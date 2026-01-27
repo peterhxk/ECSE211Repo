@@ -28,8 +28,8 @@ def collect_color_sensor_data():
             if TOUCH_SENSOR.is_pressed():
                 l_rgb = COLOR_SENSOR.get_raw_value()
                 print(f"raw_value: {l_rgb}")
-                l_rgb = COLOR_SENSOR.get_rgb()
-                print(f"rgb_list: {l_rgb}")
+                # l_rgb = COLOR_SENSOR.get_rgb()
+                # print(f"rgb_list: {l_rgb}")
                 if l_rgb is not None:
                     output_file.write(f"{l_rgb}\n")
             sleep(DELAY_SEC)
