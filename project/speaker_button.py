@@ -9,7 +9,7 @@ from utils import sound
 from utils.brick import TouchSensor, wait_ready_sensors
 import time
 
-SOUND = sound.Sound(duration=1, pitch="A4", volume=60)
+SOUND = sound.Sound(duration=1, pitch="A4", volume=100)
 TOUCH_SENSOR = TouchSensor(1)
 
 
