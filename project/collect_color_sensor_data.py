@@ -10,7 +10,7 @@ from utils.brick import EV3ColorSensor, wait_ready_sensors, TouchSensor, reset_b
 from time import sleep
 
 
-COLOR_SENSOR_DATA_FILE = "../data_analysis/color_sensor_green.csv"
+COLOR_SENSOR_DATA_FILE = "../data_analysis/color_sensor_red.csv"
 DELAY_SEC = 0.01  # seconds of delay between measurements
 
 # complete this based on your hardware setup
