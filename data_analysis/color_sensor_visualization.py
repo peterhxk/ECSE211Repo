@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 
-COLOR_SENSOR_DATA_FILE = "color_sensor.csv"
+COLOR_SENSOR_DATA_FILE = "color_sensor_yellow.csv"
 
 
 def gaussian(x, values):
@@ -28,7 +28,7 @@ def gaussian(x, values):
 red, green, blue = [], [], []
 with open(COLOR_SENSOR_DATA_FILE, "r") as f:
     for line in f.readlines():
-        r, g, b = literal_eval(line)  # convert string to 3 floats
+        r, g, b, brightness = literal_eval(line)  # convert string to 3 floats
         # normalize the values to be between 0 and 1
 
         ### UNIT-VECTOR METHOD ###
