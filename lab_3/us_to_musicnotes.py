@@ -11,7 +11,22 @@ from time import sleep
 
 
 DELAY_SEC = 0.01  # seconds of delay between measurements
-SOUND = sound.Sound(duration=0.3, pitch="A4", volume=60)
+SOUND1 = sound.Sound(duration=0.3, pitch="A4", volume=60)
+SOUND2 = sound.Sound(duration=0.3, pitch="B4", volume=60)
+SOUND3 = sound.Sound(duration=0.3, pitch="C4", volume=60)
+SOUND4 = sound.Sound(duration=0.3, pitch="D4", volume=60)
+
+def play_sound(note):
+    "Play a single note."
+    note.play()
+    note.wait_done()
+
+NOTE1DISTANCE = 10
+NOTE2DISTANCE = 20
+NOTE3DISTANCE = 30
+NOTE4DISTANCE = 40
+# How often flute plays notes
+MUSICTEMPO = 2 
 
 print("Program start.\nWaiting for sensors to turn on...")
 
@@ -35,22 +50,27 @@ def collect_us():
             us_data = US_SENSOR.get_value()  # Float value in centimeters 0, capped to 255 cm
             if us_data is not None: # If None is given, then data collection failed that time
                 print(us_data)
-                if (us_data < 5):
+                if (us_data < NOTE1DISTANCE):
                     #play note 1
                     print("note 1")
-                elif (us_data < 10):
+                    play_sound(SOUND1)
+
+                elif (us_data < NOTE2DISTANCE):
                     #play note 2
                     print("note 2")
-                elif (us_data < 15):
+                    play_sound(SOUND2)
+                elif (us_data < NOTE3DISTANCE):
                     #play note 3
                     print("note 3")
-                elif (us_data < 20):
+                    play_sound(SOUND3)
+                elif (us_data < NOTE4DISTANCE):
                     #play note 4
                     print("note 4")
+                    play_sound(SOUND4)
                 else:
                     #do nothing
                     print("no note")
-            sleep(DELAY_SEC)
+            sleep(MUSICTEMPO)
     except BaseException:  # capture all exceptions including KeyboardInterrupt (Ctrl-C)
         pass
     finally:
