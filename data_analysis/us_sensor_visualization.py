@@ -9,8 +9,9 @@ as explained in the README.md file.
 """
 
 from matplotlib import pyplot as plt
+from statistics import mean
 
-US_SENSOR_DATA_FILE = "us_sensor.csv"
+US_SENSOR_DATA_FILE = "us_sensor_10cm.csv"
 DELAY_SEC = 0.01
 
 with open(US_SENSOR_DATA_FILE, "r") as f:
@@ -18,9 +19,15 @@ with open(US_SENSOR_DATA_FILE, "r") as f:
 
 times = [DELAY_SEC * i for i in range(len(distances))]
 
+
 # You can customize the plot below, eg, by changing the color
 plt.plot(times, distances)
+plt.title("Ultrasonic Sensor sliding at a distance of ~10 cm")
 plt.xlabel("Time (s)")
 plt.ylabel("Distance (cm)")
-plt.yticks([d for d in range(round(max(distances)) + 10) if d % 10 == 0])
+m = mean(distances)
+window = 2  # cm
+plt.axhline(y=10, color='r', linestyle='--', label='Target Distance (30 cm)')
+plt.ylim(m - window, m + window)
+#plt.yticks([d for d in range(round(mean(distances)-2),round(mean(distances)+2))])
 plt.show()
