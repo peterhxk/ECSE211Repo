@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 
-COLOR_SENSOR_DATA_FILE = "color_sensor_yellow.csv"
+COLOR_SENSOR_DATA_FILE = "color_sensor_blue.csv"
 
 
 def gaussian(x, values):
@@ -41,11 +41,15 @@ with open(COLOR_SENSOR_DATA_FILE, "r") as f:
         green.append(g / denominator)
         blue.append(b / denominator)
 
+print(f"mean {mean(red)}, std {stdev(red)}")
+print(f"mean {mean(green)}, std {stdev(green)}")
+print(f"mean {mean(blue)}, std {stdev(blue)}")
 
 x_values = np.linspace(0, 1, 255)  # 255 evenly spaced values between 0 and 1
 plt.plot(x_values, gaussian(x_values, red), color="r")
 plt.plot(x_values, gaussian(x_values, green), color="g")
 plt.plot(x_values, gaussian(x_values, blue), color="b")
+plt.title("RGB values of blue cube")
 plt.xlabel("Normalized intensity value")
 plt.ylabel("Normalized intensity PDF by color")
 plt.show()
