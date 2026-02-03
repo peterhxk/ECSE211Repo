@@ -22,9 +22,10 @@ wait_ready_sensors(True) # Input True to see what the robot is trying to initial
 
 def collect_color_sensor_data():
     "Collect color sensor data."
-    pressed = False
+    pressed = False # boolean for only taking the value once upon press or hold
     try:
         output_file = open(COLOR_SENSOR_DATA_FILE, "w")
+        # loop for intaking data
         while True:
             if not TOUCH_SENSOR.is_pressed():
                 pressed = False
