@@ -41,6 +41,7 @@ with open(COLOR_SENSOR_DATA_FILE, "r") as f:
         green.append(g / denominator)
         blue.append(b / denominator)
 
+# prints the mean and std of the RGB arrays to console
 print(f"mean {mean(red)}, std {stdev(red)}")
 print(f"mean {mean(green)}, std {stdev(green)}")
 print(f"mean {mean(blue)}, std {stdev(blue)}")
