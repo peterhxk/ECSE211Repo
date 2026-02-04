@@ -5,6 +5,10 @@ This test is used to collect data from the ultrasonic sensor.
 It must be run on the robot.
 """
 
+import sys
+
+sys.path.append("../")
+
 from utils import sound
 from utils.brick import TouchSensor, EV3UltrasonicSensor, wait_ready_sensors, reset_brick
 from time import sleep
@@ -26,7 +30,6 @@ print("Program start.\nWaiting for sensors to turn on...")
 
 US_SENSOR = EV3UltrasonicSensor(2)
 KILL_SWITCH = TouchSensor(3)
-
 
 wait_ready_sensors(True) # Input True to see what the robot is trying to initialize! False to be silent.
 print("Done waiting.")
