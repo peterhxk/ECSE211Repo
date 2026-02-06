@@ -50,7 +50,7 @@ motor_command(direction)
 if is_stalling():
     motor_stop()
     sleep(PAUSE_AT_END)
-    motor.reset_position()
+    motor.reset_encoder()
 
 # now play the tones
 
