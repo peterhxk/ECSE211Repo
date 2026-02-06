@@ -13,6 +13,7 @@ button = TouchSensor("2")
 data,i = [],0
 
 while True :
+    """
     try:
         if button.is_pressed():
             data.append((i,motor.get_position()))
@@ -27,7 +28,11 @@ while True :
         with open("results.csv","a+",newline='') as f:
             writer = csv.writer(f)
             writer.writerows(data)
-
+    """
+    if not motor.is_moving() :
+        print("motor stopped")
+        sleep(1)
 
     # motor.get_position() returns the encoder value of the motor, which is set to 0 when initializing the motor.
     # use Motor.reset_encoder() to reset the position
+    #offset_encoder also helps manually offsetting the position
