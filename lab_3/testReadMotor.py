@@ -62,7 +62,7 @@ DELAY_SEC = 0.01  # seconds of delay between measurements
 NOTES = ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]   # The notes to be played
 SOUNDS = [sound.Sound(duration=0.3, pitch=note, volume=80) for note in NOTES]   # An array of Sounds corresponding to the musical notes
 NOTE_DST = 15        # The physical distance threshold between each note
-TEMPO = 0.5                        # The tempo of the music (sec/note)
+#TEMPO = 0.05                        # The tempo of the music (sec/note)
 
 def play_sound(note):
     "Play a single note."
@@ -73,7 +73,7 @@ print("Getting into loop")
 
 while True :
     # get a value from reading the sensor (replace with your library's way of reading the sensor) and map it to even intervals to play the corresponding note. For example, if the sensor value is between 0 and 8, play note 0. If it's between 8 and 16, play note 1, etc. You can adjust the intervals as needed.
-    sensor_value = motor.get_position()  # <-- CHANGE if your API differs
+    sensor_value = (-1)*motor.get_position()  # <-- CHANGE if your API differs
     # only play the tone if the button is pressed
     if button.is_pressed():
         print("button pressed, sensor value: ", sensor_value)
@@ -86,7 +86,6 @@ while True :
         else:
             # do nothing
             print("no note")
-    sleep(TEMPO)
 """
     while True:
         try:
