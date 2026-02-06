@@ -2,10 +2,9 @@ import sys
 from time import sleep, time
 import csv
 
-from lab_2.project.utils.brick import TouchSensor
 
 sys.path.append("../")
-from utils.brick import Motor, reset_brick,wait_ready_sensors
+from utils.brick import Motor, reset_brick,wait_ready_sensors,TouchSensor
 from utils import sound
 
 motor = Motor("B")
