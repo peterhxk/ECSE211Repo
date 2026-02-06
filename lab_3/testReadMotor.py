@@ -27,6 +27,7 @@ def motor_stop():
     Replace with your library's stop/brake call.
     """
     motor.set_power(0)                   # <-- CHANGE if your API differs
+    # may need to add a soft brake so the beam fully gets in position (currently I think it does a fast stop)
 
 def is_stalling(window_s=STALL_WINDOW, delta_ticks=STALL_DELTA):
     p0 = motor.get_position()
