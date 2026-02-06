@@ -61,7 +61,7 @@ DELAY_SEC = 0.01  # seconds of delay between measurements
 
 NOTES = ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]   # The notes to be played
 SOUNDS = [sound.Sound(duration=0.3, pitch=note, volume=80) for note in NOTES]   # An array of Sounds corresponding to the musical notes
-NOTE_DST = 8        # The physical distance threshold between each note
+NOTE_DST = 15        # The physical distance threshold between each note
 TEMPO = 0.5                        # The tempo of the music (sec/note)
 
 def play_sound(note):
@@ -76,6 +76,7 @@ while True :
     sensor_value = motor.get_position()  # <-- CHANGE if your API differs
     # only play the tone if the button is pressed
     if button.is_pressed():
+        print("button pressed, sensor value: ", sensor_value)
         for i in range(len(NOTES)):
             if sensor_value < NOTE_DST * (i+1):
                 # play note i
