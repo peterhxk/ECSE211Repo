@@ -18,7 +18,7 @@ while True :
             data.append((i,motor.get_position()))
             motor.reset_encoder()
             i+=1
-            sleep(0.5)
+            sleep(0.8)
     except Exception as e :
         print("Got error",e)
         reset_brick()
