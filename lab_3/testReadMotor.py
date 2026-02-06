@@ -47,11 +47,13 @@ direction = +1
 
 # SETUP : calibrate motor
 motor_command(direction)
-if is_stalling():
-    motor_stop()
-    sleep(PAUSE_AT_END)
-    motor.reset_encoder()
-    print("MOTOR STALLED : RESETTING ENCODER")
+while True:
+    if is_stalling():
+        motor_stop()
+        sleep(PAUSE_AT_END)
+        motor.reset_encoder()
+        print("MOTOR STALLED : RESETTING ENCODER")
+        break
 
 # now play the tones
 
@@ -85,29 +87,29 @@ while True :
             print("no note")
     sleep(TEMPO)
 """
-while True:
-    try:
-        # Wait until stall is detected
-        while True:
-            if is_stalling():
-                motor_stop()
-                sleep(PAUSE_AT_END)
-                direction *= -1
-                angles.append(motor.get_position())
-                break
-
-            sleep(0.01)
-
-    except KeyboardInterrupt:
-        print("Interrupting")
-        with open("angles.csv", "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["angle"])
-            for a in angles:
-                writer.writerow([a])
-        print("Saved angles:", angles)
-        reset_brick()
-        break
+    while True:
+        try:
+            # Wait until stall is detected
+            while True:
+                if is_stalling():
+                    motor_stop()
+                    sleep(PAUSE_AT_END)
+                    direction *= -1
+                    angles.append(motor.get_position())
+                    break
+    
+                sleep(0.01)
+    
+        except KeyboardInterrupt:
+            print("Interrupting")
+            with open("angles.csv", "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["angle"])
+                for a in angles:
+                    writer.writerow([a])
+            print("Saved angles:", angles)
+            reset_brick()
+            break
 """
 
     # motor.get_position() returns the encoder value of the motor, which is set to 0 when initializing the motor.
