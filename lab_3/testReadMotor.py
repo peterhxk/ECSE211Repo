@@ -1,5 +1,6 @@
 import sys
 from time import sleep, time
+import csv
 
 sys.path.append("../")
 from utils.brick import Motor, reset_brick
@@ -52,8 +53,14 @@ while True:
 
             sleep(0.01)
 
-    except Exception as e:
-        print("Got error:", e)
+    except KeyboardInterrupt:
+        print("Interrupting")
+        with open("angles.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["angle"])
+            for a in angles:
+                writer.writerow([a])
+        print("Saved angles:", angles)
         reset_brick()
         break
 
