@@ -19,6 +19,7 @@ while True :
             motor.reset_encoder()
             i+=1
             sleep(0.8)
+            print("Ready for next value")
     except Exception as e :
         print("Got error",e)
         reset_brick()
