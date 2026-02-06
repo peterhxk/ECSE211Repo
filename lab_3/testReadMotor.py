@@ -11,6 +11,8 @@ STALL_WINDOW = 0.35     # seconds to observe
 STALL_DELTA = 3         # encoder ticks considered "no movement"
 PAUSE_AT_END = 0.2      # pause before reversing
 
+angles = []
+
 def motor_command(direction: int):
     """
     direction: +1 or -1
@@ -45,6 +47,7 @@ while True:
                 motor_stop()
                 sleep(PAUSE_AT_END)
                 direction *= -1
+                angles.append(motor.get_position())
                 break
 
             sleep(0.01)
