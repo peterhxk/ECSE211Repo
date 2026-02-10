@@ -1,4 +1,5 @@
 import sys
+from time import sleep
 
 sys.path.append("../")
 
@@ -25,7 +26,9 @@ try:
             toggle_pressed = False
         
         if (drumming_active):
-            motor.set_power(30)
+            for i in range(0,100):
+                motor.set_power(i)
+                sleep(0.5)
         else:
             motor.set_power(0)
     print("Kill switch activated!")
