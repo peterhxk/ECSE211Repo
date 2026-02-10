@@ -79,7 +79,7 @@ while True :
     # get a value from reading the sensor (replace with your library's way of reading the sensor) and map it to even intervals to play the corresponding note. For example, if the sensor value is between 0 and 8, play note 0. If it's between 8 and 16, play note 1, etc. You can adjust the intervals as needed.
     sensor_value = (-1)*motor.get_position()  # multiply by -1 because it goes in the negative angles
     # only play the tone if the button is pressed
-    if button.is_pressed():
+    if True:#button.is_pressed():
         print("button pressed, sensor value: ", sensor_value)
         for i in range(len(NOTES)):
             if sensor_value < NOTE_DST * (i+1):
