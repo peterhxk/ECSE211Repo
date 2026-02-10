@@ -1,40 +1,55 @@
 import sys
 from time import sleep, time
 import math
-import threading
-import array
 
-import sounddevice as sd
+"""
+Stable continuous-ish pitch WITHOUT streaming libs (no numpy, no sounddevice).
+
+Uses a bank of prebuilt tones and switches between them.
+This avoids simpleaudio/ALSA mmap crashes caused by starting new playbacks too fast.
+
+Tune:
+- N_STEPS: more steps = smoother pitch but more memory
+- UPDATE_HZ: how often we check encoder and maybe switch
+- POS_MAX: encoder span mapped to the pitch range
+"""
 
 sys.path.append("../")
 from utils.brick import Motor, reset_brick, wait_ready_sensors, TouchSensor
+from utils import sound
 
+# -------------------- Hardware --------------------
 motor = Motor("B")
 button = TouchSensor("2")
 
+# -------------------- Motor calibration params --------------------
 POWER = 10
 STALL_WINDOW = 0.35
 STALL_DELTA = 3
 PAUSE_AT_END = 0.2
 
+# -------------------- Pitch mapping --------------------
 ENCODER_SIGN = -1
 
-FREQ_MIN = 220.0   # A3
-FREQ_MAX = 880.0   # A5
+FREQ_MIN = 220.0     # A3
+FREQ_MAX = 880.0     # A5
 
 NOTE_DST = 15
 POS_MIN = 0
-POS_MAX = 7 * NOTE_DST
+POS_MAX = 7 * NOTE_DST   # tune to your travel
 
-REQUIRE_BUTTON = False
+REQUIRE_BUTTON = False   # set True to gate with button
 
-FS = 44100
-VOLUME = 0.2  # 0..1
+# -------------------- Quantized “continuous” sound --------------------
+N_STEPS = 24             # 12/24/36/48; 24 is a good start
+VOLUME = 80
+TONE_DUR = 0.25          # seconds; longer reduces retriggers
+UPDATE_HZ = 20           # checks/sec (NOT play/sec)
+UPDATE_PERIOD = 1.0 / UPDATE_HZ
 
-state_lock = threading.Lock()
-target_freq = 440.0
-enabled = True
-phase = 0.0
+# Only switch tone if bin changes (prevents rapid restarting)
+# Optional "deadband" to reduce chatter near boundaries:
+DEADBAND_BINS = 0        # set to 1 if it chatters
 
 def motor_command(direction: int):
     motor.set_power(direction * POWER)
@@ -53,82 +68,97 @@ def is_stalling(window_s=STALL_WINDOW, delta_ticks=STALL_DELTA):
 def clamp(x, lo, hi):
     return lo if x < lo else hi if x > hi else x
 
-def pos_to_freq(pos):
+def pos_to_bin(pos):
     pos = clamp(pos, POS_MIN, POS_MAX)
-    t = (pos - POS_MIN) / (POS_MAX - POS_MIN + 1e-9)
+    t = (pos - POS_MIN) / (POS_MAX - POS_MIN + 1e-9)  # 0..1
+    b = int(t * (N_STEPS - 1) + 0.5)  # nearest bin
+    return clamp(b, 0, N_STEPS - 1)
+
+def bin_to_freq(b):
+    t = b / (N_STEPS - 1 + 1e-9)
     return FREQ_MIN * ((FREQ_MAX / FREQ_MIN) ** t)
 
-def audio_callback(outdata, frames, time_info, status):
-    global phase
-    if status:
-        # print(status)  # uncomment if you want diagnostics
-        pass
+# ---- Build tone bank ONCE (important!) ----
+print("Building tone bank...")
+TONE_BANK = []
+for i in range(N_STEPS):
+    freq = bin_to_freq(i)
+    # Your Sound() previously accepted numeric pitch (we tried that),
+    # so we keep it. If it doesn't, you must change Sound() to accept Hz.
+    TONE_BANK.append(sound.Sound(duration=TONE_DUR, pitch=freq, volume=VOLUME))
+print("Tone bank ready.")
 
-    with state_lock:
-        freq = float(target_freq)
-        on = bool(enabled)
+wait_ready_sensors(True)
 
-    if not on:
-        outdata[:] = 0
-        return
+# 1) Calibrate
+direction = +1
+motor_command(direction)
+while True:
+    if is_stalling():
+        motor_stop()
+        sleep(PAUSE_AT_END)
+        motor.reset_encoder()
+        print("MOTOR STALLED: encoder reset to 0")
+        break
 
-    omega = 2.0 * math.pi * freq / FS
+print("Entering stable quantized pitch loop")
 
-    # Build mono float32 samples without numpy
-    buf = array.array('f', [0.0]) * frames
-    ph = phase
-    amp = VOLUME
-    for i in range(frames):
-        buf[i] = amp * math.sin(ph)
-        ph += omega
-        if ph > 2.0 * math.pi:
-            ph -= 2.0 * math.pi
+current_bin = None
+current_sound = None
+last_check = 0.0
 
-    phase = ph
-
-    # Write into outdata (frames x channels)
-    # outdata is a numpy-like buffer provided by sounddevice; assignment from list/array works.
-    outdata[:, 0] = buf
-
-def main():
-    global target_freq, enabled
-
-    wait_ready_sensors(True)
-
-    motor_command(+1)
+try:
     while True:
-        if is_stalling():
-            motor_stop()
-            sleep(PAUSE_AT_END)
-            motor.reset_encoder()
-            print("MOTOR STALLED: encoder reset to 0")
-            break
+        now = time()
+        if (now - last_check) < UPDATE_PERIOD:
+            sleep(0.002)
+            continue
+        last_check = now
 
-    print("Starting audio stream (no numpy)")
+        pos = ENCODER_SIGN * motor.get_position()
+        gate = True if not REQUIRE_BUTTON else button.is_pressed()
 
-    with sd.OutputStream(
-        samplerate=FS,
-        channels=1,
-        dtype="float32",
-        callback=audio_callback,
-    ):
-        try:
-            while True:
-                pos = ENCODER_SIGN * motor.get_position()
-                gate = True if not REQUIRE_BUTTON else button.is_pressed()
-                freq = pos_to_freq(pos)
+        if not gate:
+            if current_sound is not None:
+                try:
+                    current_sound.stop()
+                except Exception:
+                    pass
+            current_sound = None
+            current_bin = None
+            continue
 
-                with state_lock:
-                    target_freq = freq
-                    enabled = gate
+        b = pos_to_bin(pos)
 
-                sleep(0.01)
+        # deadband to prevent chatter: only accept changes beyond +/- DEADBAND_BINS
+        if current_bin is not None and abs(b - current_bin) <= DEADBAND_BINS:
+            continue
 
-        except KeyboardInterrupt:
-            print("\nStopping.")
-        finally:
-            motor_stop()
-            reset_brick()
+        if b != current_bin:
+            current_bin = b
 
-if __name__ == "__main__":
-    main()
+            # stop previous tone before starting new
+            if current_sound is not None:
+                try:
+                    current_sound.stop()
+                except Exception:
+                    pass
+
+            current_sound = TONE_BANK[b]
+            try:
+                current_sound.play()   # non-blocking
+            except Exception as e:
+                print("Audio error:", e)
+                current_sound = None
+                current_bin = None
+                sleep(0.2)
+
+except KeyboardInterrupt:
+    print("\nStopping.")
+    try:
+        if current_sound is not None:
+            current_sound.stop()
+    except Exception:
+        pass
+    motor_stop()
+    reset_brick()
