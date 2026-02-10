@@ -1,17 +1,13 @@
 import sys
 from time import sleep, time
-import math
 
 """
-Continuous-pitch version (no note presets).
+Continuous pitch from motor encoder without presets.
 
-How it works:
-- Calibrates one hard-stop to define encoder zero (same as your original).
-- Maps current motor position continuously to a frequency (Hz) over a chosen range.
-- Plays very short tone "chunks" repeatedly (non-blocking) so the pitch feels continuous.
-IMPORTANT:
-- This assumes your utils.sound.Sound can accept pitch as a FREQUENCY in Hz (float/int).
-  If your Sound() only accepts note names like "A4", you’ll need the Hz-capable tone API.
+Key fixes vs your previous attempt:
+- Only ONE sound plays at a time (stop previous before starting new)
+- Rate-limit pitch updates (UPDATE_HZ)
+- Only update when pitch changes enough (FREQ_EPS_HZ)
 """
 
 sys.path.append("../")
@@ -20,36 +16,35 @@ from utils import sound
 
 # -------------------- Hardware --------------------
 motor = Motor("B")
-button = TouchSensor("2")  # set to your port; you can keep the "always on" mode below
+button = TouchSensor("2")
 
 # -------------------- Motor calibration params --------------------
-POWER = 10              # adjust motor power
-STALL_WINDOW = 0.35     # seconds to observe for stall
-STALL_DELTA = 3         # encoder ticks considered "no movement"
-PAUSE_AT_END = 0.2      # pause before resetting encoder
+POWER = 10
+STALL_WINDOW = 0.35
+STALL_DELTA = 3
+PAUSE_AT_END = 0.2
 
 # -------------------- Continuous sound params --------------------
 VOLUME = 80
-CHUNK_SEC = 0.03        # 20–60ms works well; smaller = smoother but more CPU
-LOOP_SLEEP = 0.005      # loop sleep
 
-# Map encoder position -> frequency.
-# Choose a musical range (example: A3=220 Hz to A5=880 Hz, 2 octaves)
-FREQ_MIN = 220.0
-FREQ_MAX = 880.0
+UPDATE_HZ = 15.0                 # how often we allow pitch updates (10–20 is usually safe)
+UPDATE_PERIOD = 1.0 / UPDATE_HZ
+TONE_DURATION = 0.15             # play slightly longer than update period to avoid gaps
+FREQ_EPS_HZ = 3.0                # don't restart audio unless freq changed by at least this much
 
-# Choose the encoder span to cover that frequency range.
-# You can tune this. If you know your physical travel, set POS_MAX accordingly.
-# Here we reuse your idea of 7 steps * 15 ticks = ~105 ticks span.
+# Pitch range
+FREQ_MIN = 220.0                 # A3
+FREQ_MAX = 880.0                 # A5
+
+# Encoder mapping range
 NOTE_DST = 15
 POS_MIN = 0
-POS_MAX = 7 * NOTE_DST
+POS_MAX = 7 * NOTE_DST           # tune this to match your travel
 
-# If your encoder goes negative in the direction you use, keep this.
-ENCODER_SIGN = -1  # multiply motor.get_position() by this
+ENCODER_SIGN = -1                # keep your sign convention
 
-# If you want to require button press to produce sound, set to True.
-REQUIRE_BUTTON = False
+# Gate with button?
+REQUIRE_BUTTON = False           # set True to require button press
 
 
 # -------------------- Helpers --------------------
@@ -72,11 +67,11 @@ def clamp(x, lo, hi):
 
 def pos_to_freq(pos):
     """
-    Map encoder position -> frequency (Hz), smoothly.
-    Uses exponential mapping so equal distances feel like equal pitch steps (musical).
+    Smooth, musical mapping (exponential):
+      f = fmin * (fmax/fmin)^t, t in [0,1]
     """
     pos = clamp(pos, POS_MIN, POS_MAX)
-    t = (pos - POS_MIN) / (POS_MAX - POS_MIN + 1e-9)  # 0..1
+    t = (pos - POS_MIN) / (POS_MAX - POS_MIN + 1e-9)
     return FREQ_MIN * ((FREQ_MAX / FREQ_MIN) ** t)
 
 
@@ -97,33 +92,68 @@ while True:
 
 print("Entering continuous tone loop")
 
-last_play_t = 0.0
+# We keep track of the currently playing sound (and stop it before starting a new one)
+current_sound = None
+current_freq = None
+last_update_t = 0.0
 
 try:
     while True:
-        # Read encoder, apply sign if needed
         pos = ENCODER_SIGN * motor.get_position()
 
-        # Check button gate
         gate = True
         if REQUIRE_BUTTON:
             gate = button.is_pressed()
 
+        now = time()
+
         if gate:
-            freq = pos_to_freq(pos)
+            # rate limit updates
+            if (now - last_update_t) >= UPDATE_PERIOD:
+                last_update_t = now
+                freq = pos_to_freq(pos)
 
-            # Play short chunks repeatedly (non-blocking)
-            now = time()
-            if (now - last_play_t) >= CHUNK_SEC:
-                last_play_t = now
+                # only restart audio if frequency changed enough
+                if (current_freq is None) or (abs(freq - current_freq) >= FREQ_EPS_HZ):
+                    current_freq = freq
 
-                # Assumes pitch can be Hz. If not, see note below.
-                s = sound.Sound(duration=CHUNK_SEC, pitch=freq, volume=VOLUME)
-                s.play()  # DO NOT call wait_done()
+                    # STOP previous playback to avoid ALSA mmap exhaustion
+                    try:
+                        if current_sound is not None:
+                            current_sound.stop()   # utils.sound.Sound has stop() in your stack trace context
+                    except Exception:
+                        # if stop() isn't available or fails, ignore and continue
+                        pass
 
-        sleep(LOOP_SLEEP)
+                    # Create and play new tone
+                    try:
+                        current_sound = sound.Sound(duration=TONE_DURATION, pitch=freq, volume=VOLUME)
+                        current_sound.play()  # DO NOT wait_done()
+                    except Exception as e:
+                        # If audio device glitches, back off briefly so ALSA can recover
+                        print("Audio error:", e)
+                        sleep(0.2)
+                        current_sound = None
+                        current_freq = None
+
+        else:
+            # if button not pressed, stop sound once
+            if current_sound is not None:
+                try:
+                    current_sound.stop()
+                except Exception:
+                    pass
+                current_sound = None
+                current_freq = None
+
+        sleep(0.005)
 
 except KeyboardInterrupt:
     print("\nStopping.")
+    try:
+        if current_sound is not None:
+            current_sound.stop()
+    except Exception:
+        pass
     motor_stop()
     reset_brick()
