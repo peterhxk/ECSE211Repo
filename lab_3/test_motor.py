@@ -3,6 +3,7 @@ from time import sleep
 
 sys.path.append("../")
 
+
 from utils.brick import Motor, TouchSensor, reset_brick, wait_ready_sensors
 
 # Initialise inputs and outputs

@@ -1,22 +1,26 @@
+import os
 import sys
-from time import sleep, time
 import math
+import time
 
-"""
-Stable continuous-ish pitch WITHOUT streaming libs (no numpy, no sounddevice).
+# --- Make sure we import *your* project utils/, not the pip "utils" package ---
+# If this file is in ECSE211Repo/lab_3/, ".." points to ECSE211Repo/
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-Uses a bank of prebuilt tones and switches between them.
-This avoids simpleaudio/ALSA mmap crashes caused by starting new playbacks too fast.
-
-Tune:
-- N_STEPS: more steps = smoother pitch but more memory
-- UPDATE_HZ: how often we check encoder and maybe switch
-- POS_MAX: encoder span mapped to the pitch range
-"""
-
-sys.path.append("../")
 from utils.brick import Motor, reset_brick, wait_ready_sensors, TouchSensor
 from utils import sound
+
+
+"""
+Continuous pitch (no discrete note mapping) using deterministic timers.
+
+Key ideas:
+- Use perf_counter() + sleep_until() for deterministic update timing.
+- Map motor encoder position -> frequency (Hz) continuously (exponential mapping).
+- Avoid overlapping playbacks by reusing ONE Sound and updating its pitch.
+  (Still depends on how utils/sound.py is implemented; this is the "best effort"
+  approach within that API.)
+"""
 
 # -------------------- Hardware --------------------
 motor = Motor("B")
@@ -28,29 +32,31 @@ STALL_WINDOW = 0.35
 STALL_DELTA = 3
 PAUSE_AT_END = 0.2
 
-# -------------------- Pitch mapping --------------------
-ENCODER_SIGN = -1
+# -------------------- Timing params --------------------
+UPDATE_HZ = 20.0                  # how often to update pitch (Hz)
+PERIOD = 1.0 / UPDATE_HZ
+SPIN = 0.002                      # busy-wait in last 2ms for tighter timing
 
-FREQ_MIN = 220.0     # A3
-FREQ_MAX = 880.0     # A5
+# -------------------- Continuous pitch mapping --------------------
+ENCODER_SIGN = -1                 # matches your earlier convention
 
+# Choose a pitch range (Hz). Example: 2 octaves A3 -> A5
+FREQ_MIN = 220.0                  # A3
+FREQ_MAX = 880.0                  # A5
+
+# Choose encoder span that maps to that range (tune this!)
+# If your travel is larger/smaller, adjust POS_MAX.
 NOTE_DST = 15
 POS_MIN = 0
-POS_MAX = 7 * NOTE_DST   # tune to your travel
+POS_MAX = 7 * NOTE_DST            # ~your earlier 7-step span, but now continuous
 
-REQUIRE_BUTTON = False   # set True to gate with button
+# Gate sound with button?
+REQUIRE_BUTTON = False            # set True to require button press
 
-# -------------------- Quantized “continuous” sound --------------------
-N_STEPS = 24             # 12/24/36/48; 24 is a good start
 VOLUME = 80
-TONE_DUR = 0.25          # seconds; longer reduces retriggers
-UPDATE_HZ = 20           # checks/sec (NOT play/sec)
-UPDATE_PERIOD = 1.0 / UPDATE_HZ
 
-# Only switch tone if bin changes (prevents rapid restarting)
-# Optional "deadband" to reduce chatter near boundaries:
-DEADBAND_BINS = 0        # set to 1 if it chatters
 
+# -------------------- Helpers --------------------
 def motor_command(direction: int):
     motor.set_power(direction * POWER)
 
@@ -59,105 +65,107 @@ def motor_stop():
 
 def is_stalling(window_s=STALL_WINDOW, delta_ticks=STALL_DELTA):
     p0 = motor.get_position()
-    t0 = time()
-    while time() - t0 < window_s:
-        sleep(0.02)
+    t0 = time.time()
+    while time.time() - t0 < window_s:
+        time.sleep(0.02)
     p1 = motor.get_position()
     return abs(p1 - p0) <= delta_ticks
 
 def clamp(x, lo, hi):
     return lo if x < lo else hi if x > hi else x
 
-def pos_to_bin(pos):
+def pos_to_freq(pos):
+    """
+    Smooth exponential mapping (musical):
+      f = fmin * (fmax/fmin)^t , where t in [0,1]
+    """
     pos = clamp(pos, POS_MIN, POS_MAX)
-    t = (pos - POS_MIN) / (POS_MAX - POS_MIN + 1e-9)  # 0..1
-    b = int(t * (N_STEPS - 1) + 0.5)  # nearest bin
-    return clamp(b, 0, N_STEPS - 1)
-
-def bin_to_freq(b):
-    t = b / (N_STEPS - 1 + 1e-9)
+    t = (pos - POS_MIN) / (POS_MAX - POS_MIN + 1e-9)
     return FREQ_MIN * ((FREQ_MAX / FREQ_MIN) ** t)
 
-# ---- Build tone bank ONCE (important!) ----
-print("Building tone bank...")
-TONE_BANK = []
-for i in range(N_STEPS):
-    freq = bin_to_freq(i)
-    # Your Sound() previously accepted numeric pitch (we tried that),
-    # so we keep it. If it doesn't, you must change Sound() to accept Hz.
-    TONE_BANK.append(sound.Sound(duration=TONE_DUR, pitch=freq, volume=VOLUME))
-print("Tone bank ready.")
+def sleep_until(t_deadline, spin=SPIN):
+    """
+    Sleep until an absolute perf_counter() deadline.
+    spin: busy-wait in last 'spin' seconds for tighter timing.
+    """
+    while True:
+        now = time.perf_counter()
+        remaining = t_deadline - now
+        if remaining <= 0:
+            return
+        if remaining > spin:
+            time.sleep(remaining - spin)
+        # else: busy-wait
 
+
+# -------------------- Main --------------------
 wait_ready_sensors(True)
 
-# 1) Calibrate
+# Calibrate: run until stall, then set encoder to 0
 direction = +1
 motor_command(direction)
 while True:
     if is_stalling():
         motor_stop()
-        sleep(PAUSE_AT_END)
+        time.sleep(PAUSE_AT_END)
         motor.reset_encoder()
         print("MOTOR STALLED: encoder reset to 0")
         break
 
-print("Entering stable quantized pitch loop")
+print("Entering continuous pitch loop (deterministic timing)")
 
-current_bin = None
-current_sound = None
-last_check = 0.0
+# Reuse ONE Sound and update its pitch continuously
+# duration should be "long enough" so it keeps sounding while we update pitch
+carrier = sound.Sound(duration=60, pitch=FREQ_MIN, volume=VOLUME)
+
+playing = False
+last_freq = None
+
+t0 = time.perf_counter()
+tick = 0
 
 try:
     while True:
-        now = time()
-        if (now - last_check) < UPDATE_PERIOD:
-            sleep(0.002)
-            continue
-        last_check = now
+        # deterministic tick schedule
+        t_tick = t0 + tick * PERIOD
+        sleep_until(t_tick)
+        tick += 1
 
         pos = ENCODER_SIGN * motor.get_position()
         gate = True if not REQUIRE_BUTTON else button.is_pressed()
 
         if not gate:
-            if current_sound is not None:
+            if playing:
                 try:
-                    current_sound.stop()
+                    carrier.stop()
                 except Exception:
                     pass
-            current_sound = None
-            current_bin = None
+                playing = False
+                last_freq = None
             continue
 
-        b = pos_to_bin(pos)
+        # compute continuous frequency
+        freq = pos_to_freq(pos)
 
-        # deadband to prevent chatter: only accept changes beyond +/- DEADBAND_BINS
-        if current_bin is not None and abs(b - current_bin) <= DEADBAND_BINS:
+        # start if not already playing
+        if not playing:
+            carrier.set_pitch(freq)
+            carrier.update_audio()
+            carrier.play()
+            playing = True
+            last_freq = freq
             continue
 
-        if b != current_bin:
-            current_bin = b
-
-            # stop previous tone before starting new
-            if current_sound is not None:
-                try:
-                    current_sound.stop()
-                except Exception:
-                    pass
-
-            current_sound = TONE_BANK[b]
-            try:
-                current_sound.play()   # non-blocking
-            except Exception as e:
-                print("Audio error:", e)
-                current_sound = None
-                current_bin = None
-                sleep(0.2)
+        # update pitch (only if changed enough to matter)
+        if last_freq is None or abs(freq - last_freq) >= 1.0:
+            carrier.set_pitch(freq)
+            carrier.update_audio()
+            last_freq = freq
 
 except KeyboardInterrupt:
     print("\nStopping.")
     try:
-        if current_sound is not None:
-            current_sound.stop()
+        carrier.stop()
     except Exception:
         pass
     motor_stop()
