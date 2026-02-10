@@ -5,7 +5,7 @@ sys.path.append("../")
 from utils.brick import Motor, TouchSensor, reset_brick, wait_ready_sensors
 
 # Initialise inputs and outputs
-motor = Motor("B")
+motor = Motor("C")
 KILL_SWITCH = TouchSensor(3)
 DRUM_TOGGLE = TouchSensor(1)
 
