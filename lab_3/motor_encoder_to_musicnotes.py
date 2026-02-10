@@ -1,7 +1,11 @@
 import sys
 from time import sleep, time
 import csv
-
+"""
+This code uses a large motor's encoder to play musical notes
+An automatic calibration is done at the beginning to find the maximum angle of the beam, which is used to map the angles to musical notes.
+The calibration works as follows : the motor is run in one direction (arbitrary) until it stalls (using live velocity feedback). Once stalling, the motor stops and resets the encoder position. 
+"""
 
 sys.path.append("../")
 from utils.brick import Motor, reset_brick,wait_ready_sensors,TouchSensor
@@ -24,13 +28,13 @@ def motor_command(direction: int):
     Replace this with your library's way of running the motor continuously.
     Examples in other libs: motor.set_power(direction*POWER)
     """
-    motor.set_power(direction * POWER)   # <-- CHANGE if your API differs
+    motor.set_power(direction * POWER)
 
 def motor_stop():
     """
     Replace with your library's stop/brake call.
     """
-    motor.set_power(0)                   # <-- CHANGE if your API differs
+    motor.set_power(0)
     # may need to add a soft brake so the beam fully gets in position (currently I think it does a fast stop)
 
 def is_stalling(window_s=STALL_WINDOW, delta_ticks=STALL_DELTA):
@@ -73,7 +77,7 @@ print("Getting into loop")
 
 while True :
     # get a value from reading the sensor (replace with your library's way of reading the sensor) and map it to even intervals to play the corresponding note. For example, if the sensor value is between 0 and 8, play note 0. If it's between 8 and 16, play note 1, etc. You can adjust the intervals as needed.
-    sensor_value = (-1)*motor.get_position()  # <-- CHANGE if your API differs
+    sensor_value = (-1)*motor.get_position()  # multiply by -1 because it goes in the negative angles
     # only play the tone if the button is pressed
     if button.is_pressed():
         print("button pressed, sensor value: ", sensor_value)
