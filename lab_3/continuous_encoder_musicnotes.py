@@ -1,53 +1,46 @@
 import sys
 from time import sleep, time
+import math
+import threading
 
-"""
-Continuous pitch from motor encoder without presets.
-
-Key fixes vs your previous attempt:
-- Only ONE sound plays at a time (stop previous before starting new)
-- Rate-limit pitch updates (UPDATE_HZ)
-- Only update when pitch changes enough (FREQ_EPS_HZ)
-"""
+import numpy as np
+import sounddevice as sd
 
 sys.path.append("../")
 from utils.brick import Motor, reset_brick, wait_ready_sensors, TouchSensor
-from utils import sound
 
 # -------------------- Hardware --------------------
 motor = Motor("B")
 button = TouchSensor("2")
 
-# -------------------- Motor calibration params --------------------
+# -------------------- Motor calibration --------------------
 POWER = 10
 STALL_WINDOW = 0.35
 STALL_DELTA = 3
 PAUSE_AT_END = 0.2
 
-# -------------------- Continuous sound params --------------------
-VOLUME = 80
+# -------------------- Pitch mapping --------------------
+ENCODER_SIGN = -1
 
-UPDATE_HZ = 15.0                 # how often we allow pitch updates (10–20 is usually safe)
-UPDATE_PERIOD = 1.0 / UPDATE_HZ
-TONE_DURATION = 0.15             # play slightly longer than update period to avoid gaps
-FREQ_EPS_HZ = 3.0                # don't restart audio unless freq changed by at least this much
+FREQ_MIN = 220.0   # A3
+FREQ_MAX = 880.0   # A5
 
-# Pitch range
-FREQ_MIN = 220.0                 # A3
-FREQ_MAX = 880.0                 # A5
-
-# Encoder mapping range
 NOTE_DST = 15
 POS_MIN = 0
-POS_MAX = 7 * NOTE_DST           # tune this to match your travel
+POS_MAX = 7 * NOTE_DST  # tune this to match your travel
 
-ENCODER_SIGN = -1                # keep your sign convention
+REQUIRE_BUTTON = False  # set True if you want gating
 
-# Gate with button?
-REQUIRE_BUTTON = False           # set True to require button press
+# -------------------- Audio stream params --------------------
+FS = 44100
+VOLUME = 0.2  # 0.0..1.0
 
+# Shared state for audio callback
+state_lock = threading.Lock()
+target_freq = 440.0
+enabled = True
+phase = 0.0
 
-# -------------------- Helpers --------------------
 def motor_command(direction: int):
     motor.set_power(direction * POWER)
 
@@ -66,94 +59,75 @@ def clamp(x, lo, hi):
     return lo if x < lo else hi if x > hi else x
 
 def pos_to_freq(pos):
-    """
-    Smooth, musical mapping (exponential):
-      f = fmin * (fmax/fmin)^t, t in [0,1]
-    """
     pos = clamp(pos, POS_MIN, POS_MAX)
     t = (pos - POS_MIN) / (POS_MAX - POS_MIN + 1e-9)
     return FREQ_MIN * ((FREQ_MAX / FREQ_MIN) ** t)
 
+def audio_callback(outdata, frames, time_info, status):
+    global phase
+    if status:
+        # You can print(status) if debugging
+        pass
 
-# -------------------- Main --------------------
-wait_ready_sensors(True)
+    with state_lock:
+        freq = target_freq
+        on = enabled
 
-# 1) Calibrate: run until stall, then set encoder to 0
-direction = +1
-motor_command(direction)
+    if not on:
+        outdata[:] = 0
+        return
 
-while True:
-    if is_stalling():
-        motor_stop()
-        sleep(PAUSE_AT_END)
-        motor.reset_encoder()
-        print("MOTOR STALLED: encoder reset to 0")
-        break
+    # Generate sine wave chunk with continuous phase
+    t = (np.arange(frames) / FS).astype(np.float32)
+    omega = 2.0 * math.pi * float(freq)
+    chunk = np.sin(omega * t + phase).astype(np.float32)
 
-print("Entering continuous tone loop")
+    # Update phase so waveform is continuous across callbacks
+    phase = (phase + omega * (frames / FS)) % (2.0 * math.pi)
 
-# We keep track of the currently playing sound (and stop it before starting a new one)
-current_sound = None
-current_freq = None
-last_update_t = 0.0
+    outdata[:] = (VOLUME * chunk).reshape(-1, 1)
 
-try:
+def main():
+    global target_freq, enabled
+
+    wait_ready_sensors(True)
+
+    # Calibrate: run until stall -> reset encoder to 0
+    motor_command(+1)
     while True:
-        pos = ENCODER_SIGN * motor.get_position()
+        if is_stalling():
+            motor_stop()
+            sleep(PAUSE_AT_END)
+            motor.reset_encoder()
+            print("MOTOR STALLED: encoder reset to 0")
+            break
 
-        gate = True
-        if REQUIRE_BUTTON:
-            gate = button.is_pressed()
+    print("Starting audio stream (continuous pitch)")
 
-        now = time()
-
-        if gate:
-            # rate limit updates
-            if (now - last_update_t) >= UPDATE_PERIOD:
-                last_update_t = now
+    with sd.OutputStream(
+        samplerate=FS,
+        channels=1,
+        dtype="float32",
+        callback=audio_callback,
+        blocksize=0,   # let sounddevice choose
+    ):
+        try:
+            while True:
+                pos = ENCODER_SIGN * motor.get_position()
+                gate = True if not REQUIRE_BUTTON else button.is_pressed()
                 freq = pos_to_freq(pos)
 
-                # only restart audio if frequency changed enough
-                if (current_freq is None) or (abs(freq - current_freq) >= FREQ_EPS_HZ):
-                    current_freq = freq
+                with state_lock:
+                    target_freq = freq
+                    enabled = gate
 
-                    # STOP previous playback to avoid ALSA mmap exhaustion
-                    try:
-                        if current_sound is not None:
-                            current_sound.stop()   # utils.sound.Sound has stop() in your stack trace context
-                    except Exception:
-                        # if stop() isn't available or fails, ignore and continue
-                        pass
+                sleep(0.01)
 
-                    # Create and play new tone
-                    try:
-                        current_sound = sound.Sound(duration=TONE_DURATION, pitch=freq, volume=VOLUME)
-                        current_sound.play()  # DO NOT wait_done()
-                    except Exception as e:
-                        # If audio device glitches, back off briefly so ALSA can recover
-                        print("Audio error:", e)
-                        sleep(0.2)
-                        current_sound = None
-                        current_freq = None
+        except KeyboardInterrupt:
+            print("\nStopping.")
+        finally:
+            motor_stop()
+            reset_brick()
 
-        else:
-            # if button not pressed, stop sound once
-            if current_sound is not None:
-                try:
-                    current_sound.stop()
-                except Exception:
-                    pass
-                current_sound = None
-                current_freq = None
-
-        sleep(0.005)
-
-except KeyboardInterrupt:
-    print("\nStopping.")
-    try:
-        if current_sound is not None:
-            current_sound.stop()
-    except Exception:
-        pass
-    motor_stop()
-    reset_brick()
+if __name__ == "__main__":
+    main()
