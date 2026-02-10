@@ -79,6 +79,8 @@ while True :
     # get a value from reading the sensor (replace with your library's way of reading the sensor) and map it to even intervals to play the corresponding note. For example, if the sensor value is between 0 and 8, play note 0. If it's between 8 and 16, play note 1, etc. You can adjust the intervals as needed.
     sensor_value = (-1)*motor.get_position()  # multiply by -1 because it goes in the negative angles
     # only play the tone if the button is pressed
+
+    # Version that plays discrete notes when the button is pressed. You can also make it continuously play by removing the button condition and maybe adding a delay (e.g. time.sleep(0.1)) at the end of the loop to avoid spamming too many notes.
     if True:#button.is_pressed():
         print("button pressed, sensor value: ", sensor_value)
         for i in range(len(NOTES)):
@@ -90,31 +92,7 @@ while True :
         else:
             # do nothing
             print("no note")
-"""
-    while True:
-        try:
-            # Wait until stall is detected
-            while True:
-                if is_stalling():
-                    motor_stop()
-                    sleep(PAUSE_AT_END)
-                    direction *= -1
-                    angles.append(motor.get_position())
-                    break
-    
-                sleep(0.01)
-    
-        except KeyboardInterrupt:
-            print("Interrupting")
-            with open("angles.csv", "w", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(["angle"])
-                for a in angles:
-                    writer.writerow([a])
-            print("Saved angles:", angles)
-            reset_brick()
-            break
-"""
+
 
     # motor.get_position() returns the encoder value of the motor, which is set to 0 when initializing the motor.
     # use Motor.reset_encoder() to reset the position
