@@ -2,24 +2,21 @@ import sys
 from time import sleep, time
 import math
 import threading
+import array
 
-import numpy as np
 import sounddevice as sd
 
 sys.path.append("../")
 from utils.brick import Motor, reset_brick, wait_ready_sensors, TouchSensor
 
-# -------------------- Hardware --------------------
 motor = Motor("B")
 button = TouchSensor("2")
 
-# -------------------- Motor calibration --------------------
 POWER = 10
 STALL_WINDOW = 0.35
 STALL_DELTA = 3
 PAUSE_AT_END = 0.2
 
-# -------------------- Pitch mapping --------------------
 ENCODER_SIGN = -1
 
 FREQ_MIN = 220.0   # A3
@@ -27,15 +24,13 @@ FREQ_MAX = 880.0   # A5
 
 NOTE_DST = 15
 POS_MIN = 0
-POS_MAX = 7 * NOTE_DST  # tune this to match your travel
+POS_MAX = 7 * NOTE_DST
 
-REQUIRE_BUTTON = False  # set True if you want gating
+REQUIRE_BUTTON = False
 
-# -------------------- Audio stream params --------------------
 FS = 44100
-VOLUME = 0.2  # 0.0..1.0
+VOLUME = 0.2  # 0..1
 
-# Shared state for audio callback
 state_lock = threading.Lock()
 target_freq = 440.0
 enabled = True
@@ -66,33 +61,40 @@ def pos_to_freq(pos):
 def audio_callback(outdata, frames, time_info, status):
     global phase
     if status:
-        # You can print(status) if debugging
+        # print(status)  # uncomment if you want diagnostics
         pass
 
     with state_lock:
-        freq = target_freq
-        on = enabled
+        freq = float(target_freq)
+        on = bool(enabled)
 
     if not on:
         outdata[:] = 0
         return
 
-    # Generate sine wave chunk with continuous phase
-    t = (np.arange(frames) / FS).astype(np.float32)
-    omega = 2.0 * math.pi * float(freq)
-    chunk = np.sin(omega * t + phase).astype(np.float32)
+    omega = 2.0 * math.pi * freq / FS
 
-    # Update phase so waveform is continuous across callbacks
-    phase = (phase + omega * (frames / FS)) % (2.0 * math.pi)
+    # Build mono float32 samples without numpy
+    buf = array.array('f', [0.0]) * frames
+    ph = phase
+    amp = VOLUME
+    for i in range(frames):
+        buf[i] = amp * math.sin(ph)
+        ph += omega
+        if ph > 2.0 * math.pi:
+            ph -= 2.0 * math.pi
 
-    outdata[:] = (VOLUME * chunk).reshape(-1, 1)
+    phase = ph
+
+    # Write into outdata (frames x channels)
+    # outdata is a numpy-like buffer provided by sounddevice; assignment from list/array works.
+    outdata[:, 0] = buf
 
 def main():
     global target_freq, enabled
 
     wait_ready_sensors(True)
 
-    # Calibrate: run until stall -> reset encoder to 0
     motor_command(+1)
     while True:
         if is_stalling():
@@ -102,14 +104,13 @@ def main():
             print("MOTOR STALLED: encoder reset to 0")
             break
 
-    print("Starting audio stream (continuous pitch)")
+    print("Starting audio stream (no numpy)")
 
     with sd.OutputStream(
         samplerate=FS,
         channels=1,
         dtype="float32",
         callback=audio_callback,
-        blocksize=0,   # let sounddevice choose
     ):
         try:
             while True:
