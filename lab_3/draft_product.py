@@ -5,12 +5,13 @@ import sys
 sys.path.append("../")
 from time import sleep, time
 from utils import sound
-from utils.brick import wait_ready_sensors, Motor, TouchSensor, EV3ColorSensor
+from utils.brick import wait_ready_sensors, reset_brick, Motor, TouchSensor, EV3UltrasonicSensor
 print("done importing...")
 
 # initializing ports
 drum_toggle_button = TouchSensor(1)
 flute_play_button = TouchSensor(2)
+US_sensor = EV3UltrasonicSensor(3)
 note_selector_motor = Motor("A")
 drum_motor = Motor("B")
 #kill_switch_sensor = EV3ColorSensor(2)
@@ -31,6 +32,7 @@ TEMPO = 0.5
 # boolean helpers
 drumming_active = False
 kill_switch_active = False
+kill_switch_timer = None
 
 # helper functions
 def play_sound(note):
@@ -87,5 +89,18 @@ while not kill_switch_active:
         drum_motor.set_power(30)
     else:
         drum_motor.set_power(0)
+
+    # kill switch logic
+    # US Sensor value will need to be under 10 for 2 seconds to enable kill_switch
+    if US_sensor.get_value() <= 10:
+        if not kill_switch_timer:
+            kill_switch_timer = time()
+        if time() - kill_switch_timer > 2:
+            kill_switch_activate = True
+    else:
+        kill_switch_timer = None
+
+reset_brick() # Turn off everything on the brick's hardware, and reset it
+exit()
 
 print("kill switch activated...")
