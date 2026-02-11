@@ -23,12 +23,10 @@ STALL_DELTA = 3
 PAUSE_AT_END = 0.2
 NOTES = ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]
 SOUNDS = [sound.Sound(duration=0.3, pitch=note, volume=80) for note in NOTES]
+NOTE_ANG = 20
+NOTE_ANG_LIST = [i * NOTE_ANG for i in range(len(NOTES))]
 NOTE_ANG = 10
 TEMPO = 0.5
-
-# wait for sensors to be ready
-wait_ready_sensors()
-print("sensors ready")
 
 # boolean helpers
 drumming_active = False
@@ -40,15 +38,49 @@ def play_sound(note):
     note.wait_done()
     print(f"playing note {note}")
 
+def motor_command(direction: int):
+    """Commands the motor"""
+    note_selector_motor.set_power(direction * MOTOR_POWER)
+
+def motor_stop():
+    """Stops the motor"""
+    note_selector_motor.set_power(0)
+
+def is_stalling(window_s=STALL_WINDOW, delta_ticks=STALL_DELTA):
+    p0 = note_selector_motor.get_position()
+    t0 = time()
+    while time() - t0 < window_s:
+        sleep(0.02)
+    p1 = note_selector_motor.get_position()
+    return abs(p1 - p0) <= delta_ticks
+
+# wait for sensors to be ready
+wait_ready_sensors(True)
+print("sensors ready")
+
+# SETUP : calibrate motor
+motor_command(1)
+while True:
+    if is_stalling():
+        motor_stop()
+        sleep(PAUSE_AT_END)
+        note_selector_motor.reset_encoder()
+        print("MOTOR STALLED : RESETTING ENCODER")
+        break
 
 # main loop
 while not kill_switch_active:
+    sensor_value = note_selector_motor.get_position()
     # checking all toggle buttons here...
     if drum_toggle_button.is_pressed():
         drumming_active = not drumming_active
 
     if flute_play_button.is_pressed():
-        play_sound(SOUNDS[(-1 * int(note_selector_motor.get_position())) % 6])
+        for ang, sound in zip(NOTE_ANG_LIST, SOUNDS):
+            if abs(sensor_value) < ang:
+                play_sound(sound)
+                sleep(TEMPO)
+                break
 
     # asserting state of motors given the boolean helpers
     if drumming_active:
