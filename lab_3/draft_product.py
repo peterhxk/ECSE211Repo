@@ -76,6 +76,13 @@ while not kill_switch_active:
     # checking all toggle buttons here...
     if drum_toggle_button.is_pressed():
         drumming_active = not drumming_active
+        
+    # asserting state of motors given the boolean helpers
+    if drumming_active:
+        drum_motor.set_power(30)
+    else:
+        drum_motor.set_power(0)
+
 
     if flute_play_button.is_pressed():
         for ang, sound in zip(NOTE_ANG_LIST, SOUNDS):
@@ -84,11 +91,7 @@ while not kill_switch_active:
                 sleep(TEMPO)
                 break
 
-    # asserting state of motors given the boolean helpers
-    if drumming_active:
-        drum_motor.set_power(30)
-    else:
-        drum_motor.set_power(0)
+    
 
     # kill switch logic
     # US Sensor value will need to be under 10 for 2 seconds to enable kill_switch
