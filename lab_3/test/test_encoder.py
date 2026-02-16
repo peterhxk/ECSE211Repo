@@ -52,7 +52,7 @@ direction = +1
 
 # SETUP : calibrate motor
 motor_command(direction)
-timeout = 2 # set a timeout in case the stalling is not detected and thus prevent damage on the motor
+timeout = 4 # set a timeout in case the stalling is not detected and thus prevent damage on the motor
 t0 = time.time()
 
 def reset_encoder():
@@ -62,6 +62,7 @@ def reset_encoder():
         if is_stalling():
             motor_stop()
             sleep(PAUSE_AT_END)
+            sleep(0.5) # let the motor stop
             motor.reset_encoder()
             print("MOTOR STALLED : RESETTING ENCODER")
             break

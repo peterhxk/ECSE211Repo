@@ -12,7 +12,7 @@ from utils import sound
 from test_encoder import reset_encoder,is_stalling,motor_command,motor_stop
 from utils import brick
 
-POWER = 10
+POWER = 15
 motor = Motor("B")
 button = TouchSensor("2")
 
@@ -20,7 +20,6 @@ direction = +1
 print("Resetting the encoder")
 reset_encoder()
 # ASSUMING THE MOTOR IS NOW AT 0 DEG. POSITION
-motor.reset_encoder()
 print("set angle to 0 degrees")
 
 running_angle = []
@@ -30,7 +29,7 @@ try :
         direction *= -1 # reverse the direction
         motor.set_power(direction * POWER)
         t0 = time.time()
-        timeout = 4
+        timeout = 5
         while not is_stalling():
             if time.time() - t0 > timeout:
                 raise RuntimeError("The BrickPi timed out to detect stalling. Please check connections")
