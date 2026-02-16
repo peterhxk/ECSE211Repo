@@ -30,7 +30,7 @@ try :
         direction *= -1 # reverse the direction
         motor.set_power(direction * POWER)
         t0 = time.time()
-        timeout = 2
+        timeout = 4
         while not is_stalling():
             if time.time() - t0 > timeout:
                 raise RuntimeError("The BrickPi timed out to detect stalling. Please check connections")
