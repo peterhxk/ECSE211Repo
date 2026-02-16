@@ -57,7 +57,7 @@ t0 = time.time()
 
 def reset_encoder():
     while True:
-        if time.time() - t0 < timeout:
+        if time.time() - t0 > timeout:
             raise RuntimeError("The BrickPi timed out to detect stalling. Please check connections")
         if is_stalling():
             motor_stop()
