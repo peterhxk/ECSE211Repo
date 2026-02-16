@@ -1,5 +1,6 @@
 import sys
-from time import sleep, time
+from time import sleep
+import time
 import csv
 """
 This code performs the testing of the calibration process for the motor encoder.
@@ -52,11 +53,11 @@ direction = +1
 # SETUP : calibrate motor
 motor_command(direction)
 timeout = 2 # set a timeout in case the stalling is not detected and thus prevent damage on the motor
-t0 = time.now()
+t0 = time.time()
 
 def reset_encoder():
     while True:
-        if time.now() - t0 < timeout:
+        if time.time() - t0 < timeout:
             raise RuntimeError("The BrickPi timed out to detect stalling. Please check connections")
         if is_stalling():
             motor_stop()
