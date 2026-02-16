@@ -40,8 +40,8 @@ def motor_stop():
 
 def is_stalling(window_s=STALL_WINDOW, delta_ticks=STALL_DELTA):
     p0 = motor.get_position()
-    t0 = time()
-    while time() - t0 < window_s:
+    t0 = time.time()
+    while time.time() - t0 < window_s:
         sleep(0.02)
     p1 = motor.get_position()
     return abs(p1 - p0) <= delta_ticks
