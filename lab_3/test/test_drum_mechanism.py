@@ -1,7 +1,7 @@
 import sys
 from time import sleep
 
-sys.path.append("../")
+sys.path.append("../../")
 
 
 from utils.brick import Motor, TouchSensor, reset_brick, wait_ready_sensors
@@ -29,10 +29,15 @@ try:
         if (drumming_active):
             for i in range(0,100):
                 motor.set_power(i)
-                sleep(0.5)
+                sleep(1)
+                print("Motor is at power: ", i)
         else:
             motor.set_power(0)
     print("Kill switch activated!")
+except KeyboardInterrupt:
+    print("Gently exiting test")
+    motor.set_power(0)
+
 except BaseException as error:  # capture all exceptions including KeyboardInterrupt (Ctrl-C)
     print("There was an error: ", error)
 finally:
