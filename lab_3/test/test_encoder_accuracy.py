@@ -1,5 +1,6 @@
 import sys
-from time import sleep, time
+from time import sleep
+import time
 import csv
 """
 This code performs full rotations rotations of the encoder and makes sure the maximum / minimum angle values are consistent over the rotations. It then computes the standard deviation on the minimum and maximum
@@ -27,10 +28,10 @@ try :
         # do a full rotation then record running angles
         direction *= -1 # reverse the direction
         motor.set_power(direction)
-        t0 = time.now()
+        t0 = time.time()
         timeout = 2
         while not is_stalling():
-            if time.now() - t0 > timeout:
+            if time.time() - t0 > timeout:
                 raise RuntimeError("The BrickPi timed out to detect stalling. Please check connections")
             sleep(0.02)
         motor_stop()
