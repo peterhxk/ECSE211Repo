@@ -7,7 +7,7 @@ An automatic calibration is done at the beginning to find the maximum angle of t
 The calibration works as follows : the motor is run in one direction (arbitrary) until it stalls (using live velocity feedback). Once stalling, the motor stops and resets the encoder position. 
 """
 
-sys.path.append("../")
+sys.path.append("../../")
 from utils.brick import Motor, reset_brick,wait_ready_sensors,TouchSensor
 from utils import sound
 
@@ -51,28 +51,36 @@ direction = +1
 
 # SETUP : calibrate motor
 motor_command(direction)
-while True:
-    if is_stalling():
-        motor_stop()
-        sleep(PAUSE_AT_END)
-        motor.reset_encoder()
-        print("MOTOR STALLED : RESETTING ENCODER")
-        break
+timeout = 2 # set a timeout in case the stalling is not detected and thus prevent damage on the motor
+t0 = time.now()
+
+def reset_encoder():
+    while True:
+        if time.now() - t0 < timeout:
+            raise RuntimeError("The BrickPi timed out to detect stalling. Please check connections")
+        if is_stalling():
+            motor_stop()
+            sleep(PAUSE_AT_END)
+            motor.reset_encoder()
+            print("MOTOR STALLED : RESETTING ENCODER")
+            break
 
 # now play the tones
 
 
 print("Getting into loop")
 
-while True :
-    # get a value from reading the sensor (replace with your library's way of reading the sensor) and map it to even intervals to play the corresponding note. For example, if the sensor value is between 0 and 8, play note 0. If it's between 8 and 16, play note 1, etc. You can adjust the intervals as needed.
-    sensor_value = (-1)*motor.get_position()  # multiply by -1 because it goes in the negative angles
-    # only play the tone if the button is pressed
+if __name__ == "__main__":
+    reset_encoder()
+    while True :
+        # get a value from reading the sensor (replace with your library's way of reading the sensor) and map it to even intervals to play the corresponding note. For example, if the sensor value is between 0 and 8, play note 0. If it's between 8 and 16, play note 1, etc. You can adjust the intervals as needed.
+        sensor_value = (-1)*motor.get_position()  # multiply by -1 because it goes in the negative angles
+        # only play the tone if the button is pressed
 
-    print("Sensor value: (degrees)", sensor_value)
+        print("Sensor value: (degrees)", sensor_value)
 
-    sleep(1) # wait for a second
+        sleep(1) # wait for a second
 
-    # motor.get_position() returns the encoder value of the motor, which is set to 0 when initializing the motor.
-    # use Motor.reset_encoder() to reset the position
-    #offset_encoder also helps manually offsetting the position
+        # motor.get_position() returns the encoder value of the motor, which is set to 0 when initializing the motor.
+        # use Motor.reset_encoder() to reset the position
+        #offset_encoder also helps manually offsetting the position
