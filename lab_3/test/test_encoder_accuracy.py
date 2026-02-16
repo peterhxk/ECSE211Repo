@@ -36,6 +36,8 @@ try :
             sleep(0.02)
         motor_stop()
         running_angle.append(motor.get_position())
+        print("Appended angle")
+        sleep(1)
 except KeyboardInterrupt:
     print("Gently excitting test")
 
