@@ -30,7 +30,6 @@ def motor_command(direction: int):
     Examples in other libs: motor.set_power(direction*POWER)
     """
     motor.set_power(direction * POWER)
-    print("Running motor at",direction * POWER)
 
 def motor_stop():
     """

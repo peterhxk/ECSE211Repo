@@ -12,6 +12,7 @@ from utils import sound
 from test_encoder import reset_encoder,is_stalling,motor_command,motor_stop
 from utils import brick
 
+POWER = 10
 motor = Motor("B")
 button = TouchSensor("2")
 
@@ -27,7 +28,7 @@ try :
     while True:
         # do a full rotation then record running angles
         direction *= -1 # reverse the direction
-        motor.set_power(direction)
+        motor.set_power(direction * POWER)
         t0 = time.time()
         timeout = 2
         while not is_stalling():
