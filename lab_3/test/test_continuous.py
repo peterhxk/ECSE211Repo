@@ -1,10 +1,4 @@
-import sys
-
-import os, sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import time
-
-sys.path.append("../../")
 from utils import sound
 
 NOTES = ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]

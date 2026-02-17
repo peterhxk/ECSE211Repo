@@ -1,12 +1,9 @@
-import sys
 from time import sleep
 import time
 import csv
 """
 This code performs full rotations rotations of the encoder and makes sure the maximum / minimum angle values are consistent over the rotations. It then computes the standard deviation on the minimum and maximum
 """
-
-sys.path.append("../../")
 from utils.brick import  Motor, reset_brick,wait_ready_sensors,TouchSensor
 from utils import sound
 from test_encoder import reset_encoder,is_stalling,motor_command,motor_stop

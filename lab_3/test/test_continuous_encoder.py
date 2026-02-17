@@ -1,10 +1,4 @@
-import os, sys
 import time
-import math
-
-# Make sure we import the repo's utils/
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from utils.brick import Motor, reset_brick, wait_ready_sensors, TouchSensor
 from utils import sound
 

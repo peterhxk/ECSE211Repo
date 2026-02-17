@@ -5,10 +5,6 @@ This test is used to collect data from the ultrasonic sensor.
 It must be run on the robot.
 """
 
-import sys
-
-sys.path.append("../")
-
 from utils import sound
 from utils.brick import TouchSensor, EV3UltrasonicSensor, wait_ready_sensors, reset_brick
 from time import sleep

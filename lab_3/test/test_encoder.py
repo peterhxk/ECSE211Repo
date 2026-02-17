@@ -1,14 +1,10 @@
-import sys
 from time import sleep
 import time
-import csv
 """
 This code performs the testing of the calibration process for the motor encoder.
 An automatic calibration is done at the beginning to find the maximum angle of the beam, which is used to map the angles to musical notes.
 The calibration works as follows : the motor is run in one direction (arbitrary) until it stalls (using live velocity feedback). Once stalling, the motor stops and resets the encoder position. 
 """
-
-sys.path.append("../../")
 from utils.brick import Motor, reset_brick,wait_ready_sensors,TouchSensor
 from utils import sound
 

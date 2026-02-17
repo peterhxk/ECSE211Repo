@@ -1,7 +1,3 @@
-import sys
-
-sys.path.append("../")
-
 # from utils.brick import Color, wait_ready_sensors
 # KILL_SWITCH = TouchSensor(4)
 
