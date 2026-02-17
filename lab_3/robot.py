@@ -19,7 +19,7 @@ STALL_DELTA = 3
 PAUSE_AT_END = 0.2
 NOTES = ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]
 SOUNDS = [sound.Sound(duration=0.3, pitch=note, volume=80) for note in NOTES]
-NOTE_ANG = 20
+NOTE_ANG = 300 / len(NOTES)
 NOTE_ANG_LIST = [i * NOTE_ANG for i in range(len(NOTES))]
 NOTE_ANG = 10
 TEMPO = 0.5
@@ -68,8 +68,8 @@ while True:
 
 # main loop
 try:
+    print("Robot ready to run")
     while not kill_switch_active:
-        print("Robot ready to run")
         sensor_value = note_selector_motor.get_position()
         # checking drum toggle button
         if drum_toggle_button.is_pressed():
@@ -97,7 +97,7 @@ try:
             if not kill_switch_timer:
                 kill_switch_timer = time()
             if time() - kill_switch_timer > 2:
-                kill_switch_activate = True
+                kill_switch_active = True
                 print("kill switch activated...")
         else:
             kill_switch_timer = None
