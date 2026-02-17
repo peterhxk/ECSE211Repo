@@ -1,5 +1,3 @@
-# this is a draft of the final code for the entire thing (drum + flute)
-
 # imports
 import sys
 sys.path.append("../")
