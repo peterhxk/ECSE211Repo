@@ -69,17 +69,18 @@ while True:
         break
 
 # main loop
-while not kill_switch_active:
-    sensor_value = note_selector_motor.get_position()
-    # checking drum toggle button
-    if drum_toggle_button.is_pressed():
-        drumming_active = not drumming_active
-        
-    # asserting state of motors given the boolean helpers
-    if drumming_active:
-        drum_motor.set_power(30)
-    else:
-        drum_motor.set_power(0)
+try:
+    while not kill_switch_active:
+        sensor_value = note_selector_motor.get_position()
+        # checking drum toggle button
+        if drum_toggle_button.is_pressed():
+            drumming_active = not drumming_active
+            
+        # asserting state of motors given the boolean helpers
+        if drumming_active:
+            drum_motor.set_power(30)
+        else:
+            drum_motor.set_power(0)
 
     # checking flute toggle button
     if flute_play_button.is_pressed():
@@ -89,17 +90,22 @@ while not kill_switch_active:
                 sleep(TEMPO)
                 break
 
-    # kill switch logic
-    # US Sensor value will need to be under 10 for 2 seconds to enable kill_switch
-    if US_sensor.get_value() <= 10:
-        if not kill_switch_timer:
-            kill_switch_timer = time()
-        if time() - kill_switch_timer > 2:
-            kill_switch_activate = True
-    else:
-        kill_switch_timer = None
+        
 
-reset_brick() # Turn off everything on the brick's hardware, and reset it
-exit()
-
-print("kill switch activated...")
+        # kill switch logic
+        # US Sensor value will need to be under 10 for 2 seconds to enable kill_switch
+        if US_sensor.get_value() <= 10:
+            if not kill_switch_timer:
+                kill_switch_timer = time()
+            if time() - kill_switch_timer > 2:
+                kill_switch_activate = True
+                print("kill switch activated...")
+        else:
+            kill_switch_timer = None
+except KeyboardInterrupt:
+    print("Interrupted via keyboard...")
+except Exception as err:
+    print(err)
+finally:
+    reset_brick() # Turn off everything on the brick's hardware, and reset it
+    exit()
