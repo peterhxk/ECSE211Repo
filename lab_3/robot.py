@@ -19,7 +19,7 @@ STALL_DELTA = 3
 PAUSE_AT_END = 0.2
 NOTES = ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]
 SOUNDS = [sound.Sound(duration=0.3, pitch=note, volume=80) for note in NOTES]
-NOTE_ANG = 300 / len(NOTES)
+NOTE_ANG = 330 / len(NOTES)
 NOTE_ANG_LIST = [i * NOTE_ANG for i in range(len(NOTES))]
 NOTE_ANG = 10
 TEMPO = 0.5
