@@ -69,6 +69,7 @@ while True:
 # main loop
 try:
     while not kill_switch_active:
+        print("Robot ready to run")
         sensor_value = note_selector_motor.get_position()
         # checking drum toggle button
         if drum_toggle_button.is_pressed():
@@ -80,13 +81,13 @@ try:
         else:
             drum_motor.set_power(0)
 
-    # checking flute toggle button
-    if flute_play_button.is_pressed():
-        for ang, sound in zip(NOTE_ANG_LIST, SOUNDS):
-            if abs(sensor_value) < ang:
-                play_sound(sound)
-                sleep(TEMPO)
-                break
+        # checking flute toggle button
+        if flute_play_button.is_pressed():
+            for ang, sound in zip(NOTE_ANG_LIST, SOUNDS):
+                if abs(sensor_value) < ang:
+                    play_sound(sound)
+                    sleep(TEMPO)
+                    break
 
         
 
