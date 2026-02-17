@@ -64,6 +64,9 @@ while True:
         sleep(PAUSE_AT_END)
         note_selector_motor.reset_encoder()
         print("MOTOR STALLED : RESETTING ENCODER")
+
+        # Now unblock the motor to run in read-only mode
+        note_selector_motor.float_motor()
         break
 
 # main loop
