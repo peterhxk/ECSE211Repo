@@ -9,7 +9,7 @@ drum_toggle_button = TouchSensor(1)
 flute_play_button = TouchSensor(2)
 US_sensor = EV3UltrasonicSensor(3)
 note_selector_motor = Motor("A")
-drum_motor = Motor("B")
+drum_motor = Motor("D")
 print("done initializing ports...")
 
 # declaring constants
