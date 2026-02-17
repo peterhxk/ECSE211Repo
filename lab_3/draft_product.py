@@ -14,7 +14,6 @@ flute_play_button = TouchSensor(2)
 US_sensor = EV3UltrasonicSensor(3)
 note_selector_motor = Motor("A")
 drum_motor = Motor("B")
-#kill_switch_sensor = EV3ColorSensor(2)
 print("done initializing ports...")
 
 # declaring constants
@@ -49,6 +48,7 @@ def motor_stop():
     note_selector_motor.set_power(0)
 
 def is_stalling(window_s=STALL_WINDOW, delta_ticks=STALL_DELTA):
+    """Determine if the motor is immobile - stalling"""
     p0 = note_selector_motor.get_position()
     t0 = time()
     while time() - t0 < window_s:
@@ -73,7 +73,7 @@ while True:
 # main loop
 while not kill_switch_active:
     sensor_value = note_selector_motor.get_position()
-    # checking all toggle buttons here...
+    # checking drum toggle button
     if drum_toggle_button.is_pressed():
         drumming_active = not drumming_active
         
@@ -83,15 +83,13 @@ while not kill_switch_active:
     else:
         drum_motor.set_power(0)
 
-
+    # checking flute toggle button
     if flute_play_button.is_pressed():
         for ang, sound in zip(NOTE_ANG_LIST, SOUNDS):
             if abs(sensor_value) < ang:
                 play_sound(sound)
                 sleep(TEMPO)
                 break
-
-    
 
     # kill switch logic
     # US Sensor value will need to be under 10 for 2 seconds to enable kill_switch
