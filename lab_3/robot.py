@@ -1,6 +1,4 @@
 # imports
-import sys
-sys.path.append("../")
 from time import sleep, time
 from utils import sound
 from utils.brick import wait_ready_sensors, reset_brick, Motor, TouchSensor, EV3UltrasonicSensor
