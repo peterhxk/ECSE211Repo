@@ -2,6 +2,7 @@
 import sys
 
 sys.path.append("../")
+direction = 1
 
 from time import sleep, time
 from utils import sound
@@ -99,8 +100,14 @@ while True:
 
 # main loop
 try:
-    sensor_value = note_selector_motor.get_position()
-    print("sensor value", sensor_value)
+    while True:
+        direction *= -1
+        motor_command(direction)
+        note_selector_motor.set_power(direction * MOTOR_POWER)
+        while not is_stalling():
+            sleep(0.2)
+        print("stalled")
+
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 except Exception as err:
