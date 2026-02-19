@@ -76,6 +76,8 @@ def reset_encoder():
 print("Getting into loop")
 
 if __name__ == "__main__":
+    motor.set_power(0)
+    motor.float_motor()
     reset_encoder()
     while True :
         # get a value from reading the sensor (replace with your library's way of reading the sensor) and map it to even intervals to play the corresponding note. For example, if the sensor value is between 0 and 8, play note 0. If it's between 8 and 16, play note 1, etc. You can adjust the intervals as needed.
