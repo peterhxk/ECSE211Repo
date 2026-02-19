@@ -36,21 +36,23 @@ drumming_active = False
 # flute note state
 flute_sensor_pressed = False
 sound_playing_now  = False
-sound_timer = None
+note_playing = None
 
 # helper functions
 def play_sound(note):
-    global sound_playing_now,sound_timer,SOUND_DURATION
-    if not sound_playing_now:
-        note.play()
-        sound_playing_now = True
-        sound_timer = time()
-    else:
-        if sound_timer and time() - sound_timer > SOUND_DURATION:
-            sound_timer = None
-            sound_playing_now = False
+    global sound_playing_now, note_playing
 
-    # note.wait_done()
+    if sound_playing_now and not note_playing.is_playing():
+        # check if the sound has finished playing to reset state variables
+        note_playing = None
+        sound_playing_now = False
+
+    if not sound_playing_now:
+        # if no sound is currently playing, start the audio
+        note_playing = note 
+        note_playing.play()
+        sound_playing_now = True
+        
     print(f"playing note {note}")
 
 def motor_command(direction: int):
