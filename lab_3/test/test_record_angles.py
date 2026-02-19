@@ -1,5 +1,6 @@
 # imports
 import sys
+import csv
 
 sys.path.append("../")
 direction = 1
@@ -99,6 +100,7 @@ while True:
         break
 
 # main loop
+angles = []
 try:
     while True:
         direction *= -1
@@ -106,10 +108,15 @@ try:
         note_selector_motor.set_power(direction * MOTOR_POWER)
         while not is_stalling():
             sleep(0.2)
-        print("stalled")
+        angles.append(note_selector_motor.get_position())
 
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
+    with open("new_csv_recording.csv","w") as f:
+        writer = csv.writer(f)
+        writer.writerow(["angle"])
+        for angle in angles:
+            writer.writerow([angle])
 except Exception as err:
     print(err)
 finally:
