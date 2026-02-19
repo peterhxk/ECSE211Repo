@@ -97,7 +97,6 @@ try:
             for ang, sound in zip(NOTE_ANG_LIST, SOUNDS):
                 if abs(sensor_value) < ang:
                     play_sound(sound)
-                    sleep(TEMPO)
                     break
 
         # kill switch logic
