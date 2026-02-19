@@ -79,8 +79,11 @@ while True:
         break
 
 # main loop
+executor = futures.ThreadPoolExecutor(max_workers=3)
+
 try:
     print("Robot ready to run")
+    
     while not kill_switch_active:
         sensor_value = note_selector_motor.get_position()
         # checking drum toggle button
@@ -110,15 +113,18 @@ try:
                 flute_sensor_pressed = False
             else:
                 note = SOUNDS[note_index]
-
-                with futures.ThreadPoolExecutor() as executor:
+                def play_sound_async():
+                    global note_playing, flute_sensor_pressed
                     note_playing = True
-                    future = executor.submit(lambda : play_sound(note))
-                    
+
+                    play_sound(note)
+
                     # now the note has finished playing
                     # reset state variables
                     note_playing = False
                     flute_sensor_pressed = False
+
+                executor.submit(play_sound_async)
         
         # kill switch logic
         # US Sensor value will need to be under 10 for 2 seconds to enable kill_switch
