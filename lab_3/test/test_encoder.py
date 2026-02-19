@@ -8,7 +8,12 @@ The calibration works as follows : the motor is run in one direction (arbitrary)
 from utils.brick import Motor, reset_brick,wait_ready_sensors,TouchSensor
 from utils import sound
 
-motor = Motor("B")
+import sys
+from time import sleep
+
+sys.path.append("../")
+
+motor = Motor("A")
 button = TouchSensor("2")
 
 POWER = 10              # adjust
