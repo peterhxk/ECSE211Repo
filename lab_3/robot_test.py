@@ -35,19 +35,20 @@ drumming_active = False
 
 # flute note state
 flute_sensor_pressed = False
-sound_playing = False
+sound_playing_now  = False
 sound_timer = None
 
 # helper functions
 def play_sound(note):
-    if not sound_playing:
+    global sound_playing_now,sound_timer,SOUND_DURATION
+    if not sound_playing_now:
         note.play()
-        sound_playing = True
+        sound_playing_now = True
         sound_timer = time()
     else:
-        if sound_timer and time - sound_timer > SOUND_DURATION:
+        if sound_timer and time() - sound_timer > SOUND_DURATION:
             sound_timer = None
-            sound_playing = False
+            sound_playing_now = False
 
     # note.wait_done()
     print(f"playing note {note}")
