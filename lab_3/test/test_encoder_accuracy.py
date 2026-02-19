@@ -1,6 +1,10 @@
 from time import sleep
 import time
 import csv
+import sys
+from time import sleep
+
+sys.path.append("../")
 """
 This code performs full rotations rotations of the encoder and makes sure the maximum / minimum angle values are consistent over the rotations. It then computes the standard deviation on the minimum and maximum
 """
@@ -11,7 +15,7 @@ from utils import brick
 
 POWER = 15
 motor = Motor("B")
-button = TouchSensor("2")
+
 
 direction = +1
 print("Resetting the encoder")
@@ -26,7 +30,7 @@ try :
         direction *= -1 # reverse the direction
         motor.set_power(direction * POWER)
         t0 = time.time()
-        timeout = 5
+        timeout = 10
         while not is_stalling():
             if time.time() - t0 > timeout:
                 raise RuntimeError("The BrickPi timed out to detect stalling. Please check connections")
