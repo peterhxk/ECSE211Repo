@@ -25,9 +25,12 @@ NOTE_ANG = 10
 TEMPO = 0.5
 
 # boolean helpers
-drumming_active = False
 kill_switch_active = False
 kill_switch_timer = None
+
+# drumming FSM
+waiting_for_release = False # state
+drumming_active = False
 
 # helper functions
 def play_sound(note):
@@ -76,8 +79,13 @@ try:
         sensor_value = note_selector_motor.get_position()
         # checking drum toggle button
         if drum_toggle_button.is_pressed():
-            drumming_active = not drumming_active
-            
+            waiting_for_release = True
+        else:
+            if waiting_for_release:
+                waiting_for_release = False
+                drumming_active = not drumming_active
+                print("Drum toggled on" if drumming_active else "Drum toggled off")
+
         # asserting state of motors given the boolean helpers
         if drumming_active:
             drum_motor.set_power(30)
@@ -91,8 +99,6 @@ try:
                     play_sound(sound)
                     sleep(TEMPO)
                     break
-
-        
 
         # kill switch logic
         # US Sensor value will need to be under 10 for 2 seconds to enable kill_switch
