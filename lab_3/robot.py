@@ -2,6 +2,7 @@
 from time import sleep, time
 from utils import sound
 from utils.brick import wait_ready_sensors, reset_brick, Motor, TouchSensor, EV3UltrasonicSensor
+from concurrent import futures
 print("done importing...")
 
 # initializing ports
@@ -34,12 +35,14 @@ drumming_active = False
 
 # flute note state
 flute_sensor_pressed = False
+note_playing = False
 
 # helper functions
 def play_sound(note):
-    note.play()
-    # note.wait_done()
     print(f"playing note {note}")
+
+    note.play()
+    note.wait_done()
 
 def motor_command(direction: int):
     """Commands the motor"""
@@ -99,15 +102,19 @@ try:
         if flute_play_button.is_pressed():
             flute_sensor_pressed = True 
         
-        # if we're waiting to play a note, even if the flute_play_button becomes
-        # released in the process, play the note
-        if flute_sensor_pressed:
-            for ang, sound in zip(NOTE_ANG_LIST, SOUNDS):
-                if abs(sensor_value) < ang:
-                    play_sound(sound)
-                    flute_sensor_pressed = False
-                    break
+        # if we're waiting to play a note, and not currently playing a note
+        if flute_sensor_pressed and not note_playing:
+            note = SOUNDS[abs(sensor_value) // NOTE_ANG]
 
+            with futures.ThreadPoolExecutor() as executor:
+                note_playing = True
+                future = executor.submit(lambda : play_sound(note))
+                
+                # now the note has finished playing
+                # reset state variables
+                note_playing = False
+                flute_sensor_pressed = False
+        
         # kill switch logic
         # US Sensor value will need to be under 10 for 2 seconds to enable kill_switch
         if US_sensor.get_value() <= 10:
