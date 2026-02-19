@@ -35,6 +35,7 @@ try :
             if time.time() - t0 > timeout:
                 raise RuntimeError("The BrickPi timed out to detect stalling. Please check connections")
             sleep(0.02)
+            print("Motor position",motor.get_dps())
         motor_stop()
         running_angle.append(motor.get_position())
         print("Appended angle")
