@@ -36,7 +36,7 @@ drumming_active = False
 # flute note state
 flute_sensor_pressed = False
 sound_playing_now  = False
-note_playing = None
+sound_timer = None
 
 # helper functions
 def play_sound(note):
