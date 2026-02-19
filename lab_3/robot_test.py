@@ -19,11 +19,11 @@ STALL_DELTA = 3
 PAUSE_AT_END = 0.2
 NOTES = ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]
 SOUNDS = [sound.Sound(duration=0.3, pitch=note, volume=80) for note in NOTES]
-NOTE_ANG = 350 / len(NOTES)
+NOTE_ANG = 400 / len(NOTES)
 NOTE_ANG_LIST = [i * NOTE_ANG for i in range(len(NOTES))]
 NOTE_ANG = 10
 TEMPO = 0.5
-SOUND_DURATION = 0.5
+SOUND_DURATION = 0.3
 
 # boolean helpers
 kill_switch_active = False
@@ -112,8 +112,8 @@ try:
             flute_sensor_pressed = True 
         
         # if we're waiting to play a note, even if the flute_play_button becomes
-        # released in the process, play the note
-        """ 
+        # eleased in the process, play the note
+        
         if flute_sensor_pressed:
             for ang, sound in zip(NOTE_ANG_LIST, SOUNDS):
                 if abs(sensor_value) < ang:
@@ -129,7 +129,7 @@ try:
             else:
                 play_sound(SOUNDS[note_index])
                 flute_sensor_pressed = False
-
+        """
 
         # kill switch logic
         # US Sensor value will need to be under 10 for 2 seconds to enable kill_switch
