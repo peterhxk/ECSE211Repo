@@ -18,7 +18,7 @@ STALL_WINDOW = 0.35
 STALL_DELTA = 3
 PAUSE_AT_END = 0.2
 NOTES = ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]
-SOUNDS = [sound.Sound(duration=0.3, pitch=note, volume=80) for note in NOTES]
+SOUNDS = [sound.Sound(duration=0.3, pitch=note, volume=100) for note in NOTES]
 NOTE_ANG = 400 / len(NOTES)
 NOTE_ANG_LIST = [i * NOTE_ANG for i in range(len(NOTES))]
 NOTE_ANG = 10
@@ -136,7 +136,7 @@ try:
         if US_sensor.get_value() <= 10:
             if not kill_switch_timer:
                 kill_switch_timer = time()
-            if time() - kill_switch_timer > 2:
+            if time() - kill_switch_timer > 1:
                 kill_switch_active = True
                 print("kill switch activated...")
         else:
