@@ -29,13 +29,16 @@ kill_switch_active = False
 kill_switch_timer = None
 
 # drumming FSM
-waiting_for_release = False # state
+drum_sensor_pressed = False # state
 drumming_active = False
+
+# flute note state
+flute_sensor_pressed = False
 
 # helper functions
 def play_sound(note):
     note.play()
-    note.wait_done()
+    # note.wait_done()
     print(f"playing note {note}")
 
 def motor_command(direction: int):
@@ -79,10 +82,10 @@ try:
         sensor_value = note_selector_motor.get_position()
         # checking drum toggle button
         if drum_toggle_button.is_pressed():
-            waiting_for_release = True
+            drum_sensor_pressed = True
         else:
-            if waiting_for_release:
-                waiting_for_release = False
+            if drum_sensor_pressed:
+                drum_sensor_pressed = False
                 drumming_active = not drumming_active
                 print("Drum toggled on" if drumming_active else "Drum toggled off")
 
@@ -94,9 +97,15 @@ try:
 
         # checking flute toggle button
         if flute_play_button.is_pressed():
+            flute_sensor_pressed = True 
+        
+        # if we're waiting to play a note, even if the flute_play_button becomes
+        # released in the process, play the note
+        if flute_sensor_pressed:
             for ang, sound in zip(NOTE_ANG_LIST, SOUNDS):
                 if abs(sensor_value) < ang:
                     play_sound(sound)
+                    flute_sensor_pressed = False
                     break
 
         # kill switch logic
