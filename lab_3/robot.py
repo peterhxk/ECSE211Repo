@@ -104,16 +104,21 @@ try:
         
         # if we're waiting to play a note, and not currently playing a note
         if flute_sensor_pressed and not note_playing:
-            note = SOUNDS[abs(sensor_value) // NOTE_ANG]
+            note_index = abs(sensor_value) // NOTE_ANG
 
-            with futures.ThreadPoolExecutor() as executor:
-                note_playing = True
-                future = executor.submit(lambda : play_sound(note))
-                
-                # now the note has finished playing
-                # reset state variables
-                note_playing = False
+            if note_index > len(SOUNDS) - 1:
                 flute_sensor_pressed = False
+            else:
+                note = SOUNDS[note_index]
+
+                with futures.ThreadPoolExecutor() as executor:
+                    note_playing = True
+                    future = executor.submit(lambda : play_sound(note))
+                    
+                    # now the note has finished playing
+                    # reset state variables
+                    note_playing = False
+                    flute_sensor_pressed = False
         
         # kill switch logic
         # US Sensor value will need to be under 10 for 2 seconds to enable kill_switch
