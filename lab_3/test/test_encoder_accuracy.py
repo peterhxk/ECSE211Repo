@@ -14,7 +14,7 @@ from test_encoder import reset_encoder,is_stalling,motor_command,motor_stop
 from utils import brick
 
 POWER = 15
-motor = Motor("B")
+motor = Motor("A")
 
 
 direction = +1
