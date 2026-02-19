@@ -20,7 +20,7 @@ drum_motor = Motor("D")
 print("done initializing ports...")
 
 # declaring constants
-MOTOR_POWER = 10
+MOTOR_POWER = 15
 STALL_WINDOW = 0.35
 STALL_DELTA = 3
 PAUSE_AT_END = 0.2
