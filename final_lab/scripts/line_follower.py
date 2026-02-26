@@ -1,7 +1,5 @@
-import sys
-sys.path.append("../")
 from utils.brick import wait_ready_sensors, reset_brick, Motor
-from controllers import ColorSensor
+from controllers.color_sensor_controller import ColorSensor
 from pathlib import Path
 
 

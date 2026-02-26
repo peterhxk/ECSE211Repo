@@ -5,8 +5,7 @@ import json
 class ColorSensor (EV3ColorSensor):
 
     def __init__(self, port, mode="component", bp=None):
-        super(ColorSensor, self).__init__(port, bp)
-        self.set_mode(mode)
+        super(ColorSensor)
     
     def read_colour():
         cur_rgb = super.get_rgb()
