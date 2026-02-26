@@ -4,6 +4,8 @@ import json
 
 def normalize_colours(r, g, b):
     total = r+g+b
+    if total == 0:
+        return 0,0,0
     return r/total, g/total, b/total
 
 class ColorSensor (EV3ColorSensor):
