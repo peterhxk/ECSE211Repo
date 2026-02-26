@@ -5,23 +5,23 @@ import json
 class ColorSensor (EV3ColorSensor):
 
     def __init__(self, port, mode="component", bp=None):
-        super(ColorSensor)
+        super().__init__(port)
     
-    def read_colour():
-        cur_rgb = super.get_rgb()
+    def read_colour(self):
+        cur_rgb = self.get_rgb()
         cur_r = cur_rgb[0]
         cur_g = cur_rgb[1]
         cur_b = cur_rgb[2]
-        with open("data/colour.json", "r") as f:
+        with open("data/colours.json", "r") as f:
             colours = json.load(f)
         colour_to_distance = {}
-        for colour in colours:
-            r = colour[0]
-            g = colour[1]
-            b = colour[2]
+        for colour, rgb in colours.items():
+            r = int(rgb[0])
+            g = int(rgb[1])
+            b = int(rgb[2])
 
-            d = ((cur_r - r)^2+(cur_g - g)^2+(cur_b - b)^2)^(0.5)
-            colour_to_distance[colour] = d
+            distance = ((cur_r - r)**2+(cur_g - g)**2+(cur_b - b)**2)**(1/2)
+            colour_to_distance[colour] = distance
         
         shortest_d = None
         closest_colour = None

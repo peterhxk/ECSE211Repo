@@ -13,7 +13,7 @@ wait_ready_sensors(True)
 
 try:
     while True:
-        print(ColorSensor.read_colour)
+        print(color_sensor.read_colour())
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 except Exception as err:
