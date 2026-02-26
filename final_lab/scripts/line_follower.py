@@ -1,7 +1,7 @@
 from utils.brick import wait_ready_sensors, reset_brick, Motor
 from controllers.color_sensor_controller import ColorSensor
 from pathlib import Path
-
+import time
 
 #Sensor declaration
 
@@ -14,6 +14,7 @@ wait_ready_sensors(True)
 try:
     while True:
         print(color_sensor.read_colour())
+        time.sleep(0.5)
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 except Exception as err:

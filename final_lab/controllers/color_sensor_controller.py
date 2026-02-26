@@ -12,6 +12,7 @@ class ColorSensor (EV3ColorSensor):
         cur_r = cur_rgb[0]
         cur_g = cur_rgb[1]
         cur_b = cur_rgb[2]
+        print(cur_rgb)
         with open("data/colours.json", "r") as f:
             colours = json.load(f)
         colour_to_distance = {}
