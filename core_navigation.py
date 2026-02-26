@@ -1,4 +1,7 @@
-# TO-DO: change from using sleep() to using a timer (we want robot to still collect sensor data while it moves)
+# TO-DO: 1. change from using sleep() to using a timer 
+# (we want robot to still collect sensor data while it moves)
+# 2. Currently move straight by x cm and turn by x deg doesnt work (we need to do math >:( )
+
 # imports
 from time import sleep, time
 from utils.brick import wait_ready_sensors, reset_brick, Motor, TouchSensor, EV3UltrasonicSensor
@@ -8,16 +11,7 @@ print("done importing...")
 left_motor = Motor("B")
 right_motor = Motor("C")
 
-MOTOR_POWER = 10
-
-def move_straight(x):
-    """x: distance in cm"""
-    print(f"Move straight by {x}")
-    left_motor.set_power(MOTOR_POWER)
-    right_motor.set_power(MOTOR_POWER)
-    sleep(x)
-    left_motor.set_power(0)
-    right_motor.set_power(0)
+MOTOR_POWER = 10 # DEFAULT VALUE
 
 def move_straight(x, power):
     """x: distance in cm
@@ -25,28 +19,42 @@ def move_straight(x, power):
     print(f"Move straight by {x} with {power}% power")
     left_motor.set_power(power)
     right_motor.set_power(power)
-    sleep(x)
+    sleep(x) # CHANGE THIS
+    left_motor.set_power(0)
+    right_motor.set_power(0)
+
+def move_straight(x):
+    """x: distance in cm"""
+    move_straight(x, MOTOR_POWER)
+
+def turn_angle(x, power):
+    """x: angle in degrees?
+    power: value -100 to 100"""
+    left_motor.set_power(power)
+    right_motor.set_power(-power)
+    sleep(x) # CHANGE THIS
     left_motor.set_power(0)
     right_motor.set_power(0)
 
 def turn_angle(x):
-    """x: angle in degrees?"""
-    left_motor.set_power(MOTOR_POWER)
-    right_motor.set_power(-MOTOR_POWER)
-    sleep(x)
-    left_motor.set_power(0)
-    right_motor.set_power(0)
+    turn_angle(x, MOTOR_POWER)
+
+def turn_right(power):
+    turn_angle(90, power)
 
 def turn_right():
-    pass
+    turn_angle(90)
+
+def turn_left(power):
+    turn_angle(-90,power)
 
 def turn_left():
-    pass
+    turn_angle(-90)
 
 if __name__ == "__main__":
     while True:
         dir = input("T (turn) or S (straight)?")
-        x = float(input("x?: "))
+        x = float(input("x: "))
         power = (input("power: "))
         if dir == "T":
             turn_angle(x)
