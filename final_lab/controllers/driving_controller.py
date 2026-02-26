@@ -19,7 +19,7 @@ class DrivingController():
     
     def drive(self, color_sensor):
         direction = 'l'
-        past_black = False
+        past_black = True
         self.go_left()
         while True:
             colour = color_sensor.read_colour()
