@@ -1,4 +1,4 @@
-from time import time
+import time
 
 class DrivingController():
     def __init__(self, left_motor, right_motor):
@@ -26,13 +26,13 @@ class DrivingController():
         while True:
             colour = color_sensor.read_colour()
             if timer is None:
-                timer = time()
+                timer = time.time()
                 cur_colour = colour
             else:
                 if colour != cur_colour:
-                    timer = time()
+                    timer = time.time()
                     cur_colour = colour
-                elif time() - timer >= 0.1:
+                elif time.time() - timer >= 0.1:
                     if colour == "b":
                         past_black = True
                     elif past_black and colour == "w":
