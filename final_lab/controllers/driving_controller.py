@@ -19,19 +19,28 @@ class DrivingController():
     
     def drive(self, color_sensor):
         direction = 'l'
-        past_black = True
+        past_black = False
+        cur_colour = None
+        timer = None
         self.go_left()
         while True:
             colour = color_sensor.read_colour()
-            print(colour)
-            if colour == "b":
-                past_black = True
-            elif past_black and colour == "w":
-                if direction == 'l':
-                    self.go_right()
-                    direction = 'r'
-                else:
-                    self.go_left()
-                    direction = 'l'
-                past_black = False
+            if not timer:
+                timer = time()
+                cur_colour = colour
+            else:
+                if colour != cur_colour:
+                    timer = time()
+                    cur_colour = colour
+                elif time() - timer >= 0.5:
+                    if colour == "b":
+                        past_black = True
+                    elif past_black and colour == "w":
+                        if direction == 'l':
+                            self.go_right()
+                            direction = 'r'
+                        else:
+                            self.go_left()
+                            direction = 'l'
+                        past_black = False
             time.sleep(0.05)
