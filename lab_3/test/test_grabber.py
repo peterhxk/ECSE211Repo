@@ -31,12 +31,20 @@ try:
                 if running:
                     motor.set_power(POWER * direction)
                 print("Direction:", "forward" if direction == 1 else "backward")
+            if cmd == "toggle":
+                if running:
+                    motor.set_power(0)
+                    print("Motor stopped.")
+                else:
+                    motor.set_power(POWER * direction)
+                    print("Motor running.")
+                running = not running
 
         # ---- Check button ----
         if BUTTON.is_pressed():
             print("Button pressed! Stopping motor.")
-            motor.set_power(0)
-            running = False
+            #motor.set_power(0)
+            #running = False
 
         sleep(0.05)
 
