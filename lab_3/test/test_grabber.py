@@ -65,6 +65,7 @@ try:
 
             if bloc_count >= 2:
                 print("Two blocs stored. Waiting for more commands...")
+                motor.set_power(0)
 
         sleep(0.05)
 
