@@ -11,7 +11,7 @@ BUTTON = TouchSensor(1)
 
 wait_ready_sensors(True)
 
-POWER = 30
+POWER = 50
 direction = 1  # 1 = forward, -1 = backward
 
 # ---- Bloc logic ----
