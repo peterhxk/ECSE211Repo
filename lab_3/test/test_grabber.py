@@ -7,7 +7,7 @@ from utils.brick import Motor, TouchSensor, reset_brick, wait_ready_sensors
 
 # ---- Setup ----
 motor = Motor("A")
-GRABBER_SENSOR = TouchSensor(3)  # kept, not used here
+GRABBER_SENSOR = TouchSensor(1)  # kept, not used here
 
 wait_ready_sensors(True)
 
@@ -20,6 +20,9 @@ print("Commands: switch (toggle direction), start, stop, quit")
 try:
     while True:
         cmd = input("> ").strip().lower()
+
+        if GRABBER_SENSOR.is_pressed():
+            print("Grabber sensor is pressed!")
 
         if cmd == "switch":
             direction *= -1
