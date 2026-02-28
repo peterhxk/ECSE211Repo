@@ -5,27 +5,49 @@ sys.path.append("../")
 
 from utils.brick import Motor, TouchSensor, reset_brick, wait_ready_sensors
 
-# Initialise inputs and outputs
+# ---- Setup ----
 motor = Motor("A")
-GRABBER_SENSOR = TouchSensor(3)
-
+GRABBER_SENSOR = TouchSensor(3)  # kept, not used here
 
 wait_ready_sensors(True)
-motor_state = False
+
+POWER = 20
+direction = 1          # 1 = forward, -1 = backward
+running = False        # motor initially stopped
+
+print("Commands: switch (toggle direction), start, stop, quit")
 
 try:
     while True:
-        if input("Enter 'switch') to toggle the motor: ") == "switch":
-            motor_state = not motor_state
-            if motor_state:
-                motor.set_power(20)
-            else:
-                motor.set_power(-20)
-except KeyboardInterrupt:
-    print("Gently exiting test")
-    motor.set_power(0)
+        cmd = input("> ").strip().lower()
 
-except BaseException as error:  # capture all exceptions including KeyboardInterrupt (Ctrl-C)
-    print("There was an error: ", error)
+        if cmd == "switch":
+            direction *= -1
+            if running:
+                motor.set_power(POWER * direction)
+            print("Direction is now:", "forward" if direction == 1 else "backward")
+
+        elif cmd == "start":
+            running = True
+            motor.set_power(POWER * direction)
+            print("Motor running", "forward" if direction == 1 else "backward")
+
+        elif cmd == "stop":
+            running = False
+            motor.set_power(0)
+            print("Motor stopped")
+
+        elif cmd in ("quit", "exit"):
+            break
+
+        else:
+            print("Unknown command. Use: switch, start, stop, quit")
+
+except KeyboardInterrupt:
+    print("\nGently exiting...")
+
+except BaseException as error:
+    print("There was an error:", error)
+
 finally:
     motor.set_power(0)
