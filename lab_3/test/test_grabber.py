@@ -1,7 +1,7 @@
 import sys
 from time import sleep
 
-sys.path.append("../../../")
+sys.path.append("../")
 
 from utils.brick import Motor, TouchSensor, reset_brick, wait_ready_sensors
 
