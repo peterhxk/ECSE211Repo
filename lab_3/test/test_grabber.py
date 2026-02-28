@@ -16,7 +16,7 @@ direction = 1  # 1 = forward, -1 = backward
 
 # ---- Bloc logic ----
 bloc_count = 0
-delays = [3.0, 0.5]  # after 1st press, keep spinning 3s; after 2nd press, 0.5s
+delays = [3.0, 0.1]  # after 1st press, keep spinning 3s; after 2nd press, 0.5s
 
 running = True
 motor.set_power(POWER * direction)
@@ -59,7 +59,7 @@ try:
 
             # Wait until released (simple debounce)
             while BUTTON.is_pressed():
-                sleep(0.01)
+                sleep(0.001)
 
             stop_then_restart(delays[bloc_count - 1], bloc_count)
 
