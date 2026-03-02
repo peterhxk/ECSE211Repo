@@ -21,31 +21,34 @@ class DrivingController():
         self.left_motor.set_dps(30)
         self.right_motor.set_dps(80)
 
-    def move_straight(self, x, power=10):
-        
-        print(f"Move straight by {x} with {power}% power")
-        self.left_motor.set_power(power)
-        self.right_motor.set_power(power)
-        sleep(x) # CHANGE THIS
-        self.left_motor.set_power(0)
-        self.right_motor.set_power(0)
-
-
-    def turn_angle(self, x, power=10):
+    def move_straight(self, x, dps=10):
         """x: angle in degrees?
         power: value -100 to 100"""
-        self.left_motor.set_power(power)
-        self.right_motor.set_power(-power)
-        sleep(x) # CHANGE THIS
-        self.left_motor.set_power(0)
-        self.right_motor.set_power(0)
+        print(f"Move straight by {x} at {dps} degrees per second ")
+        self.left_motor.set_dps(dps)
+        self.right_motor.set_dps(dps)
+        sleep(abs(x/dps)) # CHANGE THIS
+        self.left_motor.set_dps(0)
+        self.right_motor.set_dps(0)
 
 
-    def turn_right(self, power=10):
-        self.turn_angle(90, power)
+    def turn_angle(self, x, dps=10):
+        """x: angle in degrees
+        dps: degrees per second (can range positive to negative)
+        positive -> turn _
+        negative -> turn _"""
+        self.left_motor.set_dps(dps)
+        self.right_motor.set_dps(-dps)
+        sleep(abs(x/dps)) 
+        self.left_motor.set_dps(0)
+        self.right_motor.set_dps(0)
 
-    def turn_left(self, power=10):
-        self.turn_angle(-90,power)
+
+    def turn_right(self, dps=10):
+        self.turn_angle(90, dps)
+
+    def turn_left(self, dps=10):
+        self.turn_angle(-90,dps)
 
     
     def drive(self, color_sensor):

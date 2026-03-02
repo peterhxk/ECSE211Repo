@@ -10,10 +10,10 @@ if __name__ == "__main__":
     while True:
         dir = input("T (turn) or S (straight)?")
         x = float(input("x: "))
-        power = float(input("power: "))
+        dps = float(input("dps: "))
         if dir == "T":
-            DC.turn_angle(x,power)
+            DC.turn_angle(x,dps)
         elif dir == "S":
-            DC.move_straight(x, power)
+            DC.move_straight(x, dps)
         else:
             print("no work")
