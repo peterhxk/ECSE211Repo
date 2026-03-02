@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 import csv
 import os
 
-if "angles.csv" not in os.listdir():
-    raise FileNotFoundError("angles.csv not found. Please run test_encoder_accuracy.py first to generate the file.")
+if "new_csv_recording.csv" not in os.listdir():
+    raise FileNotFoundError("new_csv_recording.csv not found. Please run test_encoder_accuracy.py first to generate the file.")
 
-with open("angles.csv", "r") as f:
+with open("new_csv_recording.csv", "r") as f:
     reader = csv.reader(f)
     next(reader)
     angles = np.array([float(row[0]) for row in reader])
@@ -17,6 +17,9 @@ min_idx, _ = find_peaks(-angles)
 
 maxima = angles[max_idx]
 minima = angles[min_idx]
+
+print(minima)
+print(maxima)
 
 plt.figure(figsize=(10, 5))
 plt.plot(maxima, marker='o', label="Maxima")
