@@ -10,7 +10,7 @@ if __name__ == "__main__":
     while True:
         dir = input("T (turn) or S (straight)?")
         x = float(input("x: "))
-        power = (input("power: "))
+        power = float(input("power: "))
         if dir == "T":
             DC.turn_angle(x,power)
         elif dir == "S":
