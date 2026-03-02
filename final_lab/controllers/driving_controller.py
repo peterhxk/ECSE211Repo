@@ -16,6 +16,43 @@ class DrivingController():
     def go_left(self):
         self.left_motor.set_dps(30)
         self.right_motor.set_dps(80)
+
+    def move_straight(self, x, power):
+        
+        print(f"Move straight by {x} with {power}% power")
+        left_motor.set_power(power)
+        self.right_motor.set_power(power)
+        sleep(x) # CHANGE THIS
+        self.left_motor.set_power(0)
+        self.right_motor.set_power(0)
+
+    def move_straight(x):
+        """x: distance in cm"""
+        move_straight(x, self.MOTOR_POWER)
+
+    def turn_angle(x, power):
+        """x: angle in degrees?
+        power: value -100 to 100"""
+        left_motor.set_power(power)
+        right_motor.set_power(-power)
+        sleep(x) # CHANGE THIS
+        left_motor.set_power(0)
+        right_motor.set_power(0)
+
+    def turn_angle(x):
+        turn_angle(x, MOTOR_POWER)
+
+    def turn_right(power):
+        turn_angle(90, power)
+
+    def turn_right():
+        turn_angle(90)
+
+    def turn_left(power):
+        turn_angle(-90,power)
+
+    def turn_left():
+        turn_angle(-90)
     
     def drive(self, color_sensor):
         direction = 'l'

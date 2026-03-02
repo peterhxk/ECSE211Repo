@@ -8,24 +8,27 @@ from utils.brick import wait_ready_sensors, reset_brick, Motor, TouchSensor, EV3
 from concurrent import futures
 print("done importing...")
 
-left_motor = Motor("B")
-right_motor = Motor("C")
 
-MOTOR_POWER = 10 # DEFAULT VALUE
+
+def __init__(self):
+    self.left_motor = Motor("B")
+    self.right_motor = Motor("C")
+
+    self.MOTOR_POWER = 10 # DEFAULT VALUE
 
 def move_straight(x, power):
     """x: distance in cm
     power: 0-100 value of maximum motor power"""
     print(f"Move straight by {x} with {power}% power")
     left_motor.set_power(power)
-    right_motor.set_power(power)
+    self.right_motor.set_power(power)
     sleep(x) # CHANGE THIS
-    left_motor.set_power(0)
-    right_motor.set_power(0)
+    self.left_motor.set_power(0)
+    self.right_motor.set_power(0)
 
 def move_straight(x):
     """x: distance in cm"""
-    move_straight(x, MOTOR_POWER)
+    move_straight(x, self.MOTOR_POWER)
 
 def turn_angle(x, power):
     """x: angle in degrees?
