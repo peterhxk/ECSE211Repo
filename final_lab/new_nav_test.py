@@ -8,5 +8,12 @@ DC = driving_controller.DrivingController(Motor("B"), Motor("C"))
 
 if __name__ == "__main__":
     while True:
-        DC.go_left()
-        DC.go_right()
+        dir = input("T (turn) or S (straight)?")
+        x = float(input("x: "))
+        power = (input("power: "))
+        if dir == "T":
+            DC.turn_angle(x,power)
+        elif dir == "S":
+            DC.move_straight(x, power)
+        else:
+            print("no work")

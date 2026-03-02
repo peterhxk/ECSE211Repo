@@ -1,9 +1,13 @@
 import time
+from time import sleep, time
+from utils.brick import wait_ready_sensors, reset_brick, Motor, TouchSensor, EV3UltrasonicSensor
+from concurrent import futures
 
 class DrivingController():
-    def __init__(self, left_motor, right_motor):
+    def __init__(self, left_motor, right_motor, motor_power=10):
         self.left_motor = left_motor
         self.right_motor = right_motor
+        self.motor_power = motor_power
 
     def set_power(self, power):
         self.left_motor.set_power(power)
@@ -17,42 +21,32 @@ class DrivingController():
         self.left_motor.set_dps(30)
         self.right_motor.set_dps(80)
 
-    def move_straight(self, x, power):
+    def move_straight(self, x, power=10):
         
         print(f"Move straight by {x} with {power}% power")
-        left_motor.set_power(power)
+        self.left_motor.set_power(power)
         self.right_motor.set_power(power)
         sleep(x) # CHANGE THIS
         self.left_motor.set_power(0)
         self.right_motor.set_power(0)
 
-    def move_straight(x):
-        """x: distance in cm"""
-        move_straight(x, self.MOTOR_POWER)
 
-    def turn_angle(x, power):
+    def turn_angle(x, power=10):
         """x: angle in degrees?
         power: value -100 to 100"""
-        left_motor.set_power(power)
-        right_motor.set_power(-power)
+        self.left_motor.set_power(power)
+        self.right_motor.set_power(-power)
         sleep(x) # CHANGE THIS
-        left_motor.set_power(0)
-        right_motor.set_power(0)
+        self.left_motor.set_power(0)
+        self.right_motor.set_power(0)
 
-    def turn_angle(x):
-        turn_angle(x, MOTOR_POWER)
 
-    def turn_right(power):
-        turn_angle(90, power)
+    def turn_right(power=10):
+        self.turn_angle(90, power)
 
-    def turn_right():
-        turn_angle(90)
+    def turn_left(power=10):
+        self.turn_angle(-90,power)
 
-    def turn_left(power):
-        turn_angle(-90,power)
-
-    def turn_left():
-        turn_angle(-90)
     
     def drive(self, color_sensor):
         direction = 'l'
