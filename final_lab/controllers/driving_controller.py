@@ -31,7 +31,7 @@ class DrivingController():
         self.right_motor.set_power(0)
 
 
-    def turn_angle(x, power=10):
+    def turn_angle(self, x, power=10):
         """x: angle in degrees?
         power: value -100 to 100"""
         self.left_motor.set_power(power)
@@ -41,10 +41,10 @@ class DrivingController():
         self.right_motor.set_power(0)
 
 
-    def turn_right(power=10):
+    def turn_right(self, power=10):
         self.turn_angle(90, power)
 
-    def turn_left(power=10):
+    def turn_left(self, power=10):
         self.turn_angle(-90,power)
 
     
