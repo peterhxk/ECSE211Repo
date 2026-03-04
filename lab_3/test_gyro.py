@@ -21,6 +21,8 @@ print("Reset degrees to zero. Starting monitoring...")
 try:
     while True:
         dps = gyro.get_dps_measure()
+        if dps is None:
+            print("Error reading")
         if abs(dps) > THRESHOLD:
             print(f"DPS: {dps}")
 
