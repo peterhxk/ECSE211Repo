@@ -39,7 +39,7 @@ while True:
     #time.sleep(0.02)
 
 # ---- Back and forth motion ----
-direction = 1
+direction = -1
 
 try:
     while True:
