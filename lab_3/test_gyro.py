@@ -74,8 +74,7 @@ try:
     global motor, MOTOR_SPEED
     motor.set_power(MOTOR_SPEED)
     while True:
-
-
+            pass
         #time.sleep(0.02)
 except KeyboardInterrupt:
     motor.set_dps(0)
