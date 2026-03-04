@@ -12,10 +12,15 @@ gyro = EV3GyroSensor(port=1, mode=EV3GyroSensor.Mode.DPS)
 
 print("Monitoring gyro DPS... (Ctrl+C to stop)")
 
+gyro.wait_ready()
+
+gyro.reset_measure()
+
+print("Reset degrees to zero. Starting monitoring...")
+
 try:
     while True:
         dps = gyro.get_dps_measure()
-
         if abs(dps) > THRESHOLD:
             print(f"DPS: {dps}")
 
