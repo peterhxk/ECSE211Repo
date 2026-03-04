@@ -30,20 +30,12 @@ try:
     while not button.get_value():
         time.sleep(SLEEP_TIME)
 
-    print("Button pressed! Starting back-and-forth motion.")
-
-    # ---- Back and forth motion until first block is positioned ----
-    direction = -1
+    print("Button pressed! Starting loading of first block")
     first_block_positioned = False
 
     while not first_block_positioned:
-        motor.set_dps(direction * MOTOR_SPEED)
-        direction *= -1
-
-        start = time.time()
-        while time.time() - start < 5:
+            motor.set_power(MOTOR_SPEED)
             dps = gyro.get_dps_measure()
-
             if dps is None:
                 print("Error reading gyro (None).")
             elif dps > LOADING_THRESHOLD:
