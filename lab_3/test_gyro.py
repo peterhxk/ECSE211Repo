@@ -3,10 +3,9 @@ import time
 from utils.brick import EV3GyroSensor, TouchSensor, Motor
 
 # ---- Settings ----
-LOADING_THRESHOLD = 25 # this threshold is set very low because it will be a gentle push to the block
+LOADING_THRESHOLD = 25  # gentle push threshold
 SLEEP_TIME = 0.02
 MOTOR_SPEED = 50
-#
 # ------------------
 
 # Sensors
@@ -17,65 +16,63 @@ button = TouchSensor(port=2)
 motor = Motor("B")
 
 print("Initializing sensors...")
-
 gyro.wait_ready()
 button.wait_ready()
 
 gyro.reset_measure()
-
 print("Reset degrees to zero.")
 print("Motor running until button is pressed...")
 
-# ---- Run motor until button pressed ----
-motor.set_power(MOTOR_SPEED)
-
-while True:
-    pressed = button.get_value()
-
-    if pressed:
-        print("Button pressed! Starting back-and-forth motion.")
-        break
-
-    #time.sleep(0.02)
-
-# ---- Back and forth motion ----
-direction = -1
-
 try:
-    while True:
+    # ---- Run motor until button pressed ----
+    motor.set_power(MOTOR_SPEED)
 
-        # Reverse direction each cycle
+    while not button.get_value():
+        time.sleep(SLEEP_TIME)
+
+    print("Button pressed! Starting back-and-forth motion.")
+
+    # ---- Back and forth motion until first block is positioned ----
+    direction = -1
+    first_block_positioned = False
+
+    while not first_block_positioned:
         motor.set_dps(direction * MOTOR_SPEED)
         direction *= -1
 
-        # Run for 1 second in that direction
         start = time.time()
-
         while time.time() - start < 5:
-
             dps = gyro.get_dps_measure()
 
             if dps is None:
-                print("Error reading")
-
+                print("Error reading gyro (None).")
             elif dps > LOADING_THRESHOLD:
-                print("First block successfully got in position! Stopping Motor. Press the button to load the second one")
+                print(
+                    "First block successfully got in position! Stopping motor.\n"
+                    "Press the button to load the second one."
+                )
                 motor.set_power(0)
+                first_block_positioned = True
                 break
+
             time.sleep(SLEEP_TIME)
-    while True:
-        global button
-        pressed = button.get_value()
 
-        if pressed:
-            print("Button pressed! Loading the second block.")
-            break
+    # ---- Wait for button press to load second block ----
+    while not button.get_value():
+        time.sleep(SLEEP_TIME)
 
-    global motor, MOTOR_SPEED
+    print("Button pressed! Loading the second block.")
     motor.set_power(MOTOR_SPEED)
+
+    # ---- Keep running until Ctrl+C (or replace with your own stop condition) ----
     while True:
-            pass
-        #time.sleep(0.02)
+        time.sleep(0.1)
+
 except KeyboardInterrupt:
-    motor.set_dps(0)
-    print("Stopped")
+    print("Stopped (KeyboardInterrupt).")
+finally:
+    # safest stop for most EV3 motor APIs
+    try:
+        motor.set_power(0)
+    except Exception:
+        motor.set_dps(0)
