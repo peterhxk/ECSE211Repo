@@ -51,7 +51,7 @@ try:
         # Run for 1 second in that direction
         start = time.time()
 
-        while time.time() - start < 1:
+        while time.time() - start < 5:
 
             dps = gyro.get_dps_measure()
 
