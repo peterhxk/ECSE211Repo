@@ -1,33 +1,67 @@
 #!/usr/bin/env python3
 import time
-from utils.brick import EV3GyroSensor
+from utils.brick import EV3GyroSensor, EV3TouchSensor, Motor
 
 # ---- Settings ----
-THRESHOLD = 100      # degrees per second
-SLEEP_TIME = 0.02   # 50 Hz polling
+THRESHOLD = 170
+SLEEP_TIME = 0.02
+MOTOR_SPEED = 200
 # ------------------
 
-# initialize gyro on port 1 in DPS mode
+# Sensors
 gyro = EV3GyroSensor(port=1, mode=EV3GyroSensor.Mode.DPS)
+button = EV3TouchSensor(port=2)
 
-print("Monitoring gyro DPS... (Ctrl+C to stop)")
+# Motor
+motor = Motor("B")
+
+print("Initializing sensors...")
 
 gyro.wait_ready()
+button.wait_ready()
 
 gyro.reset_measure()
 
-print("Reset degrees to zero. Starting monitoring...")
+print("Reset degrees to zero.")
+print("Motor running until button is pressed...")
+
+# ---- Run motor until button pressed ----
+motor.set_dps(MOTOR_SPEED)
+
+while True:
+    pressed = button.get_value()
+
+    if pressed:
+        print("Button pressed! Starting back-and-forth motion.")
+        break
+
+    time.sleep(0.02)
+
+# ---- Back and forth motion ----
+direction = 1
 
 try:
     while True:
-        dps = gyro.get_dps_measure()
-        if dps is None:
-            print("Error reading")
 
-        elif abs(dps) > THRESHOLD:
-            print(f"DPS: {dps}")
+        # Reverse direction each cycle
+        motor.set_dps(direction * MOTOR_SPEED)
+        direction *= -1
 
-        time.sleep(SLEEP_TIME)
+        # Run for 1 second in that direction
+        start = time.time()
+
+        while time.time() - start < 1:
+
+            dps = gyro.get_dps_measure()
+
+            if dps is None:
+                print("Error reading")
+
+            elif abs(dps) > THRESHOLD:
+                print(f"DPS: {dps}")
+
+            time.sleep(SLEEP_TIME)
 
 except KeyboardInterrupt:
+    motor.set_dps(0)
     print("Stopped")
