@@ -3,9 +3,9 @@ import time
 from utils.brick import EV3GyroSensor, TouchSensor, Motor
 
 # ---- Settings ----
-LOADING_THRESHOLD = 25  # gentle push threshold
+LOADING_THRESHOLD = 60  # gentle push threshold
 SLEEP_TIME = 0.02
-MOTOR_SPEED = 60
+MOTOR_SPEED = 25
 # ------------------
 
 # Sensors
