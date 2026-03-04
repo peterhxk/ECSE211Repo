@@ -29,6 +29,11 @@ try:
 
     while not button.get_value():
         time.sleep(SLEEP_TIME)
+        dps = gyro.get_dps_measure()
+        if dps is None:
+            print("Error reading gyro (None).")
+        else:
+            print(dps)
 
     print("Button pressed! Starting loading of first block")
     first_block_positioned = False
