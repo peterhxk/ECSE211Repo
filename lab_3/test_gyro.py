@@ -3,7 +3,7 @@ import time
 from utils.brick import EV3GyroSensor
 
 # ---- Settings ----
-THRESHOLD = 20      # degrees per second
+THRESHOLD = 100      # degrees per second
 SLEEP_TIME = 0.02   # 50 Hz polling
 # ------------------
 
