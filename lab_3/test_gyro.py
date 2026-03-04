@@ -3,9 +3,9 @@ import time
 from utils.brick import EV3GyroSensor, TouchSensor, Motor
 
 # ---- Settings ----
-THRESHOLD = 220
+LOADING_THRESHOLD = 25 # this threshold is set very low because it will be a gentle push to the block
 SLEEP_TIME = 0.02
-MOTOR_SPEED = 200
+MOTOR_SPEED = 50
 #
 # ------------------
 
@@ -27,7 +27,7 @@ print("Reset degrees to zero.")
 print("Motor running until button is pressed...")
 
 # ---- Run motor until button pressed ----
-motor.set_dps(MOTOR_SPEED)
+motor.set_power(MOTOR_SPEED)
 
 while True:
     pressed = button.get_value()
@@ -58,14 +58,25 @@ try:
             if dps is None:
                 print("Error reading")
 
-            elif abs(dps) > THRESHOLD:
-                if dps < 0 :
-                    print("Block LEAVING storage space")
-                else:
-                    print("block ENTERING storage space")
-
+            elif dps > LOADING_THRESHOLD:
+                print("First block successfully got in position! Stopping Motor. Press the button to load the second one")
+                motor.set_power(0)
+                break
             time.sleep(SLEEP_TIME)
+    while True:
+        global button
+        pressed = button.get_value()
 
+        if pressed:
+            print("Button pressed! Loading the second block.")
+            break
+
+    global motor, MOTOR_SPEED
+    motor.set_power(MOTOR_SPEED)
+    while True:
+
+
+        #time.sleep(0.02)
 except KeyboardInterrupt:
     motor.set_dps(0)
     print("Stopped")
