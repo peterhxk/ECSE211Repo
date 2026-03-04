@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import time
-from utils.brick import EV3GyroSensor, EV3TouchSensor, Motor
+from utils.brick import EV3GyroSensor, TouchSensor, Motor
 
 # ---- Settings ----
 THRESHOLD = 170
@@ -10,7 +10,7 @@ MOTOR_SPEED = 200
 
 # Sensors
 gyro = EV3GyroSensor(port=1, mode=EV3GyroSensor.Mode.DPS)
-button = EV3TouchSensor(port=2)
+button = TouchSensor(port=2)
 
 # Motor
 motor = Motor("B")
