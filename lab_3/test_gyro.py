@@ -36,7 +36,7 @@ while True:
         print("Button pressed! Starting back-and-forth motion.")
         break
 
-    //time.sleep(0.02)
+    #time.sleep(0.02)
 
 # ---- Back and forth motion ----
 direction = 1
