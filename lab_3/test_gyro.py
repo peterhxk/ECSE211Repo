@@ -23,7 +23,8 @@ try:
         dps = gyro.get_dps_measure()
         if dps is None:
             print("Error reading")
-        if abs(dps) > THRESHOLD:
+
+        elif abs(dps) > THRESHOLD:
             print(f"DPS: {dps}")
 
         time.sleep(SLEEP_TIME)
