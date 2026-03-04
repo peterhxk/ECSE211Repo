@@ -3,7 +3,7 @@ import time
 from utils.brick import EV3GyroSensor, TouchSensor, Motor
 
 # ---- Settings ----
-THRESHOLD = 170
+THRESHOLD = 220
 SLEEP_TIME = 0.02
 MOTOR_SPEED = 200
 #
@@ -59,7 +59,10 @@ try:
                 print("Error reading")
 
             elif abs(dps) > THRESHOLD:
-                print(f"DPS: {dps}")
+                if dps < 0 :
+                    print("Block LEAVING storage space")
+                else:
+                    print("block ENTERING storage space")
 
             time.sleep(SLEEP_TIME)
 
