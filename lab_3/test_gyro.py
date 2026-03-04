@@ -43,6 +43,7 @@ try:
                     "First block successfully got in position! Stopping motor.\n"
                     "Press the button to load the second one."
                 )
+                print(dps)
                 motor.set_power(0)
                 first_block_positioned = True
                 break
