@@ -6,7 +6,8 @@ file_name = "gyro_dps_idle.csv"
 data = pd.read_csv(file_name)
 
 # Extract the column
-values = data["dsp"]
+print(data)
+values = data["dps"]
 
 # Plot histogram
 plt.figure()
