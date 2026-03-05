@@ -6,7 +6,7 @@ import csv
 # ---- Settings ----
 LOADING_THRESHOLD = 60  # gentle push threshold
 SLEEP_TIME = 0.02
-MOTOR_SPEED = 30
+MOTOR_SPEED = 45
 # ------------------
 
 # Sensors
