@@ -42,6 +42,8 @@ class GrabberController:
         # Detection / timing knobs
         self.sample_hz = 50
         self.consecutive_needed = 30  # require N consecutive samples beyond threshold
+        
+        self.running_power = 45
 
     # ----------------------------
     # Setup / calibration
@@ -167,7 +169,7 @@ class GrabberController:
             print("Already loaded 2 blocs, aborting.")
             return False
 
-        self.motor.set_power(30)  # TODO: tune speed
+        self.motor.set_power(self.running_power)  
         start = time.time()
 
         try:
@@ -247,7 +249,7 @@ class GrabberController:
 
         def _motor_outwards_start():
             # TODO: If your motor direction is inverted, flip the sign or use set_power(-30)
-            self.motor.set_power(30)
+            self.motor.set_power(-self.running_power)
 
         def _motor_stop():
             self.motor.set_power(0)
@@ -320,9 +322,12 @@ class GrabberController:
         """
         Main loop of the grabber controller.
         Press button to attempt to load a bloc.
+        # NEGATIVE DPS : inward tilt
+        # POSITIVE DPS : outwards tilt
         """
         try:
             while True:
+                print(self.gyro.get_dps_measure())
                 if self.button.get_value():
                     if self.bloc_count < 2:
                         print("Button pressed, attempting to load bloc...")
