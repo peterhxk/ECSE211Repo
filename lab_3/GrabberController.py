@@ -104,15 +104,15 @@ class GrabberController:
     # Gyro event detection
     # ----------------------------
     def _k_for_tilt(self, tilt: GyroTilt) -> float:
-        return 3.0 if tilt == GyroTilt.SLOW_TILT else 6.0
+        return 5.0 if tilt == GyroTilt.SLOW_TILT else 8.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
         # negative DPS = inwards
-        return -5.0 if tilt == GyroTilt.SLOW_TILT else -12.0  # tune
+        return -8.0 if tilt == GyroTilt.SLOW_TILT else -15.0  # tune
 
     def _floor_for_outwards(self, tilt: GyroTilt) -> float:
         # positive DPS = outwards
-        return 5.0 if tilt == GyroTilt.SLOW_TILT else 12.0  # tune
+        return 8.0 if tilt == GyroTilt.SLOW_TILT else 15.0  # tune
 
     def is_tilted_inwards(self, tilt: GyroTilt) -> bool:
         dps = self.gyro.get_dps_measure()
@@ -210,7 +210,7 @@ class GrabberController:
                 timeout=3.0,
             )
             # REFRACTORY PERIOD: ignore ring-down oscillation
-            time.sleep(1.0)
+            time.sleep(0.3)
 
             if not ok:
                 raise RuntimeError("Gyro did not detect first bloc leaving the position.")
@@ -255,13 +255,6 @@ class GrabberController:
         Returns True on success, False on timeout / invalid state.
         """
 
-        def _motor_outwards_start():
-            # TODO: If your motor direction is inverted, flip the sign or use set_power(-30)
-            self.motor.set_power(-self.running_power)
-
-        def _motor_stop():
-            self.motor.set_power(0)
-
         # Sanity
         if self.bloc_count <= 0:
             print("No blocs to unload.")
@@ -285,13 +278,13 @@ class GrabberController:
                     return False
 
                 # 2) Run motor outwards until we detect outwards SLOW tilt again, then stop.
-                _motor_outwards_start()
+                self.motor.set_power(-self.running_power)
                 unloaded = self._consecutive_trigger(
                     lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
                     needed=3,
                     timeout=5.0,
                 )
-                _motor_stop()
+                self.motor.set_power(0)
 
                 if not unloaded:
                     print("Timeout unloading (no outwards SLOW tilt detected).")
@@ -309,9 +302,9 @@ class GrabberController:
                 return True
 
             # If exactly 1 bloc remaining:
-            _motor_outwards_start()
+            self.motor.set_power(-self.running_power)
             time.sleep(5.0)
-            _motor_stop()
+            self.motor.set_power(0)
 
             # Update internal state: mark everything unloaded
             self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
@@ -321,7 +314,7 @@ class GrabberController:
 
         finally:
             # Safety stop
-            _motor_stop()
+            self.motor.set_power(0)
 
     # ----------------------------
     # Main loop
@@ -333,9 +326,13 @@ class GrabberController:
         # NEGATIVE DPS : inward tilt
         # POSITIVE DPS : outwards tilt
         """
+        self.motor.set_power(-self.running_power)
+        time.sleep(4)
+        self.motor.set_power(0)
+        print("Ejected all blocs")
         try:
             while True:
-                print(self.gyro.get_dps_measure())
+                #print(self.gyro.get_dps_measure())
                 if self.button.get_value():
                     if self.bloc_count < 2:
                         print("Button pressed, attempting to load bloc...")
