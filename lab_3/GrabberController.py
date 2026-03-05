@@ -194,7 +194,9 @@ class GrabberController:
                 if not ok:
                     print("Timeout waiting for first bloc to arrive.")
                     return False
-
+                time.sleep(0.3) # small delay to make sure the first block
+                # is fully in position and to avoid detecting the same event again when the block is still moving a bit
+                # later do something better
                 self.motor.set_power(0)
                 self.bloc_positions[0] = BlocLocation.UNDER_GYRO
                 self.bloc_count = 1
