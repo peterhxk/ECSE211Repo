@@ -204,6 +204,7 @@ class GrabberController:
             )
             if not ok:
                 raise RuntimeError("Gyro did not detect first bloc leaving the position.")
+            self.bloc_positions[0] = BlocLocation.BACK_STORAGE # the first block was successfully moved
 
             # Second bloc arriving (inwards slow) - longer timeout
             ok = self._consecutive_trigger(
@@ -228,6 +229,90 @@ class GrabberController:
             if time.time() - start > 0:
                 self.motor.set_power(0)
 
+    def unload_bloc(self) -> bool:
+        """
+        Unload logic (as requested):
+
+        If 2 blocs loaded:
+          1) Wait for SLOW outwards tilt (gyro back to rest / ready)
+          2) Run motor outwards until SLOW outwards tilt, then stop motor
+          3) Update internal state (one bloc unloaded)
+
+        If 1 bloc remaining:
+          - Run motor outwards for ~5 seconds, then stop
+          - Update internal state (all unloaded)
+
+        Returns True on success, False on timeout / invalid state.
+        """
+
+        def _motor_outwards_start():
+            # TODO: If your motor direction is inverted, flip the sign or use set_power(-30)
+            self.motor.set_power(30)
+
+        def _motor_stop():
+            self.motor.set_power(0)
+
+        # Sanity
+        if self.bloc_count <= 0:
+            print("No blocs to unload.")
+            return False
+
+        # NOTE: Your original "tilt outwards" detector is a one-sided threshold:
+        #   dps > mu + k*sigma
+        # so we use it as an "event" gate.
+
+        try:
+            if self.bloc_count >= 2:
+                # 1) Wait until system is "ready" / gyro returns to an outwards-slow event
+                # (Using a timeout so we don't block forever.)
+                ready = self._consecutive_trigger(
+                    lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
+                    needed=3,
+                    timeout=3.0,
+                )
+                if not ready:
+                    print("Timeout waiting for initial outwards SLOW tilt (ready).")
+                    return False
+
+                # 2) Run motor outwards until we detect outwards SLOW tilt again, then stop.
+                _motor_outwards_start()
+                unloaded = self._consecutive_trigger(
+                    lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
+                    needed=3,
+                    timeout=5.0,
+                )
+                _motor_stop()
+
+                if not unloaded:
+                    print("Timeout unloading (no outwards SLOW tilt detected).")
+                    return False
+
+                # 3) Update internal state: unload the front-most/active bloc
+                # We'll unload slot 0 first, then slot 1.
+                if self.bloc_positions[0] != BlocLocation.UNLOADED:
+                    self.bloc_positions[0] = BlocLocation.UNLOADED
+                elif self.bloc_positions[1] != BlocLocation.UNLOADED:
+                    self.bloc_positions[1] = BlocLocation.UNLOADED
+
+                self.bloc_count = max(0, self.bloc_count - 1)
+                print("Unloaded one bloc (2->1).")
+                return True
+
+            # If exactly 1 bloc remaining:
+            _motor_outwards_start()
+            time.sleep(5.0)
+            _motor_stop()
+
+            # Update internal state: mark everything unloaded
+            self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
+            self.bloc_count = 0
+            print("Unloaded last bloc (1->0).")
+            return True
+
+        finally:
+            # Safety stop
+            _motor_stop()
+
     # ----------------------------
     # Main loop
     # ----------------------------
@@ -239,17 +324,30 @@ class GrabberController:
         try:
             while True:
                 if self.button.get_value():
-                    print("Button pressed, attempting to load bloc...")
-                    success = self.load_bloc()
-                    if success:
-                        print(
-                            f"Successfully loaded bloc. Count={self.bloc_count}, "
-                            f"positions={self.bloc_positions}"
-                        )
+                    if self.bloc_count < 2:
+                        print("Button pressed, attempting to load bloc...")
+                        success = self.load_bloc()
+                        if success:
+                            print(
+                                f"Successfully loaded bloc. Count={self.bloc_count}, "
+                                f"positions={self.bloc_positions}"
+                            )
+                        else:
+                            print("Failed to load bloc.")
+                        # crude debounce
+                        time.sleep(0.2)
                     else:
-                        print("Failed to load bloc.")
-                    # crude debounce
-                    time.sleep(0.2)
+                        print("Button pressed, attempting to unload bloc...")
+                        success = self.unload_bloc()
+                        if success:
+                            print(
+                                f"Successfully unloaded bloc. Count={self.bloc_count}, "
+                                f"positions={self.bloc_positions}"
+                            )
+                        else:
+                            print("Failed to unload bloc.")
+                        # crude debounce
+                        time.sleep(0.2)
 
                 time.sleep(0.01)
 
