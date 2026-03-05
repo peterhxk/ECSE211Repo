@@ -41,7 +41,7 @@ class GrabberController:
 
         # Detection / timing knobs
         self.sample_hz = 50
-        self.consecutive_needed = 30  # require N consecutive samples beyond threshold
+        self.consecutive_needed = 15  # require N consecutive samples beyond threshold
         
         self.running_power = 45
 
@@ -104,30 +104,35 @@ class GrabberController:
     # Gyro event detection
     # ----------------------------
     def _k_for_tilt(self, tilt: GyroTilt) -> float:
-        # You can tune these based on your histogram / desired false-trigger rate.
-        return 6.0 if tilt == GyroTilt.SLOW_TILT else 12.0
+        return 3.0 if tilt == GyroTilt.SLOW_TILT else 6.0
 
-    def is_tilted_outwards(self, tilt: GyroTilt) -> bool:
-        """
-        Outwards tilt => DPS significantly ABOVE the idle mean.
-        """
-        dps = self.gyro.get_dps_measure()
-        if dps is None:
-            return False
-        k = self._k_for_tilt(tilt)
-        print("detected DPS",float(dps))
-        return float(dps) > self.mu + k * self.sigma
+    def _floor_for_inwards(self, tilt: GyroTilt) -> float:
+        # negative DPS = inwards
+        return -5.0 if tilt == GyroTilt.SLOW_TILT else -12.0  # tune
+
+    def _floor_for_outwards(self, tilt: GyroTilt) -> float:
+        # positive DPS = outwards
+        return 5.0 if tilt == GyroTilt.SLOW_TILT else 12.0  # tune
 
     def is_tilted_inwards(self, tilt: GyroTilt) -> bool:
-        """
-        Inwards tilt => DPS significantly BELOW the idle mean.
-        """
         dps = self.gyro.get_dps_measure()
         if dps is None:
             return False
+        dps = float(dps)
         k = self._k_for_tilt(tilt)
-        print("detected DPS",float(dps))
-        return float(dps) < min((self.mu - k * self.sigma),-20.0) # added a noise floor 
+        thr = self.mu - k * self.sigma
+        # must be below BOTH the gaussian threshold and a hard negative floor
+        return dps < min(thr, self._floor_for_inwards(tilt))
+
+    def is_tilted_outwards(self, tilt: GyroTilt) -> bool:
+        dps = self.gyro.get_dps_measure()
+        if dps is None:
+            return False
+        dps = float(dps)
+        k = self._k_for_tilt(tilt)
+        thr = self.mu + k * self.sigma
+        # must be above BOTH the gaussian threshold and a hard positive floor
+        return dps > max(thr, self._floor_for_outwards(tilt))
 
     def _consecutive_trigger(self, predicate, needed=None, sample_hz=None, timeout=None) -> bool:
         """
@@ -204,6 +209,9 @@ class GrabberController:
                 needed=2,
                 timeout=3.0,
             )
+            # REFRACTORY PERIOD: ignore ring-down oscillation
+            time.sleep(1.0)
+
             if not ok:
                 raise RuntimeError("Gyro did not detect first bloc leaving the position.")
             self.bloc_positions[0] = BlocLocation.BACK_STORAGE # the first block was successfully moved
