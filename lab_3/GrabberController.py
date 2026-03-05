@@ -32,7 +32,8 @@ class GrabberController:
 
         # Hardware
         self.gyro = EV3GyroSensor(port=1, mode=EV3GyroSensor.Mode.DPS)
-        self.button = TouchSensor(port=2)
+        self.loading_button = TouchSensor(port=2)
+        self.unloading_button = TouchSensor(port=3)
         self.motor = Motor("B")
 
         # Gaussian parameters for idle gyro DPS (will be calibrated)
@@ -51,7 +52,7 @@ class GrabberController:
     def initialize_sensors(self):
         print("Initializing sensors... Put the gyro in vertical (rest) position.")
         self.gyro.wait_ready()
-        self.button.wait_ready()
+        self.loading_button.wait_ready()
 
         self.gyro.reset_measure()
         self.motor.set_dps(0)
@@ -104,15 +105,15 @@ class GrabberController:
     # Gyro event detection
     # ----------------------------
     def _k_for_tilt(self, tilt: GyroTilt) -> float:
-        return 5.0 if tilt == GyroTilt.SLOW_TILT else 8.0
+        return 8.0 if tilt == GyroTilt.SLOW_TILT else 12.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
         # negative DPS = inwards
-        return -8.0 if tilt == GyroTilt.SLOW_TILT else -15.0  # tune
+        return -10.0 if tilt == GyroTilt.SLOW_TILT else -18.0  # tune
 
     def _floor_for_outwards(self, tilt: GyroTilt) -> float:
         # positive DPS = outwards
-        return 8.0 if tilt == GyroTilt.SLOW_TILT else 15.0  # tune
+        return 10.0 if tilt == GyroTilt.SLOW_TILT else 18.0  # tune
 
     def is_tilted_inwards(self, tilt: GyroTilt) -> bool:
         dps = self.gyro.get_dps_measure()
@@ -265,9 +266,10 @@ class GrabberController:
         # so we use it as an "event" gate.
 
         try:
-            if self.bloc_count >= 2:
+            if self.bloc_count == 2:
                 # 1) Wait until system is "ready" / gyro returns to an outwards-slow event
                 # (Using a timeout so we don't block forever.)
+                self.motor.set_power(-1.6*self.running_power) # increase power because blocs may not be fully aligned adding extra stress 
                 ready = self._consecutive_trigger(
                     lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
                     needed=3,
@@ -276,9 +278,10 @@ class GrabberController:
                 if not ready:
                     print("Timeout waiting for initial outwards SLOW tilt (ready).")
                     return False
-
+                
+                time.sleep(0.3) # rebound
+                
                 # 2) Run motor outwards until we detect outwards SLOW tilt again, then stop.
-                self.motor.set_power(-self.running_power)
                 unloaded = self._consecutive_trigger(
                     lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
                     needed=3,
@@ -302,8 +305,8 @@ class GrabberController:
                 return True
 
             # If exactly 1 bloc remaining:
-            self.motor.set_power(-self.running_power)
-            time.sleep(5.0)
+            self.motor.set_power(-1.5*self.running_power)
+            time.sleep(2.0)
             self.motor.set_power(0)
 
             # Update internal state: mark everything unloaded
@@ -327,15 +330,14 @@ class GrabberController:
         # POSITIVE DPS : outwards tilt
         """
         self.motor.set_power(-self.running_power)
-        time.sleep(4)
+        time.sleep(1)
         self.motor.set_power(0)
         print("Ejected all blocs")
         try:
             while True:
                 #print(self.gyro.get_dps_measure())
-                if self.button.get_value():
-                    if self.bloc_count < 2:
-                        print("Button pressed, attempting to load bloc...")
+                if self.loading_button.get_value():
+                        print("Loading Button pressed, attempting to load bloc...")
                         success = self.load_bloc()
                         if success:
                             print(
@@ -346,8 +348,8 @@ class GrabberController:
                             print("Failed to load bloc.")
                         # crude debounce
                         time.sleep(0.2)
-                    else:
-                        print("Button pressed, attempting to unload bloc...")
+                elif self.unloading_button.get_value():
+                        print("Unloading Button pressed, attempting to unload bloc...")
                         success = self.unload_bloc()
                         if success:
                             print(
