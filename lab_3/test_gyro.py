@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import time
 from utils.brick import EV3GyroSensor, TouchSensor, Motor
+import csv
 
 # ---- Settings ----
 LOADING_THRESHOLD = 60  # gentle push threshold
@@ -26,17 +27,23 @@ print("Motor running until button is pressed...")
 try:
     # ---- Run motor until button pressed ----
     motor.set_power(MOTOR_SPEED)
-
+    dps_idle = []
     while not button.get_value():
         time.sleep(SLEEP_TIME)
         dps = gyro.get_dps_measure()
         if dps is None:
             print("Error reading gyro (None).")
-        else:
-            print(dps)
+        else :
+            dps_idle.append(dps)
 
     print("Button pressed! Starting loading of first block")
     first_block_positioned = False
+
+    with open("gyro_dps_idle.csv", "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["dps"])
+        for dps in dps_idle:
+            writer.writerow([dps])
 
     while not first_block_positioned:
             motor.set_power(MOTOR_SPEED)
