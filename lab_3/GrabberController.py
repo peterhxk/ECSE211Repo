@@ -1,6 +1,7 @@
 import time
 import math
 from enum import Enum
+from collections import deque
 
 from utils.brick import EV3GyroSensor, TouchSensor, Motor
 
@@ -135,10 +136,11 @@ class GrabberController:
         # must be above BOTH the gaussian threshold and a hard positive floor
         return dps > max(thr, self._floor_for_outwards(tilt))
 
-    def _consecutive_trigger(self, predicate, needed=None, sample_hz=None, timeout=None) -> bool:
+    def _consecutive_trigger(self, predicate, needed=None, sample_hz=None, timeout=None, on_sample=None) -> bool:
         """
         Returns True once `predicate()` is True for `needed` consecutive samples.
         Optional timeout (seconds): return False if not triggered in time.
+        Optional on_sample(now_t): called each sample tick (useful for velocity-drop monitoring).
         """
         needed = self.consecutive_needed if needed is None else int(needed)
         sample_hz = self.sample_hz if sample_hz is None else float(sample_hz)
@@ -147,8 +149,16 @@ class GrabberController:
         hits = 0
         start = time.time()
         while hits < needed:
-            if timeout is not None and (time.time() - start) >= timeout:
+            now = time.time()
+
+            if timeout is not None and (now - start) >= timeout:
                 return False
+
+            if on_sample is not None:
+                try:
+                    on_sample(now)
+                except Exception as e:
+                    print(f"[drop-monitor] error: {e}")
 
             if predicate():
                 hits += 1
@@ -162,41 +172,150 @@ class GrabberController:
     # ----------------------------
     # High-level actions
     # ----------------------------
-    def load_bloc(self) -> bool:
-        """
-        Returns True on success, False on failure (timeout or already loaded 2 blocs).
 
-        Assumptions (based on your original flow):
-        - Loading the first bloc: motor runs until an "inwards" tilt is detected.
-        - Loading the second bloc: first detect first bloc leaving (outwards FAST),
-          then detect second bloc arriving (inwards SLOW).
+    from collections import deque
+
+    def _motor_speed_dps(self):
         """
+        Read motor speed in dps (or an equivalent 'velocity' unit).
+        Adjust this if your Motor API differs.
+        """
+        v = self.motor.get_dps()  # <-- change here if needed
+        if v is None:
+            return None
+        try:
+            return float(v)
+        except Exception:
+            return None
+
+    def _velocity_drop_monitor_init(
+            self,
+            window_size=500,
+            k=2.0,
+            ignore_first_n=1000,
+            start_moving_dps=30.0,
+            startup_grace_s=0.30,
+    ):
+        """
+        Initializes state for rolling drop detection.
+        - ignore_first_n: ignore first N samples after motor command (your request)
+        - start_moving_dps + startup_grace_s: ignore 'starts from rest' transient
+        """
+        return {
+            "window_size": int(window_size),
+            "k": float(k),
+            "ignore_first_n": int(ignore_first_n),
+            "start_moving_dps": float(start_moving_dps),
+            "startup_grace_s": float(startup_grace_s),
+            "buf": deque(maxlen=int(window_size)),
+            "n_total": 0,
+            "moving_seen": False,
+            "moving_since": None,
+            "last_alert_t": 0.0,
+        }
+
+    def _velocity_drop_check(self, mon_state, now_t):
+        """
+        Call this repeatedly while motor is running.
+        Returns (drop_detected: bool, info_dict_or_None)
+        """
+        v = self._motor_speed_dps()
+        mon_state["n_total"] += 1
+
+        # Always keep the buffer updated once we have a number
+        if v is not None:
+            mon_state["buf"].append(v)
+
+        # 1) ignore the first N samples unconditionally (your request)
+        if mon_state["n_total"] <= mon_state["ignore_first_n"]:
+            return False, None
+
+        # 2) ignore the moment the motor starts from rest:
+        #    wait until we see it "moving", then a short grace period.
+        if not mon_state["moving_seen"]:
+            if v is not None and abs(v) >= mon_state["start_moving_dps"]:
+                mon_state["moving_seen"] = True
+                mon_state["moving_since"] = now_t
+            return False, None
+
+        if mon_state["moving_since"] is not None:
+            if (now_t - mon_state["moving_since"]) < mon_state["startup_grace_s"]:
+                return False, None
+
+        # Need enough samples in window
+        buf = mon_state["buf"]
+        if len(buf) < mon_state["window_size"]:
+            return False, None
+
+        # Compute rolling mean/std
+        mean = sum(buf) / len(buf)
+        var = sum((x - mean) ** 2 for x in buf) / max(1, (len(buf) - 1))
+        std = math.sqrt(var)
+
+        # Avoid std=0
+        std = max(std, 1e-6)
+
+        threshold = mean - mon_state["k"] * std
+
+        if v is None:
+            return False, None
+
+        drop = v < threshold
+        info = {"speed": v, "mean": mean, "std": std, "threshold": threshold}
+        return drop, info
+
+    def load_bloc(self) -> bool:
         if self.bloc_count >= 2:
             print("Already loaded 2 blocs, aborting.")
             return False
 
-        self.motor.set_power(self.running_power)  
+        # ---- Drop detection config (your tuned values) ----
+        WINDOW_SIZE = 500
+        K = 2
+        IGNORE_FIRST = 1000  # ignore first 1000 samples (your request)
+
+        # Also ignore "start from rest" moment:
+        START_MOVING_DPS = 30.0  # tune if needed
+        STARTUP_GRACE_S = 0.30  # tune if needed
+        ALERT_COOLDOWN_S = 0.50  # avoid spamming prints
+
+        mon = self._velocity_drop_monitor_init(
+            window_size=WINDOW_SIZE,
+            k=K,
+            ignore_first_n=IGNORE_FIRST,
+            start_moving_dps=START_MOVING_DPS,
+            startup_grace_s=STARTUP_GRACE_S,
+        )
+
+        def monitor_tick(now_t):
+            drop, info = self._velocity_drop_check(mon, now_t)
+            if drop and (now_t - mon["last_alert_t"]) >= ALERT_COOLDOWN_S:
+                mon["last_alert_t"] = now_t
+                print(
+                    f"⚠️ [Velocity drop] speed={info['speed']:.1f} dps "
+                    f"(mean={info['mean']:.1f}, std={info['std']:.1f}, thr={info['threshold']:.1f}) "
+                    f"sample={mon['n_total']}"
+                )
+
+        self.motor.set_power(self.running_power)
         start = time.time()
 
         try:
             if self.bloc_count == 0:
-                # Wait for first bloc to arrive under gyro (inwards event)
-                
-                # debug only : measure DPS before doing anything then compute threshold measurements
                 dps = self.gyro.get_dps_measure()
-                print(f"dps={dps},mu={self.mu},sigma={self.sigma},threshold={self.mu-3*self.sigma}")
-                
+                print(f"dps={dps},mu={self.mu},sigma={self.sigma},threshold={self.mu - 3 * self.sigma}")
+
                 ok = self._consecutive_trigger(
                     lambda: self.is_tilted_inwards(GyroTilt.SLOW_TILT),
                     needed=3,
                     timeout=5.0,
+                    on_sample=monitor_tick,  # <-- run drop detection while waiting
                 )
                 if not ok:
                     print("Timeout waiting for first bloc to arrive.")
                     return False
-                time.sleep(0.3) # small delay to make sure the first block
-                # is fully in position and to avoid detecting the same event again when the block is still moving a bit
-                # later do something better
+
+                time.sleep(0.3)
                 self.motor.set_power(0)
                 self.bloc_positions[0] = BlocLocation.UNDER_GYRO
                 self.bloc_count = 1
@@ -206,29 +325,26 @@ class GrabberController:
             if self.bloc_positions[0] == BlocLocation.UNLOADED:
                 raise ValueError("First bloc not yet unloaded, aborting.")
 
-            # First bloc leaving position (outwards fast) - short timeout
             ok = self._consecutive_trigger(
                 lambda: self.is_tilted_outwards(GyroTilt.FAST_TILT),
                 needed=2,
                 timeout=3.0,
+                on_sample=monitor_tick,  # <-- monitor while waiting
             )
-            # REFRACTORY PERIOD: ignore ring-down oscillation
             time.sleep(0.3)
 
             if not ok:
                 raise RuntimeError("Gyro did not detect first bloc leaving the position.")
-            self.bloc_positions[0] = BlocLocation.BACK_STORAGE # the first block was successfully moved
+            self.bloc_positions[0] = BlocLocation.BACK_STORAGE
 
-            # Second bloc arriving (inwards slow) - longer timeout
             ok = self._consecutive_trigger(
                 lambda: self.is_tilted_inwards(GyroTilt.SLOW_TILT),
                 needed=3,
                 timeout=5.0,
+                on_sample=monitor_tick,  # <-- monitor while waiting
             )
             if not ok:
-                raise RuntimeError(
-                    "Timed out detecting bloc being loaded. Check connections and thresholds."
-                )
+                raise RuntimeError("Timed out detecting bloc being loaded. Check connections and thresholds.")
 
             self.motor.set_power(0)
             self.bloc_positions[1] = BlocLocation.UNDER_GYRO
@@ -237,8 +353,6 @@ class GrabberController:
             return True
 
         finally:
-            # Safety stop if something goes wrong
-            # (don’t stop if success already stopped motor, but stopping twice is fine)
             if time.time() - start > 0:
                 self.motor.set_power(0)
 
