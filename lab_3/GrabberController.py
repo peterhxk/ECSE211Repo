@@ -272,7 +272,7 @@ class GrabberController:
         # ---- Drop detection config (your tuned values) ----
         WINDOW_SIZE = 100
         K = 1
-        IGNORE_FIRST = 100  # ignore first 1000 samples (your request)
+        IGNORE_FIRST = 10  # ignore first 1000 samples (your request)
 
         # Also ignore "start from rest" moment:
         START_MOVING_DPS = 30.0  # tune if needed
