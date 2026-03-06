@@ -8,12 +8,12 @@ class DrivingController:
     # Configuration constants
     WHEEL_RADIUS = 3.0  # cm
     LINE_THICKNESS = 1.5  # cm
-    LEFT_TURN_DPS = (-30, 60)  # (left_motor, right_motor)
-    RIGHT_TURN_DPS = (60, -30)  # (left_motor, right_motor)
+    LEFT_TURN_DPS = (-100, 300)  # (left_motor, right_motor)
+    RIGHT_TURN_DPS = (300, -100)  # (left_motor, right_motor)
     
     # Timing thresholds
     COLOR_CHANGE_THRESHOLD = 0.05  # seconds to confirm color change
-    INTERSECTION_TIME_MULTIPLIER = 2.0  # multiplier for intersection detection
+    INTERSECTION_TIME_MULTIPLIER = 1.5  # multiplier for intersection detection
     LOOP_DELAY = 0.05  # seconds
     
     def __init__(self, left_motor, right_motor):
