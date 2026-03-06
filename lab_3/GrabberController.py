@@ -296,6 +296,10 @@ class GrabberController:
                     f"(mean={info['mean']:.1f}, std={info['std']:.1f}, thr={info['threshold']:.1f}) "
                     f"sample={mon['n_total']}"
                 )
+            v = self._motor_speed_dps()
+            if mon["n_total"] % 25 == 0:
+                print(
+                    f"[debug] n={mon['n_total']} motor_v={v} buf_len={len(mon['buf'])} moving_seen={mon['moving_seen']}")
 
         self.motor.set_power(self.running_power)
         start = time.time()
