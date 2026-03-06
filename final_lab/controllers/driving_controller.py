@@ -25,6 +25,7 @@ class DrivingController():
         self.go_left()
         while True:
             colour = color_sensor.read_colour()
+            print(colour)
             if timer is None:
                 timer = time.time()
                 cur_colour = colour
