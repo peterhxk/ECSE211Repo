@@ -10,12 +10,12 @@ class DrivingController():
         self.right_motor.set_power(power)
 
     def go_right(self):
-        self.left_motor.set_dps(180)
-        self.right_motor.set_dps(0)
+        self.left_motor.set_dps(360)
+        self.right_motor.set_dps(-180)
 
     def go_left(self):
-        self.left_motor.set_dps(0)
-        self.right_motor.set_dps(180)
+        self.left_motor.set_dps(-180)
+        self.right_motor.set_dps(360)
     
     def drive(self, color_sensor):
         direction = 'l'
