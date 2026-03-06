@@ -212,57 +212,57 @@ class GrabberController:
             "moving_seen": False,
             "moving_since": None,
             "last_alert_t": 0.0,
+            "drop_dps": 60.0,  # tune: try 50–100
+            "drop_needed": 3,  # require 3 consecutive samples
+            "drop_hits": 0,
         }
 
-    def _velocity_drop_check(self, mon_state, now_t):
-        """
-        Call this repeatedly while motor is running.
-        Returns (drop_detected: bool, info_dict_or_None)
-        """
+    def _velocity_drop_check_simple(self, mon_state, now_t):
         v = self._motor_speed_dps()
         mon_state["n_total"] += 1
-
-        # Always keep the buffer updated once we have a number
-        if v is not None:
-            mon_state["buf"].append(v)
-
-        # 1) ignore the first N samples unconditionally (your request)
-        if mon_state["n_total"] <= mon_state["ignore_first_n"]:
-            return False, None
-
-        # 2) ignore the moment the motor starts from rest:
-        #    wait until we see it "moving", then a short grace period.
-        if not mon_state["moving_seen"]:
-            if v is not None and abs(v) >= mon_state["start_moving_dps"]:
-                mon_state["moving_seen"] = True
-                mon_state["moving_since"] = now_t
-            return False, None
-
-        if mon_state["moving_since"] is not None:
-            if (now_t - mon_state["moving_since"]) < mon_state["startup_grace_s"]:
-                return False, None
-
-        # Need enough samples in window
-        buf = mon_state["buf"]
-        if len(buf) < mon_state["window_size"]:
-            return False, None
-
-        # Compute rolling mean/std
-        mean = sum(buf) / len(buf)
-        var = sum((x - mean) ** 2 for x in buf) / max(1, (len(buf) - 1))
-        std = math.sqrt(var)
-
-        # Avoid std=0
-        std = max(std, 1e-6)
-
-        threshold = mean - mon_state["k"] * std
-
         if v is None:
             return False, None
 
-        drop = v < threshold
-        info = {"speed": v, "mean": mean, "std": std, "threshold": threshold}
-        return drop, info
+        # ignore first N samples
+        if mon_state["n_total"] <= mon_state["ignore_first_n"]:
+            mon_state["buf"].append(v)
+            return False, None
+
+        # ignore "start from rest" moment
+        if not mon_state["moving_seen"]:
+            if abs(v) >= mon_state["start_moving_dps"]:
+                mon_state["moving_seen"] = True
+                mon_state["moving_since"] = now_t
+            mon_state["buf"].append(v)
+            return False, None
+
+        if (now_t - mon_state["moving_since"]) < mon_state["startup_grace_s"]:
+            mon_state["buf"].append(v)
+            return False, None
+
+        buf = mon_state["buf"]
+        if len(buf) < mon_state["window_size"]:
+            buf.append(v)
+            return False, None
+
+        # baseline from PREVIOUS samples (don’t include current v)
+        mean = sum(buf) / len(buf)
+
+        # simple absolute drop threshold (tune this)
+        DROP_DPS = mon_state["drop_dps"]  # e.g. 40–80
+
+        is_drop = (v < (mean - DROP_DPS))
+
+        # consecutive requirement
+        if is_drop:
+            mon_state["drop_hits"] += 1
+        else:
+            mon_state["drop_hits"] = 0
+
+        buf.append(v)
+
+        info = {"speed": v, "mean": mean, "thr": mean - DROP_DPS, "hits": mon_state["drop_hits"]}
+        return (mon_state["drop_hits"] >= mon_state["drop_needed"]), info
 
     def load_bloc(self) -> bool:
         if self.bloc_count >= 2:
@@ -288,14 +288,14 @@ class GrabberController:
         )
 
         def monitor_tick(now_t):
-            drop, info = self._velocity_drop_check(mon, now_t)
+            drop, info = self._velocity_drop_check_simple(mon, now_t)
+            if info and mon["n_total"] % 25 == 0:
+                print(
+                    f"[debug] v={info['speed']:.1f} mean={info['mean']:.1f} thr={info['thr']:.1f} hits={info['hits']}")
+
             if drop and (now_t - mon["last_alert_t"]) >= ALERT_COOLDOWN_S:
                 mon["last_alert_t"] = now_t
-                print(
-                    f"⚠️ [Velocity drop] speed={info['speed']:.1f} dps "
-                    f"(mean={info['mean']:.1f}, std={info['std']:.1f}, thr={info['threshold']:.1f}) "
-                    f"sample={mon['n_total']}"
-                )
+                print(f"⚠️ DROP: v={info['speed']:.1f} < {info['thr']:.1f} (mean={info['mean']:.1f})")
             v = self._motor_speed_dps()
             if mon["n_total"] % 25 == 0:
                 print(
