@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load CSV
-file_name = "motor_speeds_feeding.csv"#"motor_speeds_no_stress.csv"
+file_name = "motor_speeds_no_stress.csv"
 data = pd.read_csv(file_name)
 
 values = data["speed"][1000:]
