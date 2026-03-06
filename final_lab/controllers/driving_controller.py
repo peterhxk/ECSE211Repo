@@ -10,12 +10,12 @@ class DrivingController():
         self.right_motor.set_power(power)
 
     def go_right(self):
-        self.left_motor.set_dps(80)
-        self.right_motor.set_dps(30)
+        self.left_motor.set_dps(180)
+        self.right_motor.set_dps(0)
 
     def go_left(self):
-        self.left_motor.set_dps(30)
-        self.right_motor.set_dps(80)
+        self.left_motor.set_dps(0)
+        self.right_motor.set_dps(180)
     
     def drive(self, color_sensor):
         direction = 'l'
@@ -32,7 +32,7 @@ class DrivingController():
                 if colour != cur_colour:
                     timer = time.time()
                     cur_colour = colour
-                elif time.time() - timer >= 0.1:
+                elif time.time() - timer >= 0.05:
                     if colour == "b":
                         past_black = True
                     elif past_black and colour == "w":
