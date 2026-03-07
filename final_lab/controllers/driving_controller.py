@@ -12,7 +12,7 @@ class DrivingController:
     RIGHT_TURN_DPS = (200, -100)  # (left_motor, right_motor)
     
     # Timing thresholds
-    COLOR_CHANGE_THRESHOLD = 0.05  # seconds to confirm color change
+    COLOR_CHANGE_THRESHOLD = 0.1  # seconds to confirm color change
     INTERSECTION_TIME_MULTIPLIER = 1.3  # multiplier for intersection detection
     LOOP_DELAY = 0.05  # seconds
 
