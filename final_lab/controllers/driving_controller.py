@@ -180,10 +180,9 @@ class DrivingController:
         elif action == "left":
             if self.direction == "l":
                 return
-            # Spin left (on itself) until seeing second black line
-            print("Turning left: spinning in place")
-            self.left_motor.set_dps(-150)
-            self.right_motor.set_dps(150)
+            # Spin left until seeing second black line
+            print("Turning left")
+            self.go_left()
             
             # Wait to leave current black line
             left_current_black = True
@@ -207,10 +206,9 @@ class DrivingController:
         elif action == "right":
             if self.direction == "r":
                 return
-            # Spin right (on itself) until seeing second black line
-            print("Turning right: spinning in place")
-            self.left_motor.set_dps(150)
-            self.right_motor.set_dps(-150)
+            # Spin right until seeing second black line
+            print("Turning right")
+            self.go_right()
             
             # Wait to leave current black line
             left_current_black = True
