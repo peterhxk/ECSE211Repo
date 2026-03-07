@@ -238,6 +238,14 @@ class DrivingController:
             else:
                 self.left_motor.set_dps(100)
                 self.right_motor.set_dps(-100)
+            # Wait to leave current black line
+            left_current_black = True
+            while left_current_black:
+                colour = self.color_sensor.read_colour()
+                if colour != "b":
+                    left_current_black = False
+                time.sleep(0.01)
+                
             found_next_black = False
             while not found_next_black:
                 colour = self.color_sensor.read_colour()
