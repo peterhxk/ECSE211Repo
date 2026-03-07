@@ -5,9 +5,9 @@ from collections import deque
 from utils.brick import Motor
 
 # ------------------ Settings ------------------
-MOTOR_PORT = "D"
+MOTOR_PORT = "A"
 
-POWER = 45
+POWER = 60
 SLEEP_TIME = 0.02
 
 EJECT_TIME = 2.0          # seconds: initial outward purge

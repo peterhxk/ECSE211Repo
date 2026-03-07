@@ -43,7 +43,7 @@ class GrabberController:
         self.gyro = EV3GyroSensor(port=1, mode=EV3GyroSensor.Mode.DPS)
         self.loading_button = TouchSensor(port=2)
         self.unloading_button = TouchSensor(port=3)
-        self.motor = Motor("B")
+        self.motor = Motor("A")
 
         # Gaussian parameters for idle gyro DPS (will be calibrated)
         self.mu = 0.0
