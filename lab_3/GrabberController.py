@@ -380,10 +380,10 @@ class GrabberController:
 
         try:
             if self.bloc_count == 2:
-                self.motor.set_power(-1.6 * self.running_power)
+                self.motor.set_power(-1.2 * self.running_power)
                 ready = self._consecutive_trigger(
                     lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
-                    needed=3,
+                    needed=2,
                     timeout=3.0,
                 )
                 if not ready:
