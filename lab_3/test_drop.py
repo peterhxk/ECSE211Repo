@@ -16,7 +16,7 @@ CONSECUTIVE_SAMPLES = 5
 USE_MOVING_AVERAGE = True
 MOVING_AVG_WINDOW = 5
 
-COOLDOWN = 0.8
+COOLDOWN = 1.0
 
 
 def compute_stats(samples):
