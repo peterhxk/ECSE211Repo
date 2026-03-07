@@ -17,7 +17,7 @@ class DrivingController:
     LOOP_DELAY = 0.05  # seconds
 
     # Path preset
-    path = ["left"]
+    path = ["right"]
     
     def __init__(self, left_motor, right_motor):
         """Initialize the driving controller.
@@ -164,10 +164,10 @@ class DrivingController:
             print("Path completed!")
             return
         
-        action = self.path[self.path_position]
+        action = self.path[self.path_position].lower()
         print(f"Intersection {self.path_position}: {action} (time_on_black: {time_on_black:.3f}s)")
         
-        if action == "Straight":
+        if action == "straight":
             # Go straight by turning opposite direction for time_on_black
             if self.direction == 'l':
                 self.go_right()
@@ -177,7 +177,7 @@ class DrivingController:
                 print(f"Going straight: turning left for {time_on_black:.3f}s")
             time.sleep(time_on_black)
         
-        elif action == "Left":
+        elif action == "left":
             if self.direction == "l":
                 return
             # Spin left (on itself) until seeing second black line
@@ -204,7 +204,7 @@ class DrivingController:
                 time.sleep(0.01)
             print("past next black")
         
-        elif action == "Right":
+        elif action == "right":
             if self.direction == "r":
                 return
             # Spin right (on itself) until seeing second black line
@@ -229,7 +229,7 @@ class DrivingController:
                     print("Found next black line after right turn")
                 time.sleep(0.01)
         
-        elif action == "Reverse":
+        elif action == "reverse":
             # Reverse by turning in current direction and at same spot until finding next black
             print(f"Reversing: continuing {self.direction} to find next black")
             if self.direction == "l":
