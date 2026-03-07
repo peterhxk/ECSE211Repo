@@ -15,6 +15,9 @@ class DrivingController:
     COLOR_CHANGE_THRESHOLD = 0.05  # seconds to confirm color change
     INTERSECTION_TIME_MULTIPLIER = 1.5  # multiplier for intersection detection
     LOOP_DELAY = 0.05  # seconds
+
+    # Path preset
+    path = ["Straight", "Right", "Right", "Reverse", "Left", "Straight"]
     
     def __init__(self, left_motor, right_motor):
         """Initialize the driving controller.
@@ -33,6 +36,7 @@ class DrivingController:
         self.black_start_time = None
         self.on_black = False
         self.intersection_handled = False  # flag to avoid handling same intersection multiple times
+        self.path_position = 0  # current position in path array
         
         # Calculate expected line crossing time
         self.expected_crossing_time = self._calculate_crossing_time()
@@ -149,6 +153,61 @@ class DrivingController:
         """
         return self._check_intersection()
     
+    def _navigate_intersection(self, time_on_black):
+        """Navigate intersection based on current path position.
+        
+        Args:
+            time_on_black: Time spent on black surface in seconds
+        """
+        if self.path_position >= len(self.path):
+            print("Path completed!")
+            return
+        
+        action = self.path[self.path_position]
+        print(f"Intersection {self.path_position}: {action} (time_on_black: {time_on_black:.3f}s)")
+        
+        if action == "Straight":
+            # Go straight by turning opposite direction for time_on_black
+            if self.direction == 'l':
+                self.go_right()
+                print(f"Going straight: turning right for {time_on_black:.3f}s")
+            else:
+                self.go_left()
+                print(f"Going straight: turning left for {time_on_black:.3f}s")
+            time.sleep(time_on_black)
+        
+        elif action == "Left":
+            if self.direction == 'l':
+                # Already turning left, continue
+                print(f"Turning left: continuing left for {time_on_black:.3f}s")
+                time.sleep(time_on_black)
+            else:
+                # Was turning right, need to turn back left for 2x time
+                self.go_left()
+                turn_time = 2 * time_on_black
+                print(f"Turning left: turning back left for {turn_time:.3f}s")
+                time.sleep(turn_time)
+        
+        elif action == "Right":
+            if self.direction == 'r':
+                # Already turning right, continue
+                print(f"Turning right: continuing right for {time_on_black:.3f}s")
+                time.sleep(time_on_black)
+            else:
+                # Was turning left, need to turn back right for 2x time
+                self.go_right()
+                turn_time = 2 * time_on_black
+                print(f"Turning right: turning back right for {turn_time:.3f}s")
+                time.sleep(turn_time)
+        
+        elif action == "Reverse":
+            # Reverse by continuing current direction for 1x time_on_black
+            print(f"Reversing: continuing {self.direction} for {time_on_black:.3f}s")
+            time.sleep(time_on_black)
+        
+        # Move to next position in path
+        self.path_position += 1
+    
     def drive(self, color_sensor):
         """Main driving loop for line following with intersection detection.
         
@@ -173,16 +232,9 @@ class DrivingController:
             # Check for intersection
             if self.is_intersection() and not self.intersection_handled:
                 time_on_black = self.get_time_on_black()
-                print(f"Intersection detected! Time on black: {time_on_black:.3f}s")
                 
-                # Turn opposite direction for the same duration as time on black
-                if self.direction == 'l':
-                    self.go_right()
-                    print(f"Turning right for {time_on_black:.3f}s")
-                else:
-                    self.go_left()
-                    print(f"Turning left for {time_on_black:.3f}s")
-                time.sleep(time_on_black)
+                # Navigate intersection based on path
+                self._navigate_intersection(time_on_black)
                 
                 # Mark intersection as handled
                 self.intersection_handled = True
