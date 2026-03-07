@@ -17,7 +17,7 @@ class DrivingController:
     LOOP_DELAY = 0.05  # seconds
 
     # Path preset
-    path = [ "Reverse", "Straight"]
+    path = ["Straight"]
     
     def __init__(self, left_motor, right_motor):
         """Initialize the driving controller.
@@ -182,8 +182,8 @@ class DrivingController:
                 return
             # Spin left (on itself) until seeing second black line
             print("Turning left: spinning in place")
-            self.left_motor.set_dps(-100)
-            self.right_motor.set_dps(100)
+            self.left_motor.set_dps(-150)
+            self.right_motor.set_dps(150)
             
             # Wait to leave current black line
             left_current_black = True
@@ -209,8 +209,8 @@ class DrivingController:
                 return
             # Spin right (on itself) until seeing second black line
             print("Turning right: spinning in place")
-            self.left_motor.set_dps(100)
-            self.right_motor.set_dps(-100)
+            self.left_motor.set_dps(150)
+            self.right_motor.set_dps(-150)
             
             # Wait to leave current black line
             left_current_black = True
@@ -233,11 +233,11 @@ class DrivingController:
             # Reverse by turning in current direction and at same spot until finding next black
             print(f"Reversing: continuing {self.direction} to find next black")
             if self.direction == "l":
-                self.left_motor.set_dps(-100)
-                self.right_motor.set_dps(100)
+                self.left_motor.set_dps(-150)
+                self.right_motor.set_dps(150)
             else:
-                self.left_motor.set_dps(100)
-                self.right_motor.set_dps(-100)
+                self.left_motor.set_dps(150)
+                self.right_motor.set_dps(-150)
             # Wait to leave current black line
             left_current_black = True
             while left_current_black:
@@ -245,7 +245,7 @@ class DrivingController:
                 if colour != "b":
                     left_current_black = False
                 time.sleep(0.01)
-                
+
             found_next_black = False
             while not found_next_black:
                 colour = self.color_sensor.read_colour()
