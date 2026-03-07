@@ -184,22 +184,34 @@ class DrivingController:
             print("Turning left")
             self.go_left()
             
-            # Wait to leave current black line
+            # Wait to leave current black line (with 0.05s confirmation)
             left_current_black = True
+            non_black_start = None
             while left_current_black:
                 colour = self.color_sensor.read_colour()
                 if colour != "b":
-                    left_current_black = False
+                    if non_black_start is None:
+                        non_black_start = time.time()
+                    elif time.time() - non_black_start >= 0.05:
+                        left_current_black = False
+                else:
+                    non_black_start = None
                 time.sleep(0.01)
             print("past current black")
 
-            # Wait to find next black line
+            # Wait to find next black line (with 0.05s confirmation)
             found_next_black = False
+            black_start = None
             while not found_next_black:
                 colour = self.color_sensor.read_colour()
                 if colour == "b":
-                    found_next_black = True
-                    print("Found next black line after left turn")
+                    if black_start is None:
+                        black_start = time.time()
+                    elif time.time() - black_start >= 0.05:
+                        found_next_black = True
+                        print("Found next black line after left turn")
+                else:
+                    black_start = None
                 time.sleep(0.01)
             print("past next black")
         
@@ -210,22 +222,36 @@ class DrivingController:
             print("Turning right")
             self.go_right()
             
-            # Wait to leave current black line
+            # Wait to leave current black line (with 0.05s confirmation)
             left_current_black = True
+            non_black_start = None
             while left_current_black:
                 colour = self.color_sensor.read_colour()
                 if colour != "b":
-                    left_current_black = False
+                    if non_black_start is None:
+                        non_black_start = time.time()
+                    elif time.time() - non_black_start >= 0.05:
+                        left_current_black = False
+                else:
+                    non_black_start = None
                 time.sleep(0.01)
+            print("past current black")
             
-            # Wait to find next black line
+            # Wait to find next black line (with 0.05s confirmation)
             found_next_black = False
+            black_start = None
             while not found_next_black:
                 colour = self.color_sensor.read_colour()
                 if colour == "b":
-                    found_next_black = True
-                    print("Found next black line after right turn")
+                    if black_start is None:
+                        black_start = time.time()
+                    elif time.time() - black_start >= 0.05:
+                        found_next_black = True
+                        print("Found next black line after right turn")
+                else:
+                    black_start = None
                 time.sleep(0.01)
+            print("past next black")
         
         elif action == "reverse":
             # Reverse by turning in current direction and at same spot until finding next black
