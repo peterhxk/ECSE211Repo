@@ -230,9 +230,21 @@ class DrivingController:
                 time.sleep(0.01)
         
         elif action == "Reverse":
-            # Reverse by continuing current direction for 1x time_on_black
-            print(f"Reversing: continuing {self.direction} for {time_on_black:.3f}s")
-            time.sleep(time_on_black)
+            # Reverse by turning in current direction and at same spot until finding next black
+            print(f"Reversing: continuing {self.direction} to find next black")
+            if self.direction == "l":
+                self.left_motor.set_dps(-100)
+                self.right_motor.set_dps(100)
+            else:
+                self.left_motor.set_dps(100)
+                self.right_motor.set_dps(-100)
+            found_next_black = False
+            while not found_next_black:
+                colour = self.color_sensor.read_colour()
+                if colour == "b":
+                    found_next_black = True
+                    print("Found next black line after right turn")
+                time.sleep(0.01)
         
         # Move to next position in path
         self.path_position += 1
