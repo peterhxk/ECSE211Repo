@@ -44,7 +44,7 @@ class GrabberController:
         self.sample_hz = 50
         self.consecutive_needed = 15  # require N consecutive samples beyond threshold
 
-        self.running_power = 45
+        self.running_power = 60
 
     # ----------------------------
     # Setup / calibration
