@@ -149,7 +149,7 @@ def main():
             if consecutive >= CONSECUTIVE_SAMPLES and not in_event_state:
                 if event_count == 1 and time.time() - starter > 1:
                     print("Event detected again, stopping motor.")
-                    break
+                    raise KeyboardInterrupt
                 else:
                     print(
                         f"EVENT detected | "
