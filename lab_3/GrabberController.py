@@ -44,7 +44,9 @@ class GrabberController:
         self.sample_hz = 50
         self.consecutive_needed = 15  # require N consecutive samples beyond threshold
 
-        self.running_power = 70
+        self.running_power = 60
+        if self.running_power > 70:
+            print("Warning: running power too high. Pick a lower value")
 
     # ----------------------------
     # Setup / calibration
