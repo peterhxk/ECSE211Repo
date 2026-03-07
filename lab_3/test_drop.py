@@ -4,8 +4,8 @@ import statistics
 from collections import deque
 from utils.brick import Motor
 
-MOTOR_PORT = "D"
-POWER = 45
+MOTOR_PORT = "A"
+POWER = 50
 SLEEP_TIME = 0.02
 EJECT_TIME = 2.0
 DRY_RUN_TIME = 5.0
