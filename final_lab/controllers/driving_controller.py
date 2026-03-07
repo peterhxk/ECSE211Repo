@@ -8,8 +8,8 @@ class DrivingController:
     # Configuration constants
     WHEEL_RADIUS = 3.0  # cm
     LINE_THICKNESS = 1.5  # cm
-    LEFT_TURN_DPS = (-50, 250)  # (left_motor, right_motor)
-    RIGHT_TURN_DPS = (250, -50)  # (left_motor, right_motor)
+    LEFT_TURN_DPS = (-250, 350)  # (left_motor, right_motor)
+    RIGHT_TURN_DPS = (350, -250)  # (left_motor, right_motor)
     
     # Timing thresholds
     COLOR_CHANGE_THRESHOLD = 0.05  # seconds to confirm color change
