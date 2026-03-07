@@ -127,6 +127,9 @@ def main():
         in_event_state = False
         ma_window = deque(maxlen=max(1, MOVING_AVG_WINDOW))
 
+        event_count = 0
+        starter = time.time()
+
         while True:
             raw_speed = motor.get_speed()
 
@@ -144,14 +147,21 @@ def main():
                 in_event_state = False
 
             if consecutive >= CONSECUTIVE_SAMPLES and not in_event_state:
-                print(
-                    f"EVENT detected | "
-                    f"raw_speed={raw_speed:.3f} | "
-                    f"filtered_speed={speed_for_detection:.3f} | "
-                    f"threshold={threshold:.3f} | "
-                    f"consecutive={consecutive}"
-                )
-                in_event_state = True
+                if event_count == 1 and time.time() - starter > 1:
+                    print("Event detected again, stopping motor.")
+                    break
+                else:
+                    print(
+                        f"EVENT detected | "
+                        f"raw_speed={raw_speed:.3f} | "
+                        f"filtered_speed={speed_for_detection:.3f} | "
+                        f"threshold={threshold:.3f} | "
+                        f"consecutive={consecutive}"
+                    )
+                    in_event_state = True
+                    event_count +=1
+                    print("Starting cooldwon")
+                    starter = time.time()
 
             time.sleep(SLEEP_TIME)
 
