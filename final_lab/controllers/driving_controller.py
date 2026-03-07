@@ -13,7 +13,7 @@ class DrivingController:
     
     # Timing thresholds
     COLOR_CHANGE_THRESHOLD = 0.1  # seconds to confirm color change
-    INTERSECTION_TIME_MULTIPLIER = 1.3  # multiplier for intersection detection
+    INTERSECTION_TIME_MULTIPLIER = 1.1  # multiplier for intersection detection
     LOOP_DELAY = 0.05  # seconds
 
     # Path preset
@@ -115,7 +115,7 @@ class DrivingController:
         """
         if self.on_black and self.black_start_time is not None:
             time_on_black = time.time() - self.black_start_time
-            print(f"time_on_black: {time_on_black}, intersection_threshold: {self.intersection_threshold}")
+            print(f"time_on_black: {time_on_black}, threshold: {self.intersection_threshold}")
             return time_on_black >= self.intersection_threshold
         return False
     
