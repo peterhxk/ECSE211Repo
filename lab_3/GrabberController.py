@@ -381,16 +381,6 @@ class GrabberController:
         try:
             if self.bloc_count == 2:
                 self.motor.set_power(-1.2 * self.running_power)
-                ready = self._consecutive_trigger(
-                    lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
-                    needed=2,
-                    timeout=3.0,
-                )
-                if not ready:
-                    print("Timeout waiting for initial outwards SLOW tilt (ready).")
-                    return False
-
-                time.sleep(0.3)
 
                 unloaded = self._consecutive_trigger(
                     lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
