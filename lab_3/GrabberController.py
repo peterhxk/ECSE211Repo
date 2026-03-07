@@ -348,7 +348,7 @@ class GrabberController:
                 return False
 
             self.motor.set_power(60)
-            time.sleep(0.5)
+            time.sleep(0.1)
             # to make sure it gets through
             self.motor.set_power(0)
             self.bloc_positions[0] = BlocLocation.BACK_STORAGE
