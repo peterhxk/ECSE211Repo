@@ -13,7 +13,7 @@ class DrivingController:
     
     # Timing thresholds
     COLOR_CHANGE_THRESHOLD = 0.1  # seconds to confirm color change
-    INTERSECTION_TIME_MULTIPLIER = 1.1  # multiplier for intersection detection
+    INTERSECTION_TIME_MULTIPLIER = 1.05  # multiplier for intersection detection
     LOOP_DELAY = 0.05  # seconds
 
     # Path preset
