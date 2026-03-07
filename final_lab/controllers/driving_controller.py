@@ -17,7 +17,7 @@ class DrivingController:
     LOOP_DELAY = 0.05  # seconds
 
     # Path preset
-    path = ["right"]
+    path = ["left"]
     
     def __init__(self, left_motor, right_motor):
         """Initialize the driving controller.
