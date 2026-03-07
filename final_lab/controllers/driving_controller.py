@@ -178,28 +178,54 @@ class DrivingController:
             time.sleep(time_on_black)
         
         elif action == "Left":
-            if self.direction == 'l':
-                # Already turning left, continue
-                print(f"Turning left: continuing left for {time_on_black:.3f}s")
-                time.sleep(time_on_black)
-            else:
-                # Was turning right, need to turn back left for 2x time
-                self.go_left()
-                turn_time = 2 * time_on_black
-                print(f"Turning left: turning back left for {turn_time:.3f}s")
-                time.sleep(turn_time)
+            if self.direction == "l":
+                return
+            # Spin left (on itself) until seeing second black line
+            print("Turning left: spinning in place")
+            self.left_motor.set_dps(-100)
+            self.right_motor.set_dps(100)
+            
+            # Wait to leave current black line
+            left_current_black = True
+            while left_current_black:
+                colour = self.color_sensor.read_colour()
+                if colour != "b":
+                    left_current_black = False
+                time.sleep(0.01)
+            
+            # Wait to find next black line
+            found_next_black = False
+            while not found_next_black:
+                colour = self.color_sensor.read_colour()
+                if colour == "b":
+                    found_next_black = True
+                    print("Found next black line after left turn")
+                time.sleep(0.01)
         
         elif action == "Right":
-            if self.direction == 'r':
-                # Already turning right, continue
-                print(f"Turning right: continuing right for {time_on_black:.3f}s")
-                time.sleep(time_on_black)
-            else:
-                # Was turning left, need to turn back right for 2x time
-                self.go_right()
-                turn_time = 2 * time_on_black
-                print(f"Turning right: turning back right for {turn_time:.3f}s")
-                time.sleep(turn_time)
+            if self.direction == "r":
+                return
+            # Spin right (on itself) until seeing second black line
+            print("Turning right: spinning in place")
+            self.left_motor.set_dps(100)
+            self.right_motor.set_dps(-100)
+            
+            # Wait to leave current black line
+            left_current_black = True
+            while left_current_black:
+                colour = self.color_sensor.read_colour()
+                if colour != "b":
+                    left_current_black = False
+                time.sleep(0.01)
+            
+            # Wait to find next black line
+            found_next_black = False
+            while not found_next_black:
+                colour = self.color_sensor.read_colour()
+                if colour == "b":
+                    found_next_black = True
+                    print("Found next black line after right turn")
+                time.sleep(0.01)
         
         elif action == "Reverse":
             # Reverse by continuing current direction for 1x time_on_black
@@ -215,6 +241,7 @@ class DrivingController:
         Args:
             color_sensor: Color sensor controller for reading colors
         """
+        self.color_sensor = color_sensor  # Store reference for intersection navigation
         past_black = False
         self.go_left()
         
