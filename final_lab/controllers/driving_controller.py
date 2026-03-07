@@ -192,7 +192,8 @@ class DrivingController:
                 if colour != "b":
                     left_current_black = False
                 time.sleep(0.01)
-            
+            print("past current black")
+
             # Wait to find next black line
             found_next_black = False
             while not found_next_black:
@@ -201,6 +202,7 @@ class DrivingController:
                     found_next_black = True
                     print("Found next black line after left turn")
                 time.sleep(0.01)
+            print("past next black")
         
         elif action == "Right":
             if self.direction == "r":
