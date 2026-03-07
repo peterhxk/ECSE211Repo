@@ -15,7 +15,6 @@ class ColorSensor (EV3ColorSensor):
     
     def read_colour(self):
         cur_rgb = self.get_rgb()
-        print(cur_rgb)
         cur_r = cur_rgb[0]
         cur_g = cur_rgb[1]
         cur_b = cur_rgb[2]

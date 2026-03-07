@@ -115,6 +115,7 @@ class DrivingController:
         """
         if self.on_black and self.black_start_time is not None:
             time_on_black = time.time() - self.black_start_time
+            print(f"time_on_black: {time_on_black}, intersection_threshold: {self.intersection_threshold}")
             return time_on_black >= self.intersection_threshold
         return False
     
