@@ -5,7 +5,7 @@ from collections import deque
 from utils.brick import Motor
 
 # ------------------ Settings ------------------
-MOTOR_PORT = "B"
+MOTOR_PORT = "D"
 
 POWER = 45
 SLEEP_TIME = 0.02
