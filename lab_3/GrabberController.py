@@ -339,6 +339,7 @@ class GrabberController:
             if self.bloc_positions[0] == BlocLocation.UNLOADED:
                 raise ValueError("First bloc not yet unloaded, aborting.")
 
+            self.motor.set_power(45) # use calibration power
             print("Loading second bloc: using motor velocity drop detection...")
             time.sleep(1) # give a moment for the first bloc to reach the storage zone
             ok = self._is_motor_drop_detected(timeout=5.0)
