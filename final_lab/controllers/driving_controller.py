@@ -17,7 +17,7 @@ class DrivingController:
     LOOP_DELAY = 0.05  # seconds
 
     # Path preset
-    path = ["left"]
+    path = ["reverse"]
     
     def __init__(self, left_motor, right_motor):
         """Initialize the driving controller.
@@ -165,7 +165,7 @@ class DrivingController:
             return
         
         action = self.path[self.path_position].lower()
-        print(f"Intersection {self.path_position}: {action} (time_on_black: {time_on_black:.3f}s)")
+        print(f"Intersection {self.path_position}: {action} (time_on_black: {time_on_black:.3f}s), current_direction: {self.direction}")
         
         if action == "straight":
             # Go straight by turning opposite direction for time_on_black
