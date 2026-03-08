@@ -391,7 +391,7 @@ class GrabberController:
 
                 unloaded = self._consecutive_trigger(
                     lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
-                    needed=2,
+                    needed=3,
                     timeout=5.0,
                 )
                 self.motor.set_power(0)
