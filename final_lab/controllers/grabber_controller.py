@@ -82,11 +82,12 @@ class GrabberController:
         self.motor.set_power(0)
         print("Reset measures; motor stopped.")
 
+        self.calibrate_motor_drop_detection()
+        print("Calibrated motor inward speed-drop mu and sigma.")
+
         self.calibrate_gyro_noise(seconds=15.0, sample_hz=self.sample_hz, warmup=0.5)
         print("Calibrated gyro mu and sigma.")
 
-        self.calibrate_motor_drop_detection()
-        print("Calibrated motor inward speed-drop mu and sigma.")
 
     def calibrate_gyro_noise(self, seconds=10.0, sample_hz=50, warmup=0.5):
         """
