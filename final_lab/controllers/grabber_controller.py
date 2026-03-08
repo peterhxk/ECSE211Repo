@@ -412,7 +412,7 @@ class GrabberController:
             # only one bloc left
             self.motor.set_power(-45)  # use calibration power
             print("Unloading first bloc: using motor velocity drop detection...")
-            time.sleep(0.1)  # give a moment for the first bloc to reach the storage zone. NEEDS FINE TUNE
+            time.sleep(0.3)
             ok = self._is_motor_drop_detected(timeout=5.0)
             if not ok:
                 print("Timed out waiting for motor velocity drop while unloading first bloc.")
