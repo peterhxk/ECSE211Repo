@@ -391,7 +391,7 @@ class GrabberController:
 
                 unloaded = self._consecutive_trigger(
                     lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
-                    needed=2,
+                    needed=3,
                     timeout=5.0,
                 )
                 self.motor.set_power(0)
@@ -409,8 +409,18 @@ class GrabberController:
                 print("Unloaded one bloc (2->1).")
                 return True
 
-            self.motor.set_power(-1.5 * self.running_power)
-            time.sleep(2.0)
+            # only one bloc left
+            self.motor.set_power(-45)  # use calibration power
+            print("Unloading first bloc: using motor velocity drop detection...")
+            time.sleep(0.3)
+            ok = self._is_motor_drop_detected(timeout=5.0)
+            if not ok:
+                print("Timed out waiting for motor velocity drop while unloading first bloc.")
+                return False
+
+            self.motor.set_power(-60)
+            time.sleep(0.1)
+            # to make sure it gets through
             self.motor.set_power(0)
 
             self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
