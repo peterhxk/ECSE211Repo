@@ -389,7 +389,14 @@ class GrabberController:
         try:
             if self.bloc_count == 2:
                 self.motor.set_power(-1.2 * self.running_power)
-
+                """
+                unloaded = self._consecutive_trigger(
+                    lambda: self.is_tilted_inwards(GyroTilt.FAST_TILT),
+                    needed=3,
+                    timeout=5.0,
+                )
+                """
+                # alternative detection : we wait for the gyro to "spring back" which will give us more accuracy
                 unloaded = self._consecutive_trigger(
                     lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
                     needed=3,
