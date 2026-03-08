@@ -1,6 +1,7 @@
 import time
 import math
-
+from utils.brick import wait_ready_sensors, reset_brick, Motor, TouchSensor, EV3UltrasonicSensor
+from concurrent import futures
 
 class DrivingController:
     """Controller for line following with intersection detection."""
@@ -19,7 +20,7 @@ class DrivingController:
     # Path preset
     path = ["right"]
     
-    def __init__(self, left_motor, right_motor):
+    def __init__(self, left_motor, right_motor, motor_power=10):
         """Initialize the driving controller.
         
         Args:
@@ -28,6 +29,7 @@ class DrivingController:
         """
         self.left_motor = left_motor
         self.right_motor = right_motor
+        self.motor_power = motor_power
         
         # State tracking
         self.direction = 'l'  # current turning direction ('l' or 'r')
@@ -85,6 +87,35 @@ class DrivingController:
         self.left_motor.set_dps(self.LEFT_TURN_DPS[0])
         self.right_motor.set_dps(self.LEFT_TURN_DPS[1])
         self.direction = 'l'
+
+    def move_straight(self, x, dps=10):
+        """x: angle in degrees?
+        power: value -100 to 100"""
+        print(f"Move straight by {x} at {dps} degrees per second ")
+        self.left_motor.set_dps(dps)
+        self.right_motor.set_dps(dps)
+        time.sleep(abs(x/dps)) # CHANGE THIS
+        self.left_motor.set_dps(0)
+        self.right_motor.set_dps(0)
+
+
+    def turn_angle(self, x, dps=10):
+        """x: angle in degrees
+        dps: degrees per second (can range positive to negative)
+        positive -> turn _
+        negative -> turn _"""
+        self.left_motor.set_dps(dps)
+        self.right_motor.set_dps(-dps)
+        time.sleep(abs(x/dps)) 
+        self.left_motor.set_dps(0)
+        self.right_motor.set_dps(0)
+
+
+    def turn_right(self, dps=10):
+        self.turn_angle(90, dps)
+
+    def turn_left(self, dps=10):
+        self.turn_angle(-90,dps)
     
     def _handle_color_change(self, colour):
         """Handle color change detection with debouncing.
