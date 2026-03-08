@@ -5,7 +5,10 @@ import statistics
 from enum import Enum
 from collections import deque
 
-from utils.brick import EV3GyroSensor, TouchSensor, Motor
+import sys
+from tqdm import tqdm
+sys.path.append("../utils")
+from brick import EV3GyroSensor, TouchSensor, Motor
 
 
 class BlocLocation(Enum):
@@ -70,7 +73,7 @@ class GrabberController:
     # Setup / calibration
     # ----------------------------
     def initialize_sensors(self):
-        print("Initializing sensors... Put the gyro in vertical (rest) position.")
+        print("[Calibration] Initializing sensors... Don't move the Gyro sensor")
         self.gyro.wait_ready()
         self.loading_button.wait_ready()
         self.unloading_button.wait_ready()
@@ -89,6 +92,7 @@ class GrabberController:
         """
         Estimate mu and sigma for idle gyro DPS.
         """
+        print(f"[Calibration] Calibrating gyro noise... Don't move the sensor during this period ( {seconds} seconds)")
         dt = 1.0 / float(sample_hz)
 
         t0 = time.time()
@@ -98,7 +102,10 @@ class GrabberController:
 
         samples = []
         t1 = time.time()
-        while time.time() - t1 < seconds:
+
+        n_samples = int(seconds * sample_hz)
+
+        for _ in tqdm(range(n_samples), desc="[Calibration]", unit="sample"):
             v = self.gyro.get_dps_measure()
             if v is not None:
                 samples.append(float(v))
