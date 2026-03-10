@@ -1,13 +1,13 @@
 from utils.brick import wait_ready_sensors, reset_brick, Motor
-from controllers.color_sensor_controller import ColorSensor
-from controllers.driving_controller import DrivingController
+from controllers.color_sensor_controller import ColourSensorController
+from archive.driving_controller import DrivingController
 
 
 #Sensor declaration
 
 left_motor = Motor("C")
 right_motor = Motor("B")
-color_sensor = ColorSensor(2)
+color_sensor = ColourSensorController(2)
 
 driving_controller = DrivingController(left_motor, right_motor)
 

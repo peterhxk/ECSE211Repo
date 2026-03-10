@@ -1,6 +1,8 @@
-from utils.brick import EV3ColorSensor
+from utils.brick import EV3ColorSensor, Motor
 import time
 import json
+from enum import Enum
+from typing import Literal, List, Tuple
 
 def normalize_colours(r, g, b):
     total = r+g+b
@@ -8,11 +10,87 @@ def normalize_colours(r, g, b):
         return 0,0,0
     return r/total, g/total, b/total
 
-class ColorSensor (EV3ColorSensor):
+class SweepDirection(Enum):
+    RIGHT=1
+    LEFT=-1
 
-    def __init__(self, port, mode="component", bp=None):
+class ColourSensorController (EV3ColorSensor):
+
+    # Angles to the right of normal are positive
+    MAX_SWEEP_ANGLE = {
+        "left": {
+            SweepDirection.RIGHT: 0,
+            SweepDirection.LEFT: -45
+        },
+        "right": {
+            SweepDirection.RIGHT: 45,
+            SweepDirection.LEFT: 0
+        },
+        "full": {
+            SweepDirection.RIGHT: 45,
+            SweepDirection.LEFT: -45
+        }
+    }
+
+    MOTOR_POWER_DPS = 50
+
+    def __init__(self, port, motor: Motor, mode="component", bp=None):
         super().__init__(port)
-    
+
+        self.motor = motor
+        self.sweep_dir = None
+        self.colours_found = []
+
+        # Reset the value of the motor encoder.
+        self.motor.reset_encoder()
+
+    def _is_at_boundary(self, range: Literal["left", "right", "full"]) -> bool:
+        """
+        Given the current `sweep_dir`, this helper function checks if the current motor encoder position
+        of the colour sensor is beyond the pre-defined threshold. If `True`, then we need to switch the direction
+        """
+        return self.sweep_dir.value * self.motor.get_position() >= self.sweep_dir.value * self.MAX_SWEEP_ANGLE[range][self.sweep_dir]
+
+    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left") -> List[Tuple[int, str]]:
+        """
+        Function sweeps the colour sensor arm and checks the colour. 
+
+        @param
+        - `colour`: The colour to search for.
+        - `range`: `"left"`, `"right"` or `"full"`. Whether to perform a left-half, right-half, or full sweep.
+        
+        @returns 
+        - `List[Tuple[angle, colour]]` of all the times `colour` is found during this sweep.
+        """
+
+        if self.sweep_dir == None:
+            # Not currently sweeping. Start sweeping to the right.
+            self.sweep_dir = SweepDirection.RIGHT
+
+        while True:
+            # Check if a black line is found
+            if self.read_colour() == colour:
+                # Add theta to the list of matches once the colour is found
+                self.colours_found.append((self.motor.get_position(), colour))
+            
+            # Check if we are beyond the maximum sweep angle
+            if self._is_at_boundary(range):
+                # Reverse the direction
+                self.sweep_dir = SweepDirection.LEFT if self.sweep_dir == SweepDirection.RIGHT else SweepDirection.RIGHT
+                
+                # At this point, we've completed one sweep, so we must return the colours found.
+                results = self.colours_found
+                self.colours_found = []
+                return results
+            
+            # Check if the motor is operating in the current direction
+            if (self.motor.get_speed() * self.sweep_dir.value <= 0):
+                # Reverse the direction of the motor
+                self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
+
+            # Otherwise, wait a small bit more before sweeping and checking again
+            time.sleep(0.1)
+
     def read_colour(self):
         cur_rgb = self.get_rgb()
         cur_r = cur_rgb[0]
@@ -44,6 +122,6 @@ class ColorSensor (EV3ColorSensor):
         with open(file, mode="w", encoding="utf-8") as outfile:
             count = 0
             while count < 50:
-                outfile.write(f"{ColorSensor.get_rgb()}\n")
+                outfile.write(f"{ColourSensorController.get_rgb()}\n")
                 time.sleep(0.1)
 
