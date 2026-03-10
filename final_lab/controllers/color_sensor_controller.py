@@ -2,7 +2,7 @@ from utils.brick import EV3ColorSensor, Motor
 import time
 import json
 from enum import Enum
-from typing import Literal, List, Tuple
+from typing import Literal, List, Tuple, Union, NamedTuple, Optional
 
 def normalize_colours(r, g, b):
     total = r+g+b
@@ -54,17 +54,20 @@ class ColourSensorController (EV3ColorSensor):
         """
         return self.sweep_dir.value * self.motor.get_position() >= self.sweep_dir.value * self.MAX_SWEEP_ANGLE[range][self.sweep_dir]
 
-    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left") -> List[Tuple[int, str]]:
-        """
-        Function sweeps the colour sensor arm and checks the colour. 
+    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False) -> List[Tuple[int, str, int]]:
+        """Sweeps the colour sensor arm and checks the colour.
 
-        @param
-        - `colour`: The colour to search for.
-        - `range`: `"left"`, `"right"` or `"full"`. Whether to perform a left-half, right-half, or full sweep.
-        
-        @returns 
-        - `List[Tuple[angle, colour]]` of all the times `colour` is found during this sweep.
+        Args:
+            colour (str): The colour to search for (e.g., "b" for black).
+            range (str): "left", "right" or "full". Determines the sweep arc.
+            stop_on_match (bool): If True, exits early on the first detection.
+
+        Returns:
+            List[Tuple]: A list of detections where each 
+            tuple is (angle, colour, timestamp).
         """
+
+        duration = 0
 
         if self.sweep_dir == None:
             # Not currently sweeping. Start sweeping to the right.
@@ -81,7 +84,12 @@ class ColourSensorController (EV3ColorSensor):
                         break
                 else:
                     # Add theta to the list of matches once the colour is found
-                    self.colours_found.append((self.motor.get_position(), colour))
+                    self.colours_found.append((self.motor.get_position(), colour, duration))
+
+                    if stop_on_match:
+                        results = self.colours_found
+                        self.colours_found = []
+                        return results
             
             # Check if we are beyond the maximum sweep angle
             if self._is_at_boundary(range):
@@ -100,6 +108,7 @@ class ColourSensorController (EV3ColorSensor):
 
             # Otherwise, wait a small bit more before sweeping and checking again
             time.sleep(0.1)
+            duration += 0.1
 
     def read_colour(self):
         cur_rgb = self.get_rgb()

@@ -21,30 +21,33 @@ class SweepLineFollower:
     def run(self):
         while True:
             # Sweep the colour sensor once
-            sweep_result = self.sensor.sweep()
+            sweep_result = self.sensor.sweep(range="full")
+            print("Swept sensor")
 
             if len(sweep_result) == 0:
                 # Could not find the black line. Sweep again.
+                print("Did not find black line")
                 continue 
             
             if len(sweep_result) == 1:
                 # We've found the black line. Figure out if we need to correct
-                print(sweep_result[0])
-                theta, _ = sweep_result[0]
+                print("Found black line.", sweep_result[0])
+                theta, *_ = sweep_result[0]
 
                 if -self.THETA_TOLERANCE <= theta <= self.THETA_TOLERANCE:
                     # We are close enough to center that we can continue driving forward.
                     print("close to center. theta: ", theta)
 
-                    # self.pilot.move_forward()
+                    self.pilot.move_forward()
                 else:
                     # Adjust the motors to correct for the deviation
                     print("too far off. theta: ", theta)
 
-                    # adjustment = self.K_P * theta - self.K_D * (theta - self.last_theta)
-                    # self.pilot.adjust_direction(adjustment)
+                    adjustment = self.K_P * theta - self.K_D * (theta - self.last_theta)
+                    self.pilot.adjust_direction(adjustment)
 
                 self.last_theta = theta
+
             elif len(sweep_result) == 3:
                 # We've reached an intersection.
                 print("found an intersection")
