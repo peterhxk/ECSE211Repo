@@ -16,7 +16,7 @@ class SweepLineFollower:
     def test_sweep(self):
         while True:
             # Sweep the colour sensor once
-            sweep_result = self.sensor.sweep()
+            sweep_result = self.sensor.sweep(range="full")
 
             if len(sweep_result) == 0:
                 # Could not find the black line. Sweep again.
@@ -24,7 +24,8 @@ class SweepLineFollower:
             
             if len(sweep_result) == 1:
                 # We've found the black line. Figure out if we need to correct
-                theta, = sweep_result[0]
+                print(sweep_result[0])
+                theta, _ = sweep_result[0]
 
                 if -self.THETA_TOLERANCE <= theta <= self.THETA_TOLERANCE:
                     # We are close enough to center that we can continue driving forward.

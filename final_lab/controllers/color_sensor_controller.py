@@ -32,6 +32,9 @@ class ColourSensorController (EV3ColorSensor):
         }
     }
 
+    # Angle tolerance at which the line is still considered the same one
+    THETA_TOLERANCE = 10
+
     MOTOR_POWER_DPS = 50
 
     def __init__(self, port, motor: Motor, mode="component", bp=None):
@@ -70,8 +73,15 @@ class ColourSensorController (EV3ColorSensor):
         while True:
             # Check if a black line is found
             if self.read_colour() == colour:
-                # Add theta to the list of matches once the colour is found
-                self.colours_found.append((self.motor.get_position(), colour))
+                # Check to make sure we are not "finding" the same black line as previously
+                theta = self.motor.get_position()
+                
+                for line_angle, _ in self.colours_found:
+                    if abs(theta - line_angle) <= self.THETA_TOLERANCE:
+                        break
+                else:
+                    # Add theta to the list of matches once the colour is found
+                    self.colours_found.append((self.motor.get_position(), colour))
             
             # Check if we are beyond the maximum sweep angle
             if self._is_at_boundary(range):
@@ -99,7 +109,7 @@ class ColourSensorController (EV3ColorSensor):
         # nor_r, nor_g, nor_b = normalize_colours(cur_r,cur_g,cur_b)
         # print((nor_r, nor_g, nor_b))
         # print(cur_rgb)
-        with open("data/colours.json", "r") as f:
+        with open("../data/colours.json", "r") as f:
             colours = json.load(f)
         colour_to_distance = {}
         for colour, rgb in colours.items():
