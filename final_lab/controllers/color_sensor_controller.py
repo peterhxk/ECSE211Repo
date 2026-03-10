@@ -99,7 +99,7 @@ class ColourSensorController (EV3ColorSensor):
         # nor_r, nor_g, nor_b = normalize_colours(cur_r,cur_g,cur_b)
         # print((nor_r, nor_g, nor_b))
         # print(cur_rgb)
-        with open("data/colours.json", "r") as f:
+        with open("../data/colours.json", "r") as f:
             colours = json.load(f)
         colour_to_distance = {}
         for colour, rgb in colours.items():
