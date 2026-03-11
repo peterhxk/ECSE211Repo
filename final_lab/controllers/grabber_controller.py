@@ -331,7 +331,7 @@ class GrabberController:
 
                 ok = self._consecutive_trigger(
                     lambda: self.is_tilted_inwards(GyroTilt.SLOW_TILT),
-                    needed=5,
+                    needed=2,
                     timeout=5.0,
                 )
                 if not ok:
