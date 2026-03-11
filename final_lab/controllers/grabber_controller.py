@@ -12,9 +12,10 @@ from brick import EV3GyroSensor, TouchSensor, Motor
 
 
 class BlocLocation(Enum):
-    BACK_STORAGE = 1
-    UNDER_GYRO = 2
-    UNLOADED = 3
+    BACK_STORAGE = 1 # in the back storage area
+    UNDER_GYRO = 2 # under the gyro arm, either pushing inwards or outwards
+    AT_GATE = 2 # the closest to the end of the parallel conveyor belts
+    UNLOADED = 3 # not yet loaded, or already unloaded
 
 
 class GyroTilt(Enum):
@@ -39,8 +40,8 @@ class GrabberController:
 
         # Hardware
         self.gyro = EV3GyroSensor(port=1, mode=EV3GyroSensor.Mode.DPS)
-        self.loading_button = TouchSensor(port=3)
-        self.unloading_button = TouchSensor(port=4)
+        #self.loading_button = TouchSensor(port=3)
+        #self.unloading_button = TouchSensor(port=4)
         self.motor = Motor("A")
 
         # Gaussian parameters for idle gyro DPS
@@ -75,8 +76,8 @@ class GrabberController:
     def initialize_sensors(self):
         print("[Calibration] Initializing sensors... Don't move the Gyro sensor")
         self.gyro.wait_ready()
-        self.loading_button.wait_ready()
-        self.unloading_button.wait_ready()
+        #self.loading_button.wait_ready()
+        #self.unloading_button.wait_ready()
 
         self.gyro.reset_measure()
         self.motor.set_power(0)
@@ -345,7 +346,8 @@ class GrabberController:
 
             # bloc_count == 1
             if self.bloc_positions[0] == BlocLocation.UNLOADED:
-                raise ValueError("First bloc not yet unloaded, aborting.")
+                print("Error: internal state inconsistency: bloc count is 1 but no bloc is loaded.")
+                return False
 
             self.motor.set_power(45) # use calibration power
             print("Loading second bloc: using motor velocity drop detection...")
@@ -360,7 +362,7 @@ class GrabberController:
             # to make sure it gets through
             self.motor.set_power(0)
             self.bloc_positions[0] = BlocLocation.BACK_STORAGE
-            self.bloc_positions[1] = BlocLocation.UNDER_GYRO
+            self.bloc_positions[1] = BlocLocation.AT_GATE
             self.bloc_count = 2
             print("Successfully loaded second bloc.")
             return True
@@ -408,10 +410,9 @@ class GrabberController:
                     print("Timeout unloading (no outwards SLOW tilt detected).")
                     return False
 
-                if self.bloc_positions[0] != BlocLocation.UNLOADED:
-                    self.bloc_positions[0] = BlocLocation.UNLOADED
-                elif self.bloc_positions[1] != BlocLocation.UNLOADED:
-                    self.bloc_positions[1] = BlocLocation.UNLOADED
+                self.bloc_positions[0] = BlocLocation.AT_GATE
+                # the first bloc should move to at gate position while the second one is ejected
+                self.bloc_positions[1] = BlocLocation.UNLOADED
 
                 self.bloc_count = max(0, self.bloc_count - 1)
                 print("Unloaded one bloc (2->1).")
@@ -455,8 +456,10 @@ class GrabberController:
 
         try:
             while True:
-                if self.loading_button.get_value():
-                    print("Loading Button pressed, attempting to load bloc...")
+                user_command = input("Enter command (l=load, u=unload, q=quit): ").lower() # ideally later use MATCH statement for better handling
+                #if self.loading_button.get_value():
+                if user_command == 'l':
+                    print("Loading a package into the Grabber")
                     success = self.load_bloc()
                     if success:
                         print(
@@ -467,8 +470,9 @@ class GrabberController:
                         print("Failed to load bloc.")
                     time.sleep(0.2)
 
-                elif self.unloading_button.get_value():
-                    print("Unloading Button pressed, attempting to unload bloc...")
+                elif user_command == 'u':
+                #elif self.unloading_button.get_value():
+                    print("Unloading a package from the Grabber")
                     success = self.unload_bloc()
                     if success:
                         print(
