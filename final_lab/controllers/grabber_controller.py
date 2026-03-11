@@ -39,7 +39,7 @@ class GrabberController:
         self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
 
         # Hardware
-        self.gyro = EV3GyroSensor(port=1, mode=EV3GyroSensor.Mode.DPS)
+        self.gyro = EV3GyroSensor(port=3, mode=EV3GyroSensor.Mode.DPS)
         #self.loading_button = TouchSensor(port=3)
         #self.unloading_button = TouchSensor(port=4)
         self.motor = Motor("A")
@@ -71,7 +71,7 @@ class GrabberController:
             print("Warning: running power too high. Pick a lower value")
 
     # ----------------------------
-    # Setup / calibration
+    # Setup / calibration#
     # ----------------------------
     def initialize_sensors(self):
         print("[Calibration] Initializing sensors... Don't move the Gyro sensor")
@@ -493,4 +493,4 @@ class GrabberController:
 if __name__ == "__main__":
     controller = GrabberController()
     controller.initialize_sensors()
-    controller.loop()
+    controller.loop(
