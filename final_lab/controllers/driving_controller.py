@@ -28,5 +28,5 @@ class DrivingController:
         - A positive value of `adjustment` will turn the robot to the right.
         - A larger magnitude of `adjustment` will make the robot turn with a smaller turn radius.
         """
-        self.right_motor.set_dps(self.base_power - adjustment)
-        self.left_motor.set_dps(self.base_power + adjustment)
+        self.right_motor.set_dps(self.base_power + adjustment)
+        self.left_motor.set_dps(self.base_power - adjustment)
