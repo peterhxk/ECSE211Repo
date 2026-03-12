@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-import time
 import math
 import statistics
 from enum import Enum
 from collections import deque
-
 import sys
 from tqdm import tqdm
 sys.path.append("../utils")
 from brick import EV3GyroSensor, TouchSensor, Motor
+import os
+import glob
+import time
+import pickle
+from datetime import datetime
 
 
 class BlocLocation(Enum):
@@ -33,16 +36,18 @@ class GrabberController:
       5) Load / unload blocs
     """
 
-    def __init__(self):
-        # Internal state
+    def __init__(self,motor_port="A",gyro_port=3,calibration=True,debug=True):
+
+        # Internal state variables
+
         self.bloc_count = 0
         self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
+        self.calibration = calibration
+        self.debug = debug
 
-        # Hardware
-        self.gyro = EV3GyroSensor(port=3, mode=EV3GyroSensor.Mode.DPS)
-        #self.loading_button = TouchSensor(port=3)
-        #self.unloading_button = TouchSensor(port=4)
-        self.motor = Motor("A")
+        # Hardware definition
+        self.gyro = EV3GyroSensor(port=gyro_port, mode=EV3GyroSensor.Mode.DPS)
+        self.motor = Motor(motor_port)
 
         # Gaussian parameters for idle gyro DPS
         self.mu = 0.0
@@ -145,55 +150,116 @@ class GrabberController:
 
         return samples
 
-    def calibrate_motor_drop_detection(self):
+    def calibrate_motor_drop_detection(self, calibration=True):
         """
-        1) Eject outward
-        2) Dry run both ways at power=45
-        3) Keep inward mu/sigma for drop detection while loading second bloc
+        If calibration=True:
+            1) Eject outward
+            2) Dry run both ways at power=45
+            3) Keep inward mu/sigma for drop detection while loading second bloc
+            4) Save calibration data to a timestamped serialized object
+
+        If calibration=False:
+            - Load the latest saved calibration object
+            - Do not overwrite anything
         """
-        print("[Motor calibration] Ejecting outward first...")
-        self.motor.set_power(-self.motor_calibration_power)
-        time.sleep(self.motor_eject_time)
-        self.motor.set_power(0)
-        time.sleep(0.5)
+        calibration_dir = getattr(self, "motor_calibration_dir", "motor_calibrations")
+        os.makedirs(calibration_dir, exist_ok=True)
 
-        print("[Motor calibration] Dry run outward...")
-        outward_samples = self._sample_motor_speeds(
-            power=-self.motor_calibration_power,
-            duration=self.motor_dry_run_time,
-            sleep_time=self.motor_sample_sleep,
-        )
-        if len(outward_samples) < 2:
-            raise RuntimeError("Not enough outward motor samples collected.")
+        if calibration:
+            if self.debug:
+                print("[Motor calibration] Ejecting outward first...")
+                self.motor.set_power(-self.motor_calibration_power)
+                time.sleep(self.motor_eject_time)
+                self.motor.set_power(0)
+                time.sleep(0.5)
 
-        mu_out = statistics.mean(outward_samples)
-        sigma_out = statistics.stdev(outward_samples)
-        print(
-            f"[Motor calibration] outward n={len(outward_samples)} "
-            f"mu={mu_out:.3f}, sigma={sigma_out:.3f}"
-        )
+                print("[Motor calibration] Dry run outward...")
+                outward_samples = self._sample_motor_speeds(
+                    power=-self.motor_calibration_power,
+                    duration=self.motor_dry_run_time,
+                    sleep_time=self.motor_sample_sleep,
+                )
+                if len(outward_samples) < 2:
+                    raise RuntimeError("Not enough outward motor samples collected.")
 
-        time.sleep(0.5)
+                mu_out = statistics.mean(outward_samples)
+                sigma_out = statistics.stdev(outward_samples)
+                sigma_out = max(sigma_out, 1e-6)
 
-        print("[Motor calibration] Dry run inward...")
-        inward_samples = self._sample_motor_speeds(
-            power=self.motor_calibration_power,
-            duration=self.motor_dry_run_time,
-            sleep_time=self.motor_sample_sleep,
-        )
-        if len(inward_samples) < 2:
-            raise RuntimeError("Not enough inward motor samples collected.")
+                print(
+                    f"[Motor calibration] outward n={len(outward_samples)} "
+                    f"mu={mu_out:.3f}, sigma={sigma_out:.3f}"
+                )
 
-        self.motor_mu_in = statistics.mean(inward_samples)
-        self.motor_sigma_in = statistics.stdev(inward_samples)
-        self.motor_sigma_in = max(self.motor_sigma_in, 1e-6)
+                time.sleep(0.5)
+
+                print("[Motor calibration] Dry run inward...")
+                inward_samples = self._sample_motor_speeds(
+                    power=self.motor_calibration_power,
+                    duration=self.motor_dry_run_time,
+                    sleep_time=self.motor_sample_sleep,
+                )
+                if len(inward_samples) < 2:
+                    raise RuntimeError("Not enough inward motor samples collected.")
+
+                self.motor_mu_in = statistics.mean(inward_samples)
+                self.motor_sigma_in = statistics.stdev(inward_samples)
+                self.motor_sigma_in = max(self.motor_sigma_in, 1e-6)
+                inward_n = len(inward_samples)
+
+            else:
+                raise RuntimeError("Calibration requested but debug mode is disabled.")
+
+            calibration_data = {
+                "date": datetime.now().isoformat(),
+                "motor_mu_in": self.motor_mu_in,
+                "motor_sigma_in": self.motor_sigma_in,
+                "motor_calibration_power": self.motor_calibration_power,
+                "motor_dry_run_time": self.motor_dry_run_time,
+                "motor_sample_sleep": self.motor_sample_sleep,
+                "motor_drop_k": self.motor_drop_k,
+            }
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            calibration_file = os.path.join(
+                calibration_dir, f"motor_calibration_{timestamp}.pkl"
+            )
+
+            with open(calibration_file, "wb") as f:
+                pickle.dump(calibration_data, f)
+
+            if self.debug:
+                print(f"[Motor calibration] Saved calibration to {calibration_file}")
+
+        else:
+            calibration_files = sorted(
+                glob.glob(os.path.join(calibration_dir, "motor_calibration_*.pkl"))
+            )
+            if not calibration_files:
+                raise FileNotFoundError(
+                    f"No calibration file found in '{calibration_dir}'."
+                )
+
+            latest_file = calibration_files[-1]
+            with open(latest_file, "rb") as f:
+                calibration_data = pickle.load(f)
+
+            self.motor_mu_in = calibration_data["motor_mu_in"]
+            self.motor_sigma_in = max(calibration_data["motor_sigma_in"], 1e-6)
+            inward_n = "loaded"
+
+            if self.debug:
+                print(f"[Motor calibration] Loaded latest calibration from {latest_file}")
+                print(f"[Motor calibration] Calibration date: {calibration_data['date']}")
 
         threshold = self.motor_mu_in - self.motor_drop_k * self.motor_sigma_in
         print(
-            f"[Motor calibration] inward n={len(inward_samples)} "
+            f"[Motor calibration] inward n={inward_n} "
             f"mu={self.motor_mu_in:.3f}, sigma={self.motor_sigma_in:.3f}, "
             f"threshold={threshold:.3f}"
         )
+
+        return threshold
 
     # ----------------------------
     # Gyro event detection
