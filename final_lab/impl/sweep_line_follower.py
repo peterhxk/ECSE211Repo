@@ -44,6 +44,7 @@ class SweepLineFollower:
                     print("too far off. theta: ", theta)
 
                     adjustment = self.K_P * theta - self.K_D * (theta - self.last_theta)
+                    print(adjustment, self.pilot.base_power)
                     self.pilot.adjust_direction(adjustment)
 
                 self.last_theta = theta
