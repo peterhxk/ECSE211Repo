@@ -5,7 +5,7 @@ class SweepLineFollower:
 
     THETA_TOLERANCE = 3
     MOTOR_BASE_POWER_DPS = 150
-    K_P = 1.5   # @TODO: Choose appropriate values of K_P and K_D.
+    K_P = 1   # @TODO: Choose appropriate values of K_P and K_D.
     K_D = 0.5
     LAMBDA = 0
     K_R = 5
@@ -52,9 +52,9 @@ class SweepLineFollower:
 
                 self.last_theta = theta
 
-            elif len(sweep_result) == 3:
+            elif len(sweep_result) == 2 or len(sweep_result) == 3:
                 # We've reached an intersection.
-                print("found an intersection")
+                print("found an intersection, ", len(sweep_result), " lines detected")
 
                 continue
 
