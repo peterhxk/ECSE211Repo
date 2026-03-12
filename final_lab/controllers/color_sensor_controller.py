@@ -79,7 +79,7 @@ class ColourSensorController (EV3ColorSensor):
                 # Check to make sure we are not "finding" the same black line as previously
                 theta = self.motor.get_position()
                 
-                for line_angle, _ in self.colours_found:
+                for line_angle, *_ in self.colours_found:
                     if abs(theta - line_angle) <= self.THETA_TOLERANCE:
                         break
                 else:
