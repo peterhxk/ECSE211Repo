@@ -329,7 +329,7 @@ class GrabberController:
             self.motor.set_power(self.running_power)
 
         while time.time() - start < duration and not cooldown:
-            if self._is_motor_drop_detected(timeout=0.5):
+            if self._is_motor_drop_detected(timeout=1.0):
                 print("[Motor drop detected] Temporarily increasing velocity to prevent blocking")
 
                 cooldown = True
@@ -417,6 +417,8 @@ class GrabberController:
                 )
                 # start a thread
                 threading.Thread(self.increase_on_velocity_drop()).start()
+
+                print("Started THREAD")
 
                 ok = self._consecutive_trigger(
                     lambda: self.is_tilted_inwards(GyroTilt.SLOW_TILT),
