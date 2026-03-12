@@ -549,6 +549,11 @@ class GrabberController:
                         print("Failed to unload bloc.")
                     time.sleep(0.2)
 
+                elif user_command == 'q':
+                    time.sleep(0.2)
+                    raise KeyboardInterrupt
+
+
                 time.sleep(0.01)
 
         except KeyboardInterrupt:
