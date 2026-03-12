@@ -47,6 +47,9 @@ class SweepLineFollower:
                     print(adjustment, self.pilot.base_power)
                     self.pilot.adjust_direction(adjustment)
 
+                    print("right motor: ", self.pilot.right_motor.get_dps())
+                    print("left motor: ", self.pilot.left.get_dps())
+
                 self.last_theta = theta
 
             elif len(sweep_result) == 3:
