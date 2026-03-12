@@ -22,7 +22,7 @@ class SweepLineFollower:
         while True:
             # Sweep the colour sensor once
             sweep_result = self.sensor.sweep(range="full")
-            print("Swept sensor")
+            print("Swept sensor", sweep_result)
 
             if len(sweep_result) == 0:
                 # Could not find the black line. Sweep again.
