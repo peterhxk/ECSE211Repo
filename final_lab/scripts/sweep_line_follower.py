@@ -23,6 +23,7 @@ wait_ready_sensors(True)
 
 try:
     driving_controller.adjust_direction(-30)
+    time.sleep(10)
     # line_follower.run()
 
 except KeyboardInterrupt:
