@@ -331,7 +331,7 @@ class GrabberController:
             if self.bloc_count != 0:
                 return
 
-            if self._is_motor_drop_detected(timeout=1.0):
+            if self._is_motor_drop_detected(timeout=5.0):
                 print("[Motor drop detected] Temporarily increasing velocity to prevent blocking")
 
                 cooldown = True
