@@ -5,8 +5,8 @@ class SweepLineFollower:
 
     THETA_TOLERANCE = 3
     MOTOR_BASE_POWER_DPS = 150
-    K_P = 1   # @TODO: Choose appropriate values of K_P and K_D.
-    K_D = 0
+    K_P = 1.5   # @TODO: Choose appropriate values of K_P and K_D.
+    K_D = 0.5
     LAMBDA = 0
     K_R = 5
 
