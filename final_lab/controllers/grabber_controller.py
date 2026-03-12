@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import math
 import statistics
+import threading
 from enum import Enum
 from collections import deque
 import sys
@@ -12,6 +13,7 @@ import glob
 import time
 import pickle
 from datetime import datetime
+import threading
 
 
 class BlocLocation(Enum):
@@ -318,6 +320,25 @@ class GrabberController:
     # ----------------------------
     # Motor drop detection
     # ----------------------------
+
+    def increase_on_velocity_drop(self, duration=2.0):
+        start = time.time()
+        cooldown = False
+
+        def reset_power():
+            self.motor.set_power(self.running_power)
+
+        while time.time() - start < duration and not cooldown:
+            if self._is_motor_drop_detected(timeout=0.5):
+                print("[Motor drop detected] Temporarily increasing velocity to prevent blocking")
+
+                cooldown = True
+
+                boosted_power = min(1.5 * self.motor.get_power(), self.running_power*1.4)
+                self.motor.set_power(boosted_power)
+                threading.Timer(1.0, reset_power).start()
+
+
     def _is_motor_drop_detected(self, timeout=5.0) -> bool:
         """
         While motor is already running inward, detect a sustained drop in motor speed:
@@ -394,6 +415,8 @@ class GrabberController:
                     f"dps={dps}, mu={self.mu}, sigma={self.sigma}, "
                     f"threshold={self.mu - 3 * self.sigma}"
                 )
+                # start a thread
+                threading.Thread(self.increase_on_velocity_drop()).start()
 
                 ok = self._consecutive_trigger(
                     lambda: self.is_tilted_inwards(GyroTilt.SLOW_TILT),
