@@ -64,8 +64,3 @@ class SweepLineFollower:
                 self.pilot.left_motor.set_dps(self.K_R * theta)
 
                 # @TODO: Complete logic
-<<<<<<< HEAD
-=======
-                
-                pass
->>>>>>> 6b3b975 (start of intersection logic)
