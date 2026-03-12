@@ -578,12 +578,14 @@ class GrabberController:
                     print("Gently excitting program")
                     raise KeyboardInterrupt
 
-
                 time.sleep(0.01)
 
         except KeyboardInterrupt:
             print("Stopping grabber controller loop.")
             self.motor.set_power(0)
+
+    def kill(self):
+        raise NotImplementedError()
 
 
 if __name__ == "__main__":
