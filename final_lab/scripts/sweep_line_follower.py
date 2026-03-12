@@ -6,6 +6,7 @@ from utils.brick import wait_ready_sensors, reset_brick, Motor
 from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
 from impl.sweep_line_follower import SweepLineFollower
+import time
 
 # Sensor declaration
 
@@ -22,6 +23,7 @@ wait_ready_sensors(True)
 
 try:
     driving_controller.move_forward()
+    time.sleep(5000)
     # line_follower.run()
 
 except KeyboardInterrupt:
