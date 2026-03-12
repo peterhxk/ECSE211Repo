@@ -325,18 +325,22 @@ class GrabberController:
         start = time.time()
         cooldown = False
 
-        def reset_power():
-            self.motor.set_power(self.running_power)
-
         while time.time() - start < duration and not cooldown:
             if self._is_motor_drop_detected(timeout=1.0):
                 print("[Motor drop detected] Temporarily increasing velocity to prevent blocking")
 
                 cooldown = True
-
-                boosted_power = min(1.5 * self.motor.get_power(), self.running_power*1.4)
+                boosted_power = min(1.5 * self.motor.get_power(), self.running_power * 1.4)
                 self.motor.set_power(boosted_power)
-                threading.Timer(1.0, reset_power).start()
+
+                time.sleep(1.0)
+
+                # only restore if motor is still supposed to be running
+                if self.bloc_count == 0:
+                    self.motor.set_power(self.running_power)
+
+                if self.bloc_count == 1:
+                    self.motor.set_power(0)
 
 
     def _is_motor_drop_detected(self, timeout=5.0) -> bool:
@@ -416,7 +420,7 @@ class GrabberController:
                     f"threshold={self.mu - 3 * self.sigma}"
                 )
                 # start a thread
-                threading.Thread(self.increase_on_velocity_drop()).start()
+                threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
 
                 print("Started THREAD")
 
