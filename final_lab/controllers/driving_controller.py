@@ -1,7 +1,10 @@
+from typing import Literal
 from utils.brick import Motor
 
 class DrivingController:
     """Controller to drive the robot."""
+
+    WHEEL_DIAMETER_MM = 42.6
 
     def __init__(self, right_motor: Motor, left_motor: Motor, base_power: int):
         """
@@ -20,6 +23,38 @@ class DrivingController:
         """
         self.right_motor.set_dps(self.base_power)
         self.left_motor.set_dps(self.base_power)
+
+    def stop_motors(self):
+        """Stops the motors."""
+        self.right_motor.set_dps(0)
+        self.left_motor.set_dps(0)
+    
+    def reset_encoders(self):
+        """Resets the motor encoder values of both motors."""
+        self.left_motor.reset_encoder()
+        self.right_motor.reset_encoder()
+
+    def get_avg_encoder_value(self):
+        """Reads the average encoder value of the left and right motors."""
+        return (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
+
+    def pivot(self, power: int, direction: Literal["left", "right"]):
+        """
+        Pivots the robot with one of the wheels as a pivot point.
+        
+        Args:
+            power (int): The power at which to rotate the moving wheel.
+            direction (left | right): The direction in which to turn the robot.
+        """
+
+        if direction == "left":
+            self.right_motor.set_dps(power)
+            self.left_motor.set_dps(0)
+        elif direction == "left":
+            self.left_motor.set_dps(power)
+            self.right_motor.set_dps(0)
+        else:
+            raise Exception(f"Invalid option for parameter direction in DrivingController.pivot: {direction}.\nValid options are: left, right")
 
     def adjust_direction(self, adjustment: int):
         """

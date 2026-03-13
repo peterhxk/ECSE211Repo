@@ -1,5 +1,7 @@
 from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
+import math
+import time 
 
 class SweepLineFollower:
 
@@ -17,6 +19,54 @@ class SweepLineFollower:
 
     def begin(self):
         self.pilot.move_forward()
+    
+    def move_forward(self, max_distance):
+        """Moves the robot forward as long as the colour sensor detects the black line.
+        
+        Args:
+            max_distance (int): The distance to move forward for, in millimetres.
+        """
+
+        # Reset encoder values
+        self.pilot.reset_encoders()
+
+        # Begin moving forward
+        self.pilot.move_forward()
+
+        # Keep moving forward as long as the black line is detected
+        # Keep track of the distance 
+        # @TODO Distance does not account for any adjustments (wiggling)
+        distance = 0
+        last_encoder_value = 0
+        while self.sensor.read_colour() == "b" and distance < max_distance:
+            distance += (math.pi/180) * (self.pilot.get_avg_encoder_value() - last_encoder_value) * (self.pilot.WHEEL_DIAMETER_MM/2)
+            time.sleep(0.1)
+
+        if distance < max_distance:
+            # Stopped due to the black line no longer being detected.
+            # Sweep the colour arm to find the line once again
+
+            while True:
+                results = self.sensor.sweep(range="full", stop_on_match=True)
+                angle = results[0][0]
+
+                # Positive angles -> line is detected on the left
+                self.pilot.pivot(20, "left" if angle > 0 else "right")
+                
+                # Rotate for an amount of time based on theta
+                # @TODO calculate time based on phi rather than theta
+                time.sleep(angle / 10)
+
+                if -self.THETA_TOLERANCE <= angle <= self.THETA_TOLERANCE:
+                    # Robot is straight
+                    # @TODO: Advance slightly to ensure that robot actually is straight
+                    # If that's the case, return to move_forward and advance the remaining distance
+                    pass
+                
+                # @TODO: Otherwise, repeat the process to determine the next correction to perform
+
+
+            return
 
     def run(self):
         while True:
