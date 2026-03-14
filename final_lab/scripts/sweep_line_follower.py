@@ -15,7 +15,7 @@ right_motor = Motor("B")
 color_sensor_motor = Motor("D")
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
-color_sensor_controller = ColourSensorController(4, color_sensor_motor)
+color_sensor_controller = ColourSensorController(2, color_sensor_motor)
 
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 
