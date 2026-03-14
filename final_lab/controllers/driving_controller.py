@@ -49,12 +49,18 @@ class DrivingController:
         """
         print(f"pivoting {direction}")
 
+        # if direction == "left":
+        #     self.right_motor.set_dps(self.base_power)
+        #     self.left_motor.set_dps(0)
+        # elif direction == "right":
+        #     self.left_motor.set_dps(self.base_power)
+        #     self.right_motor.set_dps(0)
         if direction == "left":
-            self.right_motor.set_dps(self.base_power)
-            self.left_motor.set_dps(0)
+            self.right_motor.set_dps(self.base_power/2)
+            self.left_motor.set_dps(-self.base_power/2)
         elif direction == "right":
-            self.left_motor.set_dps(self.base_power)
-            self.right_motor.set_dps(0)
+            self.left_motor.set_dps(self.base_power/2)
+            self.right_motor.set_dps(-self.base_power/2)
         else:
             raise Exception(f"Invalid option for parameter direction in DrivingController.pivot: {direction}.\nValid options are: left, right")
 
