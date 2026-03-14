@@ -12,9 +12,8 @@ class DrivingController:
 
         Params: `right_motor`, `left_motor`: BrickPi `Motor` objects.
         """
-
-        self.right_motor = right_motor
         self.left_motor = left_motor 
+        self.right_motor = right_motor
         self.base_power = base_power
     
     def move_forward(self):
