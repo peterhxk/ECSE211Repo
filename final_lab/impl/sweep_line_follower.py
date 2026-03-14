@@ -117,7 +117,7 @@ class SweepLineFollower:
 
 
     def run(self):
-        distance_mm = 10000
+        distance_mm = 20000
         self.move_forward(distance_mm)
         return
         while True:
