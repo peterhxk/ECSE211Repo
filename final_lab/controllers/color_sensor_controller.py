@@ -132,7 +132,7 @@ class ColourSensorController (EV3ColorSensor):
             
 
             # Otherwise, wait a small bit more before sweeping and checking again
-            time.sleep(0.1)
+            time.sleep(0.01)
             duration += 0.1
 
     def read_colour(self):
