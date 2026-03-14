@@ -133,9 +133,8 @@ class ColourSensorController (EV3ColorSensor):
         cur_r = cur_rgb[0]
         cur_g = cur_rgb[1]
         cur_b = cur_rgb[2]
-        # nor_r, nor_g, nor_b = normalize_colours(cur_r,cur_g,cur_b)
-        # print((nor_r, nor_g, nor_b))
-        print(cur_rgb)
+        # Uncomment for rgb data adjustment
+        # print(cur_rgb)
         with open("data/colours.json", "r") as f:
             colours = json.load(f)
         colour_to_distance = {}
@@ -161,4 +160,7 @@ class ColourSensorController (EV3ColorSensor):
             while count < 50:
                 outfile.write(f"{ColourSensorController.get_rgb()}\n")
                 time.sleep(0.1)
+
+    def read_colour_print(self):
+        print(self.get_rgb())
 
