@@ -21,7 +21,7 @@ class DrivingController:
         """
         Sets the left and right motors to move the robot forward at a rate of `self.base_power`.
         """
-        print(f"moving forward with {self.base_power}")
+        # print(f"moving forward with {self.base_power}")
 
         self.right_motor.set_dps(self.base_power)
         self.left_motor.set_dps(self.base_power)
@@ -48,6 +48,7 @@ class DrivingController:
             power (int): The power at which to rotate the moving wheel.
             direction (left | right): The direction in which to turn the robot.
         """
+        print(f"pivoting {direction}")
 
         if direction == "left":
             self.right_motor.set_dps(power)
