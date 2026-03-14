@@ -55,7 +55,7 @@ class SweepLineFollower:
                 
                 # Rotate for an amount of time based on theta
                 # time t as a function of angle theta
-                t = self.f_theta(angle, dps)
+                t = abs(self.f_theta(angle, dps))
                 print(f"sleeping for {t}")
                 time.sleep(t)
 
