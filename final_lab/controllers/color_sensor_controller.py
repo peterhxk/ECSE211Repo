@@ -36,7 +36,7 @@ class ColourSensorController (EV3ColorSensor):
     # Angle tolerance at which the line is still considered the same one
     THETA_TOLERANCE = 10
 
-    MOTOR_POWER_DPS = 70
+    MOTOR_POWER_DPS = 140
 
     def __init__(self, port, motor: Motor, mode="component", bp=None):
         super().__init__(port)
