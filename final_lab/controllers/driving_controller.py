@@ -6,7 +6,7 @@ class DrivingController:
 
     WHEEL_DIAMETER_MM = 42.6
 
-    def __init__(self, right_motor: Motor, left_motor: Motor, base_power: int):
+    def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int):
         """
         Initializes the driving controller.
 
