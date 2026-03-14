@@ -88,9 +88,12 @@ class SweepLineFollower:
 
         # total d needed for wheel to travel
         d = dis_wheels_mm*phi*math.pi/180
+        print(f"total_d to travel {d}")
+
 
         # distance/s from degrees/s
         d_per_s = dps * cir / 360
+        print(f"distance per second {d_per_s}")
 
         # time t (in sec) for wheel to turn for
         t = d / d_per_s
