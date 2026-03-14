@@ -73,6 +73,8 @@ class ColourSensorController (EV3ColorSensor):
             # Not currently sweeping. Start sweeping to the right.
             self.sweep_dir = SweepDirection.RIGHT
 
+        prev_reversed = False
+
         while True:
             # Check if a black line is found
             if self.read_colour() == colour:
@@ -95,12 +97,15 @@ class ColourSensorController (EV3ColorSensor):
             if self._is_at_boundary(range):
                 # Reverse the direction
                 self.sweep_dir = SweepDirection.LEFT if self.sweep_dir == SweepDirection.RIGHT else SweepDirection.RIGHT
-                
-                # At this point, we've completed one sweep, so we must return the colours found.
-                results = self.colours_found
-                self.colours_found = []
-                return results
-            
+
+                if prev_reversed:
+                    # At this point, we've completed one sweep, so we must return the colours found.
+                    results = self.colours_found
+                    self.colours_found = []
+                    return results
+                prev_reversed = True
+    
+        
             # Check if the motor is operating in the current direction
             if (self.motor.get_speed() * self.sweep_dir.value <= 0):
                 # Reverse the direction of the motor
@@ -117,7 +122,7 @@ class ColourSensorController (EV3ColorSensor):
         cur_b = cur_rgb[2]
         # nor_r, nor_g, nor_b = normalize_colours(cur_r,cur_g,cur_b)
         # print((nor_r, nor_g, nor_b))
-        print(cur_rgb)
+        #print(cur_rgb)
         with open("data/colours.json", "r") as f:
             colours = json.load(f)
         colour_to_distance = {}
