@@ -50,7 +50,7 @@ class DrivingController:
         if direction == "left":
             self.right_motor.set_dps(power)
             self.left_motor.set_dps(0)
-        elif direction == "left":
+        elif direction == "right":
             self.left_motor.set_dps(power)
             self.right_motor.set_dps(0)
         else:
@@ -66,4 +66,3 @@ class DrivingController:
         self.right_motor.set_dps(self.base_power + adjustment)
         self.left_motor.set_dps(self.base_power - adjustment)
 
-        
