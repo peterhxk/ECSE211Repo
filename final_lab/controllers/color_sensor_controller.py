@@ -91,6 +91,7 @@ class ColourSensorController (EV3ColorSensor):
                     if stop_on_match:
                         results = self.colours_found
                         self.colours_found = []
+                        self.motor.set_dps(0)
                         return results
             
             # Check if we are beyond the maximum sweep angle
@@ -102,6 +103,7 @@ class ColourSensorController (EV3ColorSensor):
                     # At this point, we've completed one sweep, so we must return the colours found.
                     results = self.colours_found
                     self.colours_found = []
+                    self.motor.set_dps(0)
                     return results
                 prev_reversed = True
     

@@ -22,11 +22,6 @@ line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 wait_ready_sensors(True)
 
 try:
-    base_power = 150
-    while True:
-        right_motor.set_dps(base_power)
-        left_motor.set_dps(base_power)
-        time.sleep(10)
     line_follower.run()
 
 except KeyboardInterrupt:
