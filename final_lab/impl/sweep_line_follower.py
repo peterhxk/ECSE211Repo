@@ -56,13 +56,12 @@ class SweepLineFollower:
                 results = self.sensor.sweep(range="full", stop_on_match=True)
                 angle = results[0][0]
 
-                dps = 20
                 # Positive angles -> line is detected on the left
-                self.pilot.pivot(dps, "left" if angle > 0 else "right")
+                self.pilot.pivot("left" if angle > 0 else "right")
                 
                 # Rotate for an amount of time based on theta
                 # time t as a function of angle theta
-                t = abs(self.f_theta(angle, dps))
+                t = abs(self.f_theta(angle, 150))
                 print(f"sleeping for {t*10}")
                 time.sleep(t*10)
 

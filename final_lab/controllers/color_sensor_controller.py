@@ -82,22 +82,30 @@ class ColourSensorController (EV3ColorSensor):
             # Check if a black line is found
             if self.read_colour() == colour:
                 # Check to make sure we are not "finding" the same black line as previously
-                theta = self.motor.get_position()
+                # theta = self.motor.get_position()
                 
-                for line_angle, *_ in self.colours_found:
-                    if abs(theta - line_angle) <= self.THETA_TOLERANCE:
-                        break
-                else:
-                    # Add theta to the list of matches once the colour is found
-                    self.colours_found.append((self.motor.get_position(), colour, duration))
+                # for line_angle, *_ in self.colours_found:
+                #     if abs(theta - line_angle) <= self.THETA_TOLERANCE:
+                #         break
+                # else:
+                #     # Add theta to the list of matches once the colour is found
+                #     self.colours_found.append((self.motor.get_position(), colour, duration))
 
-                    if stop_on_match:
-                        results = self.colours_found
-                        self.colours_found = []
-                        self.motor.set_dps(0)
-                        self.motor.set_position(init_position)
-                        self.motor.wait_is_moving()
-                        return results
+                #     if stop_on_match:
+                #         results = self.colours_found
+                #         self.colours_found = []
+                #         self.motor.set_dps(0)
+                #         self.motor.set_position(init_position)
+                #         self.motor.wait_is_moving()
+                #         return results
+                self.colours_found.append((self.motor.get_position(), colour, duration))
+                if stop_on_match:
+                    results = self.colours_found
+                    self.colours_found = []
+                    self.motor.set_dps(0)
+                    self.motor.set_position(init_position)
+                    self.motor.wait_is_moving()
+                    return results
             
             # Check if we are beyond the maximum sweep angle
             if self._is_at_boundary(range):

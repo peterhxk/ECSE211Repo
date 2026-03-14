@@ -40,7 +40,7 @@ class DrivingController:
         """Reads the average encoder value of the left and right motors."""
         return (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
 
-    def pivot(self, power: int, direction: Literal["left", "right"]):
+    def pivot(self, direction: Literal["left", "right"]):
         """
         Pivots the robot with one of the wheels as a pivot point.
         
@@ -51,10 +51,10 @@ class DrivingController:
         print(f"pivoting {direction}")
 
         if direction == "left":
-            self.right_motor.set_dps(power)
+            self.right_motor.set_dps(self.base_power)
             self.left_motor.set_dps(0)
         elif direction == "right":
-            self.left_motor.set_dps(power)
+            self.left_motor.set_dps(self.base_power)
             self.right_motor.set_dps(0)
         else:
             raise Exception(f"Invalid option for parameter direction in DrivingController.pivot: {direction}.\nValid options are: left, right")
