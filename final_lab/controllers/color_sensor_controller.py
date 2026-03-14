@@ -82,6 +82,8 @@ class ColourSensorController (EV3ColorSensor):
             self.sweep_dir = SweepDirection.LEFT
 
         prev_reversed = False
+        consecutive_count = 0
+        consecutive_positions = []
 
         while True:
             # Check if the motor is operating in the current direction
@@ -91,21 +93,24 @@ class ColourSensorController (EV3ColorSensor):
 
             # Check if a black line is found
             if self.read_colour() == colour:
-                positions = []
-                while self.read_colour() == colour:
-                    positions.append(self.motor.get_position())
-                    time.sleep(0.1)
-                print(positions)
-                self.colours_found.append((sum(positions)/len(positions), colour, duration))
-                print(self.colours_found)
-                print("loop is stuck here")
-                if stop_on_match:
-                    results = self.colours_found
-                    self.colours_found = []
-                    self.motor.set_dps(0)
-                    self.motor.set_position(init_position)
-                    self.motor.wait_is_moving()
-                    return results
+                consecutive_count += 1
+                consecutive_positions.append(self.motor.get_position())
+                if consecutive_count >= 5:
+                    avg_pos = sum(consecutive_positions) / len(consecutive_positions)
+                    self.colours_found.append((avg_pos, colour, duration))
+                    print(self.colours_found)
+                    consecutive_count = 0
+                    consecutive_positions = []
+                    if stop_on_match:
+                        results = self.colours_found
+                        self.colours_found = []
+                        self.motor.set_dps(0)
+                        self.motor.set_position(init_position)
+                        self.motor.wait_is_moving()
+                        return results
+            else:
+                consecutive_count = 0
+                consecutive_positions = []
             
             # Check if we are beyond the maximum sweep angle
             if self._is_at_boundary(range):
