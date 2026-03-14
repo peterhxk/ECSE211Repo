@@ -88,7 +88,7 @@ class ColourSensorController (EV3ColorSensor):
             if (self.motor.get_speed() * self.sweep_dir.value <= 0):
                 # Reverse the direction of the motor
                 self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
-                
+
             # Check if a black line is found
             if self.read_colour() == colour:
                 positions = []
@@ -102,6 +102,7 @@ class ColourSensorController (EV3ColorSensor):
                     self.motor.set_dps(0)
                     self.motor.set_position(init_position)
                     self.motor.wait_is_moving()
+                    print(f"force return angle result")
                     return results
             
             # Check if we are beyond the maximum sweep angle
