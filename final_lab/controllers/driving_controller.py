@@ -55,6 +55,8 @@ class DrivingController:
         # elif direction == "right":
         #     self.left_motor.set_dps(self.base_power)
         #     self.right_motor.set_dps(0)
+        
+        # try rotate in place
         if direction == "left":
             self.right_motor.set_dps(self.base_power/2)
             self.left_motor.set_dps(-self.base_power/2)
