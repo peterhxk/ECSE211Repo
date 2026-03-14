@@ -65,7 +65,7 @@ class SweepLineFollower:
                 t = abs(self.f_theta(angle, 150))
                 print(f"sleeping for {t*10}")
                 time.sleep(t*10)
-                self.move_forward(50, force=True)
+                #self.move_forward(50, force=True)
 
         print(f"advancement of {max_distance} distance completed")
         return
