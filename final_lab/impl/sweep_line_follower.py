@@ -63,8 +63,8 @@ class SweepLineFollower:
                 # Rotate for an amount of time based on theta
                 # time t as a function of angle theta
                 t = abs(self.f_theta(angle, dps))
-                print(f"sleeping for {t}")
-                time.sleep(t)
+                print(f"sleeping for {t*10}")
+                time.sleep(t*10)
 
         print(f"advancement of {max_distance} distance completed")
         return
