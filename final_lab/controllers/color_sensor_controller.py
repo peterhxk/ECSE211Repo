@@ -69,6 +69,9 @@ class ColourSensorController (EV3ColorSensor):
 
         duration = 0
 
+        #initial colour sensor position (should be straight)
+        init_position = self.motor.get_position()
+        
         if self.sweep_dir == None:
             # Not currently sweeping. Start sweeping to the right.
             self.sweep_dir = SweepDirection.RIGHT
@@ -92,6 +95,8 @@ class ColourSensorController (EV3ColorSensor):
                         results = self.colours_found
                         self.colours_found = []
                         self.motor.set_dps(0)
+                        self.motor.set_position(init_position)
+                        self.motor.wait_is_moving()
                         return results
             
             # Check if we are beyond the maximum sweep angle
@@ -104,6 +109,8 @@ class ColourSensorController (EV3ColorSensor):
                     results = self.colours_found
                     self.colours_found = []
                     self.motor.set_dps(0)
+                    self.motor.set_position(init_position)
+                    self.motor.wait_is_moving()
                     return results
                 prev_reversed = True
     
