@@ -22,7 +22,8 @@ line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 wait_ready_sensors(True)
 
 try:
-    driving_controller.move_forward()
+    while True:
+        driving_controller.move_forward()
     #line_follower.run()
 
 except KeyboardInterrupt:
