@@ -90,7 +90,6 @@ class ColourSensorController (EV3ColorSensor):
                 self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
 
             # Check if a black line is found
-            print(self.read_colour())
             if self.read_colour() == colour:
                 positions = []
                 while self.read_colour() == colour:
@@ -135,7 +134,7 @@ class ColourSensorController (EV3ColorSensor):
         cur_b = cur_rgb[2]
         # nor_r, nor_g, nor_b = normalize_colours(cur_r,cur_g,cur_b)
         # print((nor_r, nor_g, nor_b))
-        #print(cur_rgb)
+        print(cur_rgb)
         with open("data/colours.json", "r") as f:
             colours = json.load(f)
         colour_to_distance = {}
