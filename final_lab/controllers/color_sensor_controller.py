@@ -55,7 +55,7 @@ class ColourSensorController (EV3ColorSensor):
         """
         return self.sweep_dir.value * self.motor.get_position() >= self.sweep_dir.value * self.MAX_SWEEP_ANGLE[range][self.sweep_dir]
 
-    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_direction: Literal["left", "right"] = "right") -> List[Tuple[int, str, int]]:
+    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True) -> List[Tuple[int, str, int]]:
         """Sweeps the colour sensor arm and checks the colour.
 
         Args:
@@ -76,7 +76,7 @@ class ColourSensorController (EV3ColorSensor):
         
         print("------------")
         print(init_position)
-        if starting_direction == "right":
+        if starting_on_right:
             self.sweep_dir = SweepDirection.RIGHT
         else:
             self.sweep_dir = SweepDirection.LEFT

@@ -36,6 +36,7 @@ class SweepLineFollower:
         distance = 0
         last_encoder_value = 0
         moving_forward = False
+        starting_direction_right = True
 
         while distance < max_distance:
             # Moving forward
@@ -54,7 +55,8 @@ class SweepLineFollower:
                     moving_forward = False
                     self.pilot.stop_motors()
 
-                results = self.sensor.sweep(range="full", stop_on_match=True)
+                results = self.sensor.sweep(range="full", stop_on_match=True, starting_on_right=starting_direction_right)
+                starting_direction_right = not starting_direction_right
                 print(f"sweeping result {results}")
                 angle = results[0][0]
 
