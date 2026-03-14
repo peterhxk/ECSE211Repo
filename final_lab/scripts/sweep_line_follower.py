@@ -1,5 +1,5 @@
 import sys
-sys.path.append("../")
+#sys.path.append("../")
 
 import traceback
 from utils.brick import wait_ready_sensors, reset_brick, Motor
@@ -26,7 +26,7 @@ try:
 
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
-    
+
 except Exception as err:
     print(err)
     traceback.print_exc()
