@@ -87,8 +87,8 @@ class SweepLineFollower:
 
         x = 180-abs(angle)
         c = math.sqrt(l_rod_mm**2+l_axle_rod_mm**2+2*l_rod_mm*l_axle_rod_mm* \
-                                  math.cos(x))
-        phi = math.degrees(math.asin(l_rod_mm*math.sin(x)/c))
+                            abs(math.cos(math.radians(x))))
+        phi = math.degrees(math.asin(l_rod_mm*math.sin(math.radians(x))/c))
         print(f"turning angle for robot {phi}")
         
         # For one wheel stationary rotation
