@@ -21,6 +21,7 @@ class DrivingController:
         """
         Sets the left and right motors to move the robot forward at a rate of `self.base_power`.
         """
+        print("moving forward")
         self.right_motor.set_dps(self.base_power)
         self.left_motor.set_dps(self.base_power)
 
