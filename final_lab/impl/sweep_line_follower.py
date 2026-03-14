@@ -35,10 +35,13 @@ class SweepLineFollower:
         # @TODO Distance does not account for any adjustments (wiggling)
         distance = 0
         last_encoder_value = 0
+        moving_forward = False
 
         while distance < max_distance:
-            # Begin moving forward
-            self.pilot.move_forward()
+            # Moving forward
+            if not moving_forward:
+                self.pilot.move_forward()
+                moving_forward=True
 
             print(self.pilot.get_avg_encoder_value())
             print(self.sensor.read_colour())
@@ -46,6 +49,10 @@ class SweepLineFollower:
             distance += (math.pi/180) * (self.pilot.get_avg_encoder_value() - last_encoder_value) * (self.pilot.WHEEL_DIAMETER_MM/2)
             time.sleep(0.1)
             if self.sensor.read_colour() == "w":
+                if moving_forward:
+                    moving_forward = False
+                    self.pilot.stop_motors()
+
                 results = self.sensor.sweep(range="full", stop_on_match=True)
                 angle = results[0][0]
 
