@@ -30,45 +30,69 @@ class SweepLineFollower:
         # Reset encoder values
         self.pilot.reset_encoders()
 
-        # Begin moving forward
-        self.pilot.move_forward()
-
         # Keep moving forward as long as the black line is detected
         # Keep track of the distance 
         # @TODO Distance does not account for any adjustments (wiggling)
         distance = 0
         last_encoder_value = 0
-        while self.sensor.read_colour() == "b" and distance < max_distance:
+
+        while distance < max_distance:
+            # Begin moving forward
+            self.pilot.move_forward()
+
+            print(self.pilot.get_avg_encoder_value)
+            
             distance += (math.pi/180) * (self.pilot.get_avg_encoder_value() - last_encoder_value) * (self.pilot.WHEEL_DIAMETER_MM/2)
             time.sleep(0.1)
-
-        if distance < max_distance:
-            # Stopped due to the black line no longer being detected.
-            # Sweep the colour arm to find the line once again
-
-            while True:
+            if self.sensor.read_colour() == "w":
                 results = self.sensor.sweep(range="full", stop_on_match=True)
                 angle = results[0][0]
 
+                dps = 20
                 # Positive angles -> line is detected on the left
-                self.pilot.pivot(20, "left" if angle > 0 else "right")
+                self.pilot.pivot(dps, "left" if angle > 0 else "right")
                 
                 # Rotate for an amount of time based on theta
-                # @TODO calculate time based on phi rather than theta
-                time.sleep(angle / 10)
+                # time t as a function of angle theta
+                t = self.f_theta(angle, dps)
+                time.sleep(t)
 
-                if -self.THETA_TOLERANCE <= angle <= self.THETA_TOLERANCE:
-                    # Robot is straight
-                    # @TODO: Advance slightly to ensure that robot actually is straight
-                    # If that's the case, return to move_forward and advance the remaining distance
-                    pass
-                
-                # @TODO: Otherwise, repeat the process to determine the next correction to perform
+        print(f"advancement of {max_distance} distance completed")
+        return
+    
+    # Helper
+    def f_theta(self, angle, dps):
 
+        # Define constants
+        dis_wheels_mm = 159
+        l_rod_mm = 65
+        l_axle_rod_mm = 69
+        dia_wheel_mm = 42.6
 
-            return
+        # Calculation
+        # phi: turning angle for robot wheels
+        phi = math.asin(l_rod_mm*math.sin(math.degrees(180-angle))/ \
+                        math.sqrt(l_rod_mm**2+l_axle_rod_mm**2+2*l_rod_mm*l_axle_rod_mm* \
+                                  math.cos(math.degrees(180-angle))))
+        # circumference of wheel
+        cir = dia_wheel_mm*math.pi
+
+        # total d needed for wheel to travel
+        d = dis_wheels_mm*phi*math.pi/180
+
+        # distance/s from degrees/s
+        d_per_s = dps * cir / 360
+
+        # time t (in sec) for wheel to turn for
+        t = d / d_per_s
+        
+        return t
+
 
     def run(self):
+        distance_mm = 100
+        self.move_forward(distance_mm)
+        return
         while True:
             # Sweep the colour sensor once
             sweep_result = self.sensor.sweep(range="full")
