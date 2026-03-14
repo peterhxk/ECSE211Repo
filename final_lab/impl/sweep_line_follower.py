@@ -93,24 +93,25 @@ class SweepLineFollower:
         
         # For one wheel stationary rotation
 
-        # # circumference of wheel
-        # cir = dia_wheel_mm*math.pi
-        # # total d needed for wheel to travel
-        # d = dis_wheels_mm*phi*math.pi/180
-        # print(f"total_d to travel {d}")
+        # circumference of wheel
+        cir = dia_wheel_mm*math.pi
+        # total d needed for wheel to travel
+        d = dis_wheels_mm*phi*math.pi/180
+        print(f"total_d to travel {d}")
 
 
-        # # distance/s from degrees/s
-        # d_per_s = dps * cir / 360
-        # print(f"distance per second {d_per_s}")
+        # distance/s from degrees/s
+        d_per_s = dps * cir / 360
+        print(f"distance per second {d_per_s}")
 
         # time t (in sec) for wheel to turn for
-        # t = d / d_per_s
+        t = d / d_per_s
 
-        # For center in-place rotation
-        total_ang_for_wheel = phi * dis_wheels_mm / dia_wheel_mm
+        ## For center in-place rotation (works)
+        
+        # total_ang_for_wheel = phi * dis_wheels_mm / dia_wheel_mm
 
-        t = total_ang_for_wheel/dps
+        # t = total_ang_for_wheel/dps
 
         
         return t
