@@ -73,6 +73,9 @@ class ColourSensorController (EV3ColorSensor):
         #initial colour sensor position (should be straight)
         init_position = self.motor.get_position()
         
+        print("------------")
+        print(init_position)
+        
         if self.sweep_dir == None:
             # Not currently sweeping. Start sweeping to the right.
             self.sweep_dir = SweepDirection.RIGHT
