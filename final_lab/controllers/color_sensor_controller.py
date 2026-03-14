@@ -95,6 +95,7 @@ class ColourSensorController (EV3ColorSensor):
                 while self.read_colour() == colour:
                     positions.append(self.motor.get_position())
                     time.sleep(0.1)
+                    print("loop is stuck here")
                 print(positions)
                 self.colours_found.append((sum(positions)/len(positions), colour, duration))
                 if stop_on_match:
