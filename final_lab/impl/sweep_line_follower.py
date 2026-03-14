@@ -40,7 +40,7 @@ class SweepLineFollower:
             # Begin moving forward
             self.pilot.move_forward()
 
-            print(self.pilot.get_avg_encoder_value)
+            print(self.pilot.get_avg_encoder_value())
             
             distance += (math.pi/180) * (self.pilot.get_avg_encoder_value() - last_encoder_value) * (self.pilot.WHEEL_DIAMETER_MM/2)
             time.sleep(0.1)
