@@ -58,7 +58,7 @@ class SweepLineFollower:
                 angle = results[0][0]
 
                 # Positive angles -> line is detected on the left
-                self.pilot.pivot("right" if angle > 0 else "left")
+                self.pilot.pivot("left" if angle > 0 else "right")
                 
                 # Rotate for an amount of time based on theta
                 # time t as a function of angle theta
