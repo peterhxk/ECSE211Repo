@@ -84,9 +84,11 @@ class SweepLineFollower:
 
         # Calculation
         # phi: turning angle for robot wheels
-        phi = math.asin(l_rod_mm*math.sin(math.degrees(abs(180-angle)))/ \
-                        math.sqrt(l_rod_mm**2+l_axle_rod_mm**2+2*l_rod_mm*l_axle_rod_mm* \
-                                  math.cos(math.degrees(abs(180-angle)))))
+
+        x = 180-abs(angle)
+        c = math.sqrt(l_rod_mm**2+l_axle_rod_mm**2+2*l_rod_mm*l_axle_rod_mm* \
+                                  math.cos(math.degrees(x)))
+        phi = math.asin(l_rod_mm*math.sin(math.degrees(x))/c)
         print(f"turning angle for robot {phi}")
         
         # For one wheel stationary rotation
