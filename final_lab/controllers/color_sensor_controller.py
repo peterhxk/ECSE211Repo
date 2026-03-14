@@ -3,6 +3,7 @@ import time
 import json
 from enum import Enum
 from typing import Literal, List, Tuple, Union, NamedTuple, Optional
+import math
 
 def normalize_colours(r, g, b):
     total = r+g+b
@@ -81,24 +82,11 @@ class ColourSensorController (EV3ColorSensor):
         while True:
             # Check if a black line is found
             if self.read_colour() == colour:
-                # Check to make sure we are not "finding" the same black line as previously
-                # theta = self.motor.get_position()
-                
-                # for line_angle, *_ in self.colours_found:
-                #     if abs(theta - line_angle) <= self.THETA_TOLERANCE:
-                #         break
-                # else:
-                #     # Add theta to the list of matches once the colour is found
-                #     self.colours_found.append((self.motor.get_position(), colour, duration))
-
-                #     if stop_on_match:
-                #         results = self.colours_found
-                #         self.colours_found = []
-                #         self.motor.set_dps(0)
-                #         self.motor.set_position(init_position)
-                #         self.motor.wait_is_moving()
-                #         return results
-                self.colours_found.append((self.motor.get_position(), colour, duration))
+                positions = []
+                while self.read_colour() == colour:
+                    positions.append(self.motor.get_position())
+                    time.sleep(0.1)
+                self.colours_found.append((sum(positions)/len(positions), colour, duration))
                 if stop_on_match:
                     results = self.colours_found
                     self.colours_found = []

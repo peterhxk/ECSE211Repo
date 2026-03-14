@@ -54,6 +54,7 @@ class SweepLineFollower:
                     self.pilot.stop_motors()
 
                 results = self.sensor.sweep(range="full", stop_on_match=True)
+                print(f"sweeping result {results}")
                 angle = results[0][0]
 
                 # Positive angles -> line is detected on the left
