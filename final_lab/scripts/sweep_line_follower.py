@@ -10,8 +10,8 @@ import time
 
 # Sensor declaration
 
-left_motor = Motor("C")
-right_motor = Motor("B")
+left_motor = Motor("B")
+right_motor = Motor("C")
 color_sensor_motor = Motor("A")
 
 driving_controller = DrivingController(left_motor, right_motor, 150)

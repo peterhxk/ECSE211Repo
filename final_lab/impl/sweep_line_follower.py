@@ -20,7 +20,7 @@ class SweepLineFollower:
     def begin(self):
         self.pilot.move_forward()
     
-    def move_forward(self, max_distance):
+    def move_forward(self, max_distance, force = False):
         """Moves the robot forward as long as the colour sensor detects the black line.
         
         Args:
@@ -48,7 +48,7 @@ class SweepLineFollower:
             
             distance += (math.pi/180) * (self.pilot.get_avg_encoder_value() - last_encoder_value) * (self.pilot.WHEEL_DIAMETER_MM/2)
             time.sleep(0.1)
-            if self.sensor.read_colour() == "w":
+            if not force and self.sensor.read_colour() == "w":
                 if moving_forward:
                     moving_forward = False
                     self.pilot.stop_motors()
@@ -65,6 +65,7 @@ class SweepLineFollower:
                 t = abs(self.f_theta(angle, 150))
                 print(f"sleeping for {t*10}")
                 time.sleep(t*10)
+                self.move_forward(50, force=True)
 
         print(f"advancement of {max_distance} distance completed")
         return
