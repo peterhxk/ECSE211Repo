@@ -84,6 +84,11 @@ class ColourSensorController (EV3ColorSensor):
         prev_reversed = False
 
         while True:
+            # Check if the motor is operating in the current direction
+            if (self.motor.get_speed() * self.sweep_dir.value <= 0):
+                # Reverse the direction of the motor
+                self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
+                
             # Check if a black line is found
             if self.read_colour() == colour:
                 positions = []
@@ -115,10 +120,7 @@ class ColourSensorController (EV3ColorSensor):
                 prev_reversed = True
     
         
-            # Check if the motor is operating in the current direction
-            if (self.motor.get_speed() * self.sweep_dir.value <= 0):
-                # Reverse the direction of the motor
-                self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
+            
 
             # Otherwise, wait a small bit more before sweeping and checking again
             time.sleep(0.1)
