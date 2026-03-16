@@ -92,4 +92,6 @@ class DrivingController:
         self.right_motor.set_position_relative(-angle*self.ORIENTTODEG)
         print(-angle*self.ORIENTTODEG)
         print("working")
+        self.right_motor.set_dps(self.base_power/2)
+        self.left_motor.set_dps(-self.base_power/2)
         
