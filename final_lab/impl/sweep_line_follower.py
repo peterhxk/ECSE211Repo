@@ -124,8 +124,8 @@ class SweepLineFollower:
 
     def run(self):
         self.turn_logic("right")
-        #distance_mm = 20000
-        #self.move_forward(distance_mm)
+        distance_mm = 20000
+        self.move_forward(distance_mm)
         return
         while True:
             # Sweep the colour sensor once
