@@ -5,6 +5,8 @@ class DrivingController:
     """Controller to drive the robot."""
 
     WHEEL_DIAMETER_MM = 42.6
+    WHEEL_DISTANCE_MM = 159 
+    ORIENTTODEG = WHEEL_DISTANCE_MM/WHEEL_DIAMETER_MM
 
     def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int):
         """
@@ -76,3 +78,12 @@ class DrivingController:
         self.right_motor.set_dps(self.base_power + adjustment)
         self.left_motor.set_dps(self.base_power - adjustment)
 
+    def turn_in_place(self, angle: float):
+        """angle: in degrees
+        dps: degrees per second (can range positive to negative)
+        positive -> turn left?
+        negative -> turn right?"""
+        self.left_motor.set_limits(self.base_power)
+        self.right_motor.set_limits(self.base_power)
+        self.left_motor.set_position_relative(int(angle*self.ORIENTTODEG))
+        self.right_motor.set_position_relative(int(-angle*self.ORIENTTODEG))

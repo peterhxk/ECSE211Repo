@@ -117,9 +117,15 @@ class SweepLineFollower:
         return t
 
 
+    def turn_logic(self, direction):
+        if direction == "right":
+            self.pilot.turn_in_place(90)
+        return
+
     def run(self):
-        distance_mm = 20000
-        self.move_forward(distance_mm)
+        self.turn_logic("right")
+        #distance_mm = 20000
+        #self.move_forward(distance_mm)
         return
         while True:
             # Sweep the colour sensor once
@@ -166,3 +172,7 @@ class SweepLineFollower:
                 self.pilot.left_motor.set_dps(self.K_R * theta)
 
                 # @TODO: Complete logic
+                
+                # 1st idea: make the run method sleep until we turned enough (we need to turn at specifc angle and power)
+                
+                pass
