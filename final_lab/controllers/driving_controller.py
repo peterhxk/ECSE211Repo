@@ -79,11 +79,15 @@ class DrivingController:
         self.left_motor.set_dps(self.base_power - adjustment)
 
     def turn_in_place(self, angle: float):
-        """angle: in degrees
+        """
+        Based on class notes
+        angle: in degrees
         dps: degrees per second (can range positive to negative)
         positive -> turn left?
-        negative -> turn right?"""
+        negative -> turn right?""" 
         self.left_motor.set_limits(self.base_power, 30)
         self.right_motor.set_limits(self.base_power, 30)
         self.left_motor.set_position_relative(int(angle*self.ORIENTTODEG))
         self.right_motor.set_position_relative(int(-angle*self.ORIENTTODEG))
+        print("working")
+        
