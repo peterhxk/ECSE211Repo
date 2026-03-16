@@ -85,6 +85,8 @@ class DrivingController:
         dps: degrees per second (can range positive to negative)
         positive -> turn left?
         negative -> turn right?""" 
+        self.right_motor.set_dps(self.base_power/2)
+        self.left_motor.set_dps(-self.base_power/2)
         self.left_motor.set_limits(self.base_power, 30)
         self.right_motor.set_limits(self.base_power, 30)
         self.left_motor.set_position_relative(angle*self.ORIENTTODEG)
@@ -92,6 +94,5 @@ class DrivingController:
         self.right_motor.set_position_relative(-angle*self.ORIENTTODEG)
         print(-angle*self.ORIENTTODEG)
         print("working")
-        self.right_motor.set_dps(self.base_power/2)
-        self.left_motor.set_dps(-self.base_power/2)
+
         
