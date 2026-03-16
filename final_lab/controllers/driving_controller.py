@@ -87,7 +87,9 @@ class DrivingController:
         negative -> turn right?""" 
         self.left_motor.set_limits(self.base_power, 30)
         self.right_motor.set_limits(self.base_power, 30)
-        self.left_motor.set_position_relative(int(angle*self.ORIENTTODEG))
-        self.right_motor.set_position_relative(int(-angle*self.ORIENTTODEG))
+        self.left_motor.set_position_relative(angle*self.ORIENTTODEG)
+        print(angle*self.ORIENTTODEG)
+        self.right_motor.set_position_relative(-angle*self.ORIENTTODEG)
+        print(-angle*self.ORIENTTODEG)
         print("working")
         
