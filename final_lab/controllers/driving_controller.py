@@ -122,9 +122,14 @@ class DrivingController:
         self.right_motor.set_limits(0, self.base_power)
         self.left_motor.set_position_relative(angle*self.ORIENTTODEG)
         self.right_motor.set_position_relative(-angle*self.ORIENTTODEG)
+        
 
         
-    def turn_90(self, direction):
+    def turn_90(self, direction: Literal["left", "right"]):
         """
-        Turns"""
-        pass
+        Turns in place to the right or left"""
+        if direction == "left":
+            self.turn_in_place(90)
+        else:
+            self.turn_in_place(-90)
+        

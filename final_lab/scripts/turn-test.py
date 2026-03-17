@@ -18,6 +18,9 @@ driving_controller = DrivingController(left_motor, right_motor, 150)
 
 try:
     driving_controller.turn_in_place(90)
+    driving_controller.pivot_90("left")
+    driving_controller.pivot_90("right")
+    
     time.sleep(5)
     print("waited 5 sec")
 
