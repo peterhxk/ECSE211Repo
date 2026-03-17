@@ -598,6 +598,6 @@ class GrabberController:
 
 
 if __name__ == "__main__":
-    controller = GrabberController("A",2,True,True)
+    controller = GrabberController("D",4,True,True)
     controller.initialize_sensors()
     controller.loop()
