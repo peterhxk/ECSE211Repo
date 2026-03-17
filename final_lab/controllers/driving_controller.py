@@ -94,6 +94,8 @@ class DrivingController:
             self.left_motor.set_dps(-self.base_power)
         new_angle = abs(angle)
         time.sleep(self.base_power/new_angle)
+        self.right_motor.set_dps(0)
+        self.left_motor.set_dps(0)
         print("start of other 2nd test")
         self.left_motor.set_limits(0, self.base_power)
         self.right_motor.set_limits(0, self.base_power)
