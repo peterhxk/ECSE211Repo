@@ -16,17 +16,17 @@ right_motor = Motor("B")
 driving_controller = DrivingController(left_motor, right_motor, 150)
 
 try:
+    print("trying turn in place")
     driving_controller.turn_in_place(90)
     time.sleep(8)
-    print('smth')
-    '''
-    time.sleep(1)
+    print("trying pivot left")
     driving_controller.pivot_90("left")
-    time.sleep(1)
+    time.sleep(8)
+    print("trying pivot right")
     driving_controller.pivot_90("right")
-    time.sleep(1)
-    print("waited 5 sec")
-    '''
+    time.sleep(8)
+
+    
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 
