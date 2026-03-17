@@ -104,7 +104,7 @@ class DrivingController:
         positive -> turn left?
         negative -> turn right?""" 
         
-        
+        self.reset_encoders()
         if (angle > 0):
             self.right_motor.set_dps(-self.base_power)
             self.left_motor.set_dps(self.base_power)
