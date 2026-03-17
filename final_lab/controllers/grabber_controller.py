@@ -71,11 +71,11 @@ class GrabberController:
 
         # These are parameters to fine tune for the motor drop detection
         self.motor_dry_run_time = 5.0
-        self.motor_drop_k = 3.0
-        self.motor_drop_consecutive_needed = 10 # increased this value so that the block loads further (before : was 5)
+        self.motor_drop_k = 4.0 #increase K to decrease threshold sensitivity
+        self.motor_drop_consecutive_needed = 5 # increased this value so that the block loads further (before : was 5)
         self.use_motor_moving_average = True
         self.motor_moving_avg_window = 5
-        self.motor_drop_warm_up_delay = 1.2 # the delay before monitoring for motor velocity drop
+        self.motor_drop_warm_up_delay = 0.5 # the delay before monitoring for motor velocity drop
 
         if self.running_power > 70:
             print("Warning: running power too high. Pick a lower value")
