@@ -104,7 +104,7 @@ class DrivingController:
         print("working")
 
         
-    def turn_90(self, direction: String):
+    def turn_90(self, direction):
         """
         Turns"""
         pass
