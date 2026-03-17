@@ -12,12 +12,13 @@ import time
 
 left_motor = Motor("C")
 right_motor = Motor("B")
-color_sensor_motor = Motor("A")
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
 
 try:
     driving_controller.turn_in_place(90)
+    time.sleep(1)
+    print('smth')
     '''
     time.sleep(1)
     driving_controller.pivot_90("left")
