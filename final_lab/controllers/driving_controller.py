@@ -118,6 +118,7 @@ class DrivingController:
         time.sleep(2)
         
         print("start of other 2nd test")
+        self.reset_encoders()
         self.left_motor.set_limits(0, self.base_power)
         self.right_motor.set_limits(0, self.base_power)
         self.left_motor.set_position_relative(angle*self.ORIENTTODEG)
