@@ -96,45 +96,104 @@ class GrabberController:
         self.calibrate_motor_drop_detection()
         print("Calibrated motor inward speed-drop mu and sigma.")
 
-        self.calibrate_gyro_noise(seconds=15.0, sample_hz=self.sample_hz, warmup=0.5)
+        self.calibrate_gyro_noise(
+            seconds=15.0,
+            sample_hz=self.sample_hz,
+            warmup=0.5,
+            calibration=self.calibration #NEW : added parameter to skip calibration and used latest data instead
+        )
         print("Calibrated gyro mu and sigma.")
 
-
-    def calibrate_gyro_noise(self, seconds=10.0, sample_hz=50, warmup=0.5):
+    def calibrate_gyro_noise(self, seconds=10.0, sample_hz=50, warmup=0.5, calibration=True):
         """
-        Estimate mu and sigma for idle gyro DPS.
+        If calibration=True:
+            - Collect gyro samples
+            - Compute mu/sigma
+            - Save to gyro_calibrations/*.pkl
+
+        If calibration=False:
+            - Load most recent calibration
         """
-        print(f"[Calibration] Calibrating gyro noise... Don't move the sensor during this period ( {seconds} seconds)")
-        dt = 1.0 / float(sample_hz)
 
-        t0 = time.time()
-        while time.time() - t0 < warmup:
-            _ = self.gyro.get_dps_measure()
-            time.sleep(dt)
+        calibration_dir = getattr(self, "gyro_calibration_dir", "gyro_calibrations")
+        os.makedirs(calibration_dir, exist_ok=True)
 
-        samples = []
-        t1 = time.time()
+        if calibration:
+            print(f"[Gyro calibration] Calibrating... Don't move sensor ({seconds}s)")
+            dt = 1.0 / float(sample_hz)
 
-        n_samples = int(seconds * sample_hz)
+            # Warmup
+            t0 = time.time()
+            while time.time() - t0 < warmup:
+                _ = self.gyro.get_dps_measure()
+                time.sleep(dt)
 
-        for _ in tqdm(range(n_samples), desc="[Calibration]", unit="sample"):
-            v = self.gyro.get_dps_measure()
-            if v is not None:
-                samples.append(float(v))
-            time.sleep(dt)
+            samples = []
+            n_samples = int(seconds * sample_hz)
 
-        if len(samples) < 10:
-            raise RuntimeError(f"Not enough gyro samples collected: {len(samples)}")
+            for _ in tqdm(range(n_samples), desc="[Gyro calibration]", unit="sample"):
+                v = self.gyro.get_dps_measure()
+                if v is not None:
+                    samples.append(float(v))
+                time.sleep(dt)
 
-        mu = sum(samples) / len(samples)
-        var = sum((x - mu) ** 2 for x in samples) / (len(samples) - 1)
-        sigma = math.sqrt(var)
-        sigma = max(sigma, 1e-6)
+            if len(samples) < 10:
+                raise RuntimeError(f"Not enough gyro samples collected: {len(samples)}")
 
-        self.mu = mu
-        self.sigma = sigma
-        print(f"[Gyro calibration] n={len(samples)} mu={mu:.3f} dps, sigma={sigma:.3f} dps")
-        return mu, sigma
+            mu = sum(samples) / len(samples)
+            var = sum((x - mu) ** 2 for x in samples) / (len(samples) - 1)
+            sigma = math.sqrt(var)
+            sigma = max(sigma, 1e-6)
+
+            self.mu = mu
+            self.sigma = sigma
+
+            calibration_data = {
+                "date": datetime.now().isoformat(),
+                "mu": self.mu,
+                "sigma": self.sigma,
+                "seconds": seconds,
+                "sample_hz": sample_hz,
+            }
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            calibration_file = os.path.join(
+                calibration_dir, f"gyro_calibration_{timestamp}.pkl"
+            )
+
+            with open(calibration_file, "wb") as f:
+                pickle.dump(calibration_data, f)
+
+            if self.debug:
+                print(f"[Gyro calibration] Saved to {calibration_file}")
+
+        else:
+            calibration_files = sorted(
+                glob.glob(os.path.join(calibration_dir, "gyro_calibration_*.pkl"))
+            )
+
+            if not calibration_files:
+                raise FileNotFoundError(
+                    f"No gyro calibration file found in '{calibration_dir}'."
+                )
+
+            latest_file = calibration_files[-1]
+
+            with open(latest_file, "rb") as f:
+                calibration_data = pickle.load(f)
+
+            self.mu = calibration_data["mu"]
+            self.sigma = max(calibration_data["sigma"], 1e-6)
+
+            if self.debug:
+                print(f"[Gyro calibration] Loaded latest calibration from {latest_file}")
+                print(f"[Gyro calibration] Calibration date: {calibration_data['date']}")
+
+        print(
+            f"[Gyro calibration] mu={self.mu:.3f}, sigma={self.sigma:.3f}"
+        )
+
+        return self.mu, self.sigma
 
     def _sample_motor_speeds(self, power, duration, sleep_time):
         """
@@ -326,18 +385,20 @@ class GrabberController:
 
     def increase_on_velocity_drop(self, duration=0.5):
         start = time.time()
-        cooldown = False
+        cooldown = time.time()
+        timeout = 1.0
 
-        while time.time() - start < duration and not cooldown:
+        while time.time() - start < timeout and time.time() - cooldown > duration:
 
             # stop thread if loading finished
             if self.bloc_count != 0:
+                # only call this function when loading the first block
                 return
 
             if self._is_motor_drop_detected(timeout=5.0):
                 print("[Motor drop detected] Temporarily increasing velocity to prevent blocking")
 
-                cooldown = True
+                cooldown = time.time() # reset cooldown to actual time so that we temporarily exit the while loop for [duration] seconds
 
                 boosted_power = min(1.5 * self.motor.get_power(), self.running_power * 1.4)
                 self.motor.set_power(boosted_power)
@@ -345,7 +406,7 @@ class GrabberController:
                 # restore only if still loading
                 if self.bloc_count == 0:
                     self.motor.set_power(self.running_power)
-        time.sleep(1.0)
+
 
     def _is_motor_drop_detected(self, timeout=5.0) -> bool:
         """
@@ -419,20 +480,21 @@ class GrabberController:
         try:
             if self.bloc_count == 0:
                 dps = self.gyro.get_dps_measure()
-                print(
-                    f"dps={dps}, mu={self.mu}, sigma={self.sigma}, "
-                    f"threshold={self.mu - 3 * self.sigma}" #TODO un-hardcode this 3 value
-                )
+
                 # start a thread
                 threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
+                #This thread ensures that the belt doesn't stall when the package gets caught.
 
-                print("Started THREAD")
+                print("[INFO] Started velocity drop detection thread")
 
                 ok = self._consecutive_trigger(
                     lambda: self.is_tilted_inwards(GyroTilt.SLOW_TILT),
                     needed=4, #TODO make a script to calibrate this : as a general rule INCREASE this is it triggers by itself, DECREASE it if it has false triggers
                     timeout=5.0,
                 )
+
+                print("[INFO] Started gyro detection thread")
+
                 if not ok:
                     print("Timeout waiting for first bloc to arrive.")
                     return False
