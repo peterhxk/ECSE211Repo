@@ -102,9 +102,10 @@ class DrivingController:
         angle: in degrees
         dps: degrees per second (can range positive to negative)
         positive -> turn left?
-        negative -> turn right?""" 
-        
-        self.reset_encoders()
+        negative -> turn right?
+        currently
+        """ 
+        '''
         if (angle > 0):
             self.right_motor.set_dps(-self.base_power)
             self.left_motor.set_dps(self.base_power)
@@ -118,7 +119,7 @@ class DrivingController:
         time.sleep(2)
         
         print("start of other 2nd test")
-        self.reset_encoders()
+'''
         self.left_motor.set_limits(0, self.base_power)
         self.right_motor.set_limits(0, self.base_power)
         self.left_motor.set_position_relative(angle*self.ORIENTTODEG)
