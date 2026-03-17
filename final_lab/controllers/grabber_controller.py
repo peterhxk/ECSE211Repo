@@ -273,10 +273,10 @@ class GrabberController:
         return 6.0 if tilt == GyroTilt.SLOW_TILT else 10.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
-        return -6.0 if tilt == GyroTilt.SLOW_TILT else -12.0
+        return -8.0 if tilt == GyroTilt.SLOW_TILT else -12.0
 
     def _floor_for_outwards(self, tilt: GyroTilt) -> float:
-        return 6.0 if tilt == GyroTilt.SLOW_TILT else 12.0
+        return 8.0 if tilt == GyroTilt.SLOW_TILT else 12.0
 
     def is_tilted_inwards(self, tilt: GyroTilt) -> bool:
         dps = self.gyro.get_dps_measure()
@@ -430,7 +430,7 @@ class GrabberController:
 
                 ok = self._consecutive_trigger(
                     lambda: self.is_tilted_inwards(GyroTilt.SLOW_TILT),
-                    needed=3, #TODO make a script to calibrate this : as a general rule INCREASE this is it triggers by itself, DECREASE it if it has false triggers
+                    needed=4, #TODO make a script to calibrate this : as a general rule INCREASE this is it triggers by itself, DECREASE it if it has false triggers
                     timeout=5.0,
                 )
                 if not ok:
