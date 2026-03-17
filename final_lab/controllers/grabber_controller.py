@@ -270,13 +270,13 @@ class GrabberController:
     # Gyro event detection
     # ----------------------------
     def _k_for_tilt(self, tilt: GyroTilt) -> float:
-        return 8.0 if tilt == GyroTilt.SLOW_TILT else 12.0
+        return 6.0 if tilt == GyroTilt.SLOW_TILT else 10.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
-        return -10.0 if tilt == GyroTilt.SLOW_TILT else -18.0
+        return -6.0 if tilt == GyroTilt.SLOW_TILT else -12.0
 
     def _floor_for_outwards(self, tilt: GyroTilt) -> float:
-        return 10.0 if tilt == GyroTilt.SLOW_TILT else 18.0
+        return 6.0 if tilt == GyroTilt.SLOW_TILT else 12.0
 
     def is_tilted_inwards(self, tilt: GyroTilt) -> bool:
         dps = self.gyro.get_dps_measure()
@@ -421,7 +421,7 @@ class GrabberController:
                 dps = self.gyro.get_dps_measure()
                 print(
                     f"dps={dps}, mu={self.mu}, sigma={self.sigma}, "
-                    f"threshold={self.mu - 3 * self.sigma}"
+                    f"threshold={self.mu - 3 * self.sigma}" #TODO un-hardcode this 3 value
                 )
                 # start a thread
                 threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
