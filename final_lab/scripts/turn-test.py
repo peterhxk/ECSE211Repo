@@ -17,7 +17,7 @@ driving_controller = DrivingController(left_motor, right_motor, 150)
 
 try:
     driving_controller.turn_in_place(90)
-    time.sleep(1)
+    time.sleep(8)
     print('smth')
     '''
     time.sleep(1)
