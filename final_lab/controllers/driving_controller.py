@@ -104,7 +104,7 @@ class DrivingController:
         positive -> turn left?
         negative -> turn right?""" 
         
-        '''
+        
         if (angle > 0):
             self.right_motor.set_dps(-self.base_power)
             self.left_motor.set_dps(self.base_power)
@@ -116,7 +116,7 @@ class DrivingController:
         self.right_motor.set_dps(0)
         self.left_motor.set_dps(0)
         time.sleep(2)
-        '''
+        
         print("start of other 2nd test")
         self.left_motor.set_limits(0, self.base_power)
         self.right_motor.set_limits(0, self.base_power)
