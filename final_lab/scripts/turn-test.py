@@ -19,6 +19,7 @@ driving_controller = DrivingController(left_motor, right_motor, 150)
 try:
     driving_controller.turn_in_place(90)
     time.sleep(5)
+    print("waited 5 sec")
 
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")

@@ -1,12 +1,13 @@
 from typing import Literal
 from utils.brick import Motor
-
+import time
 class DrivingController:
     """Controller to drive the robot."""
 
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_DISTANCE_MM = 159 
     ORIENTTODEG = WHEEL_DISTANCE_MM/WHEEL_DIAMETER_MM
+    ANGLE_TURN_90 = ORIENTTODEG*90 # angle for wheel to turn to turn right angle
 
     def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int):
         """
@@ -85,15 +86,25 @@ class DrivingController:
         dps: degrees per second (can range positive to negative)
         positive -> turn left?
         negative -> turn right?""" 
-        self.right_motor.set_dps(-self.base_power/2)
-        self.left_motor.set_dps(self.base_power/2)
-        '''
-        self.left_motor.set_limits(self.base_power, 30)
-        self.right_motor.set_limits(self.base_power, 30)
+        if (angle > 0):
+            self.right_motor.set_dps(-self.base_power)
+            self.left_motor.set_dps(self.base_power)
+        else:
+            self.right_motor.set_dps(self.base_power)
+            self.left_motor.set_dps(-self.base_power)
+        new_angle = abs(angle)
+        time.sleep(self.base_power/new_angle)
+        print("start of other 2nd test")
+        self.left_motor.set_limits(0, self.base_power)
+        self.right_motor.set_limits(0, self.base_power)
         self.left_motor.set_position_relative(angle*self.ORIENTTODEG)
         print(angle*self.ORIENTTODEG)
         self.right_motor.set_position_relative(-angle*self.ORIENTTODEG)
         print(-angle*self.ORIENTTODEG)
         print("working")
-'''
+
         
+    def turn_90(self, direction: String):
+        """
+        Turns"""
+        pass
