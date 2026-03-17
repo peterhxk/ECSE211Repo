@@ -1,6 +1,8 @@
 from typing import Literal
 from utils.brick import Motor
 import time
+import math
+
 class DrivingController:
     """Controller to drive the robot."""
 
@@ -8,6 +10,7 @@ class DrivingController:
     WHEEL_DISTANCE_MM = 159 
     ORIENTTODEG = WHEEL_DISTANCE_MM/WHEEL_DIAMETER_MM
     ANGLE_TURN_90 = ORIENTTODEG*90 # angle for wheel to turn to turn right angle
+    PIVOT_90 = math.pi * WHEEL_DISTANCE_MM# degrees to pvot 90
 
     def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int):
         """
@@ -85,6 +88,7 @@ class DrivingController:
         elif direction == "right":
             self.left_motor.set_limits(0, self.base_power)
             self.left_motor.set_position_relative(90*self.ORIENTTODEG)
+        print(f"turning {90*self.ORIENTTODEG} degrees on wheels")
 
     def adjust_direction(self, adjustment: int):
         """
@@ -124,6 +128,7 @@ class DrivingController:
         self.right_motor.set_limits(0, self.base_power)
         self.left_motor.set_position_relative(angle*self.ORIENTTODEG)
         self.right_motor.set_position_relative(-angle*self.ORIENTTODEG)
+        print(f"turning {angle*self.ORIENTTODEG} degrees on wheels")
         
 
         
