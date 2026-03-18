@@ -14,23 +14,25 @@ print("waiting for sensors to be ready...")
 wait_ready_sensors(True)
 print("sensors ready!")
 
+base_power = 100
+
 
 try:
     while True:
-        driving_controller.set_left_motor(20)
-        driving_controller.set_right_motor(-20)
+        driving_controller.set_left_motor(base_power)
+        driving_controller.set_right_motor(-1 * base_power)
         time.sleep(0.01)
         driving_controller.set_left_motor(0)
         driving_controller.set_right_motor(0)
         time.sleep(0.01)
-        driving_controller.set_left_motor(-40)
-        driving_controller.set_right_motor(40)
+        driving_controller.set_left_motor(-1 * base_power * 2)
+        driving_controller.set_right_motor(base_power)
         time.sleep(0.01)
         driving_controller.set_left_motor(0)
         driving_controller.set_right_motor(0)
         time.sleep(0.01)
-        driving_controller.set_left_motor(20)
-        driving_controller.set_right_motor(-20)
+        driving_controller.set_left_motor(base_power)
+        driving_controller.set_right_motor(-1 * base_power)
         time.sleep(0.01)
         driving_controller.set_left_motor(0)
         driving_controller.set_right_motor(0)
