@@ -29,7 +29,7 @@ try:
         distance_mm = ultrasonic_sensor.get_cm() * 10 # roudned to mm
         raw_closing_rate = (distance_mm - prev_distance) / dt
         smoothed_closing_rate = alpha * raw_closing_rate + (1 - alpha) * smoothed_closing_rate
-        print(f"Smoothed closing rate: {smoothed_closing_rate:.2f}")
+        print(f"Current distance: {distance_mm:.2f} mm, Smoothed closing rate: {smoothed_closing_rate:.2f} mm/s")
         prev_distance = distance_mm
         time.sleep(phase_time_s)
 except KeyboardInterrupt:
