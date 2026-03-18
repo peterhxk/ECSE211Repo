@@ -15,16 +15,18 @@ wait_ready_sensors(True)
 print("sensors ready!")
 
 base_power = 150
-phase_time_s = 0.25
+phase_time_s = 0.2
 
 
 try:
     while True:
         left_motor.set_dps(base_power)
         right_motor.set_dps(-base_power)
+        print(f"US distance: {ultrasonic_sensor.get_cm()} cm")
         time.sleep(phase_time_s)
         left_motor.set_dps(-base_power)
         right_motor.set_dps(base_power)
+        print(f"US distance: {ultrasonic_sensor.get_cm()} cm")
         time.sleep(phase_time_s)
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
