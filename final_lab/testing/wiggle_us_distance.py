@@ -1,7 +1,7 @@
 import sys
 #sys.path.append("../")
 
-from utils.brick import wait_ready_sensors, Motor, EV3UltrasonicSensor
+from utils.brick import wait_ready_sensors, reset_brick, Motor, EV3UltrasonicSensor
 from controllers.driving_controller import DrivingController
 import time
 
@@ -15,14 +15,19 @@ wait_ready_sensors(True)
 print("sensors ready!")
 
 base_power = 150
+phase_time_s = 0.25
 
 
 try:
     while True:
         left_motor.set_dps(base_power)
         right_motor.set_dps(-base_power)
-        time.sleep(1)
+        time.sleep(phase_time_s)
         left_motor.set_dps(-base_power)
         right_motor.set_dps(base_power)
+        time.sleep(phase_time_s)
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
+finally:
+    driving_controller.stop_motors()
+    reset_brick()
