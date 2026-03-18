@@ -76,3 +76,10 @@ class DrivingController:
         self.right_motor.set_dps(self.base_power + adjustment)
         self.left_motor.set_dps(self.base_power - adjustment)
 
+    def set_left_motor(self, power: int):
+        """Sets the left motor to a specific power."""
+        self.left_motor.set_dps(power)
+    
+    def set_right_motor(self, power: int):
+        """Sets the right motor to a specific power."""
+        self.right_motor.set_dps(power)

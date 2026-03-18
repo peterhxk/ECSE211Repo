@@ -31,7 +31,7 @@ class SweepLineFollower:
         self.pilot.reset_encoders()
 
         # Keep moving forward as long as the black line is detected
-        # Keep track of the distance 
+        # Keep track of the distance
         # @TODO Distance does not account for any adjustments (wiggling)
         distance = 0
         last_encoder_value = 0
