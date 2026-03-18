@@ -1,7 +1,7 @@
 from utils.brick import wait_ready_sensors, reset_brick, Motor, EV3UltrasonicSensor
 from controllers.driving_controller import DrivingController
 import time
-import numpy as np
+from statistics import median, mean
 
 left_motor = Motor("B")
 right_motor = Motor("C")
@@ -13,30 +13,32 @@ wait_ready_sensors(True)
 print("sensors ready!")
 
 base_power = 60
-phase_time_s = 0.5
+phase_time_s = 0.8
 
 prev_distance = ultrasonic_sensor.get_cm() * 10
 smoothed_closing_rate = 0
 dt = phase_time_s
 alpha = 0.1
 
-def get_stable_us_reading(sensor, samples=10):
+def get_stable_us_reading(sensor, samples=20):
     readings = []
     for _ in range(samples):
         reading = sensor.get_cm() * 10
         readings.append(reading)
-        time.sleep(0.05)
+        time.sleep(0.07)
 
-    readings = np.array(readings)
-    median = np.median(readings)
-    mad = np.median(np.abs(readings - median))
-
-    if mad == 0:
-        return np.mean(readings)
+    m = median(readings)
+    deviations = [abs(x - m) for x in readings]
+    mad = median(deviations)
     
-    mask = np.abs(readings - median) <= 1.5 * mad
-    return np.mean(readings[mask])
+    if mad == 0:
+        filtered = [x for x in readings if x == m]
+    else:
+        sigma = 1.4826 * mad
+        threshold = 1.5 * sigma
+        filtered = [x for x in readings if abs(x - m) <= threshold]
 
+    return mean(filtered) if filtered else None
 
 try:
     while True:
