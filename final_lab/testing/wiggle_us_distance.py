@@ -14,28 +14,15 @@ print("waiting for sensors to be ready...")
 wait_ready_sensors(True)
 print("sensors ready!")
 
-base_power = 100
+base_power = 150
 
 
 try:
     while True:
-        driving_controller.set_left_motor(-1 * base_power)
-        driving_controller.set_right_motor(base_power)
-        time.sleep(0.01)
-        driving_controller.set_left_motor(0)
-        driving_controller.set_right_motor(0)
-        time.sleep(0.01)
-        driving_controller.set_left_motor(base_power * 2)
-        driving_controller.set_right_motor(-1 * base_power)
-        time.sleep(0.01)
-        driving_controller.set_left_motor(0)
-        driving_controller.set_right_motor(0)
-        time.sleep(0.01)
-        driving_controller.set_left_motor(-1 * base_power)
-        driving_controller.set_right_motor(base_power)
-        time.sleep(0.01)
-        driving_controller.set_left_motor(0)
-        driving_controller.set_right_motor(0)
-
+        left_motor.set_dps(base_power)
+        right_motor.set_dps(-base_power)
+        time.sleep(1)
+        left_motor.set_dps(-base_power)
+        right_motor.set_dps(base_power)
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
