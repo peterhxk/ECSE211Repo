@@ -26,7 +26,7 @@ try:
     left_motor.set_dps(base_power)
     right_motor.set_dps(base_power)
     while True:
-        distance_mm = ultrasonic_sensor.get_distance_mm()
+        distance_mm = ultrasonic_sensor.get_cm() * 10 # roudned to mm
         raw_closing_rate = (distance_mm - prev_distance) / dt
         smoothed_closing_rate = alpha * raw_closing_rate + (1 - alpha) * smoothed_closing_rate
         print(f"Smoothed closing rate: {smoothed_closing_rate:.2f}")
