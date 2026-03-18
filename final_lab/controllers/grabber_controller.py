@@ -4,6 +4,7 @@ import math
 import statistics
 from enum import Enum
 from collections import deque
+import data.measurements as consts
 
 import sys
 from tqdm import tqdm
