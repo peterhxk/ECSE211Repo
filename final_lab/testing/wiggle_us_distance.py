@@ -1,3 +1,6 @@
+import sys
+#sys.path.append("../")
+
 from utils.brick import wait_ready_sensors, reset_brick, Motor, UltrasonicSensor
 from controllers.driving_controller import DrivingController
 import time
