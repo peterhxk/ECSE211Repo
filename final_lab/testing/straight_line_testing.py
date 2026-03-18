@@ -17,7 +17,7 @@ print("sensors ready!")
 base_power = 60
 phase_time_s = 0.2
 
-prev_distance = 0
+prev_distance = ultrasonic_sensor.get_cm() * 10
 smoothed_closing_rate = 0
 dt = phase_time_s
 alpha = 0.5
