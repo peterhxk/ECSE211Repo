@@ -149,6 +149,7 @@ class ColourSensorController (EV3ColorSensor):
             time.sleep(0.01)
             duration += 0.1
 
+
     def read_colour(self):
         cur_rgb = self.get_rgb()
         cur_r = cur_rgb[0]
