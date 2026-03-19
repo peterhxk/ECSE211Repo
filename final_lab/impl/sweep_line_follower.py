@@ -132,7 +132,7 @@ class SweepLineFollower:
         else:
             raise Exception("Wrong direction input")
         # Moves 30 mm forward to find intersection
-        self.pilot.move_distance(30)
+        self.pilot.move_forward()
         while (self.sensor.read_colour == "w"):
             print("reading white")
 
