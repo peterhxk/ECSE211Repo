@@ -23,7 +23,7 @@ try:
 
     driving_controller.pivot_90("right")
     print("pivot 90 right")
-    time.sleep(4)
+    time.sleep(6)
 
     driving_controller.move_distance(100)
     print("move 100 mm")
@@ -35,11 +35,11 @@ try:
 
     driving_controller.turn_in_place(360)
     print("turn in place, clockwise?")
-    time.sleep(6)
+    time.sleep(15)
 
     driving_controller.turn_in_place(-360)
     print("turn in place, counter-clockwise?")
-    time.sleep(6)
+    time.sleep(15)
 
 
 except KeyboardInterrupt:
