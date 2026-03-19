@@ -93,8 +93,11 @@ class GrabberController:
         self.motor.set_power(0)
         print("Reset measures; motor stopped.")
 
-        self.calibrate_motor_drop_detection()
-        print("Calibrated motor inward speed-drop mu and sigma.")
+        self.calibrate_motor_drop_detection(calibration=self.calibration)
+        if self.calibration:
+            print("Calibrated motor inward speed-drop mu and sigma.")
+        else:
+            print("Skipped motor calibration")
 
         self.calibrate_gyro_noise(
             seconds=15.0,
@@ -102,7 +105,10 @@ class GrabberController:
             warmup=0.5,
             calibration=self.calibration,
         )
-        print("Calibrated gyro mu and sigma.")
+        if self.calibration:
+            print("Calibrated gyroscope")
+        else:
+            print("Skipped gyro calibration")
 
     def calibrate_gyro_noise(self, seconds=10.0, sample_hz=50, warmup=0.5, calibration=True):
         """
