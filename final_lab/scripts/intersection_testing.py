@@ -18,8 +18,10 @@ wait_ready_sensors(True)
 
 try:
     driving_controller.move_distance(1000)
-    while(driving_controller.left_motor.wait_is_moving(0.1)):
+    time.sleep(1)
+    while True:
         print(color_sensor_controller.get_rgb())
+        time.sleep(0.1)
 
 
     '''
