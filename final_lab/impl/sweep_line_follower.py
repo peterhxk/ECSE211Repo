@@ -121,7 +121,7 @@ class SweepLineFollower:
 
     def turn_logic(self, direction: Literal["left", "right"]):
         """ Turn the robot while pivoting around 1 wheel with intersection in front.
-        Prerequisite: Robot is directly facing the intersection between X mm and Y mm
+        Prerequisite: Robot is directly facing the intersection between X mm and 30 mm
         Input: 
         """
     
@@ -137,7 +137,7 @@ class SweepLineFollower:
             print("reading white")
 
         self.pilot.pivot_90(direction)
-        self.sleep(5)
+        time.sleep(5)
 
     def run(self):
         self.pilot.move_distance(100)
