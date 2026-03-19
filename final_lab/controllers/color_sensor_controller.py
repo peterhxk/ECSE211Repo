@@ -4,6 +4,8 @@ import json
 from enum import Enum
 from typing import Literal, List, Tuple, Union, NamedTuple, Optional
 import math
+import data.measurements as consts
+
 
 def normalize_colours(r, g, b):
     total = r+g+b
@@ -56,13 +58,16 @@ class ColourSensorController (EV3ColorSensor):
         return self.sweep_dir.value * self.motor.get_position() >= self.sweep_dir.value * self.MAX_SWEEP_ANGLE[range][self.sweep_dir]
 
     def set_arm_at_angle(self, angle: float):
-        pass
+        """UNTESTED Sets the arm at {angle} degrees off the origin (straight ahead) 
+        
+        angle > 0 -> right?
+        angle < 0 -> left?
+        """
+        self.motor.set_position(angle)
 
     def read_current_angle(self):
         pass
 
-    def convert_motor_angle_to_robot_angle(self, angle: float):
-        pass
 
     def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True) -> List[Tuple[int, str, int]]:
         """Sweeps the colour sensor arm and checks the colour.

@@ -118,12 +118,26 @@ class SweepLineFollower:
         return t
 
 
-    def turn_logic(self, direction):
+    def turn_logic(self, direction: Literal["left", "right"]):
+        """ Turn the robot while pivoting around 1 wheel with intersection in front.
+        Prerequisite: Robot is directly facing the intersection between X mm and Y mm
+        Input: 
+        """
+    
         if direction == "right":
-            self.pilot.turn_in_place(90)
-        return
+            self.sensor.set_arm_at_angle(consts.angle_pivot)
+        elif direction == "left":
+            self.sensor.set_arm_at_angle(-consts.angle_pivot)
+        else:
+            raise Exception("Wrong direction input")
+        # Moves 30 mm forward to find intersection
+        self.pilot.move_distance(30)
+        while (self.sensor.read_colour == "w"):
+            print("reading white")
 
     def run(self):
+        self.pilot.move_distance(100)
+
         self.turn_logic("right")
         distance_mm = 20000
         self.move_forward(distance_mm)

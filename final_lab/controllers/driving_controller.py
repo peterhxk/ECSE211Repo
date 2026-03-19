@@ -23,6 +23,15 @@ class DrivingController:
         self.right_motor = right_motor
         self.base_power = base_power
     
+    def set_speed(self, power):
+        """Sets new DPS (degrees per second)
+        power: dps value between 0 - 1250?
+        """
+        self.base_power = power
+
+    def convert_sensor_angle_to_robot_angle(self, angle: float):
+        pass
+
     def move_forward(self):
         """
         Sets the left and right motors to move the robot forward at a rate of `self.base_power`.
@@ -31,6 +40,22 @@ class DrivingController:
 
         self.right_motor.set_dps(self.base_power)
         self.left_motor.set_dps(self.base_power)
+
+    def move_distance(self, dist: float):
+        """
+        UNTESTED
+        Moves robot by distance (mm).
+        Non-blocking (use time.sleep for testing so other code does not run)
+        Inputs:
+        distance: in mm
+        positive -> move forward
+        negative -> move backward
+        """ 
+        self.left_motor.set_limits(0, self.base_power)
+        self.right_motor.set_limits(0, self.base_power)
+        self.left_motor.set_position_relative(dist*360/consts.dia_wheel_mm/math.pi)
+        self.right_motor.set_position_relative(dist*360/consts.dia_wheel_mm/math.pi)
+        print(f"turning {dist*360/consts.dia_wheel_mm/math.pi} degrees on wheels")
 
     def stop_motors(self):
         """Stops the motors."""
@@ -103,12 +128,13 @@ class DrivingController:
 
     def turn_in_place(self, angle: float):
         """
-        Based on class notes
+        Turns robot around center of rotation (midpoint between 2 wheels) by angle. (based on class notes)
+        Non-blocking (use time.sleep for testing so other code does not run)
+        Inputs:
         angle: in degrees
-        dps: degrees per second (can range positive to negative)
         positive -> turn left?
         negative -> turn right?
-        currently
+        
         """ 
         '''
         if (angle > 0):
