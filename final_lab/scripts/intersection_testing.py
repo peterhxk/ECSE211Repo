@@ -13,11 +13,12 @@ driving_controller = DrivingController(left_motor, right_motor, 150)
 color_sensor_controller = ColourSensorController(2, color_sensor_motor)
 
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
-print('hi')
 wait_ready_sensors(True)
 
 try:
+    SweepLineFollower.turn_logic("left")
     driving_controller.move_distance(1000)
+
     time.sleep(1)
     while True:
         print(color_sensor_controller.get_rgb())
