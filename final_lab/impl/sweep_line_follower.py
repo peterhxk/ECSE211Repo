@@ -136,9 +136,13 @@ class SweepLineFollower:
         while (self.sensor.read_colour == "w"):
             print("reading white")
 
+        self.pilot.pivot_90(direction)
+        self.sleep(5)
+
     def run(self):
         self.pilot.move_distance(100)
-
+        print("moving 100 mm")
+        time.sleep(5)
         self.turn_logic("right")
         distance_mm = 20000
         self.move_forward(distance_mm)
