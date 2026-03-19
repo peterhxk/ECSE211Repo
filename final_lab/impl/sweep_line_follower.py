@@ -136,7 +136,8 @@ class SweepLineFollower:
         self.pilot.move_forward()
         while (self.sensor.read_colour == "w"):
             print("reading white")
-
+        
+        self.pilot.stop_motors()
         self.pilot.pivot_90(direction)
         time.sleep(5)
 
