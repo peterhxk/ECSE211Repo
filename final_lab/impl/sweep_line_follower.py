@@ -2,6 +2,7 @@ from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
 import math
 import time 
+from typing import Literal
 import data.measurements as consts
 
 class SweepLineFollower:
