@@ -49,6 +49,8 @@ class ColourSensorController (EV3ColorSensor):
 
         # Reset the value of the motor encoder.
         self.motor.reset_encoder()
+        # Sets maximum speed of motor.
+        motor.set_limits(0, self.MOTOR_POWER_DPS)
 
     def _is_at_boundary(self, range: Literal["left", "right", "full"]) -> bool:
         """
@@ -58,7 +60,9 @@ class ColourSensorController (EV3ColorSensor):
         return self.sweep_dir.value * self.motor.get_position() >= self.sweep_dir.value * self.MAX_SWEEP_ANGLE[range][self.sweep_dir]
 
     def set_arm_at_angle(self, angle: float):
-        """UNTESTED Sets the arm at {angle} degrees off the origin (straight ahead) 
+        """
+        ISSUE: currently the arm is moving too fast
+        Sets the arm at {angle} degrees off the origin (straight ahead) 
         
         angle > 0 -> right?
         angle < 0 -> left?
