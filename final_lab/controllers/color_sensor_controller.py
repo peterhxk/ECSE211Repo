@@ -179,6 +179,36 @@ class ColourSensorController (EV3ColorSensor):
                 shortest_d = d
                 closest_colour = colour
         return closest_colour
+
+    def read_colour_pivot(self):
+        """
+        Read colour, but intended to be used when sensor is tilted at 81 degrees (angle to pivot on intersection).
+        Uses pivot_colours.json instead
+        """
+        cur_rgb = self.get_rgb()
+        cur_r = cur_rgb[0]
+        cur_g = cur_rgb[1]
+        cur_b = cur_rgb[2]
+        # Uncomment for rgb data adjustment
+        # print(cur_rgb)
+        with open("data/pivot_colours.json", "r") as f:
+            colours = json.load(f)
+        colour_to_distance = {}
+        for colour, rgb in colours.items():
+            r = int(rgb[0])
+            g = int(rgb[1])
+            b = int(rgb[2])
+
+            distance = ((cur_r - r)**2+(cur_g - g)**2+(cur_b - b)**2)**(1/2)
+            colour_to_distance[colour] = distance
+        
+        shortest_d = None
+        closest_colour = None
+        for colour, d in colour_to_distance.items():
+            if not closest_colour or d < shortest_d:
+                shortest_d = d
+                closest_colour = colour
+        return closest_colour
     
     def save_colour_data(file):
         with open(file, mode="w", encoding="utf-8") as outfile:
