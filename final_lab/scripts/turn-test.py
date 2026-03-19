@@ -19,12 +19,16 @@ try:
     print("trying turn in place")
     driving_controller.turn_in_place(90)
     time.sleep(6)
-    print("trying pivot left")
+    print("trying pivot 90 left")
     driving_controller.pivot_90("left")
     time.sleep(6)
-    print("trying pivot right")
+    print("trying pivot 90 right")
     driving_controller.pivot_90("right")
     time.sleep(6)
+    driving_controller.pivot("left")
+    time.sleep(4)
+    print("pivoting left")
+
 
     
 except KeyboardInterrupt:

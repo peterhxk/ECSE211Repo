@@ -114,7 +114,7 @@ class DrivingController:
         elif direction == "right":
             self.left_motor.set_limits(0, self.base_power)
             self.left_motor.set_position_relative(180*self.ORIENTTODEG)
-        print(f"turning {90*self.ORIENTTODEG} degrees on wheels")
+        print(f"turning {180*self.ORIENTTODEG} degrees on wheel")
 
     def adjust_direction(self, adjustment: int):
         """
