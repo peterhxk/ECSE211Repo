@@ -16,7 +16,8 @@ line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 wait_ready_sensors(True)
 
 try:
-    SweepLineFollower.turn_logic("left")
+    line_follower.turn_logic("left")
+    '''
     driving_controller.move_distance(1000)
 
     time.sleep(1)
@@ -24,7 +25,7 @@ try:
         print(color_sensor_controller.get_rgb())
         time.sleep(0.1)
 
-
+'''
     '''
     driving_controller.pivot_90("left")
     print("pivot 90 left")
