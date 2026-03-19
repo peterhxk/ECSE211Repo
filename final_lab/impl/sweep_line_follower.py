@@ -131,6 +131,7 @@ class SweepLineFollower:
             self.sensor.set_arm_at_angle(-consts.angle_pivot)
         else:
             raise Exception("Wrong direction input")
+        time.sleep(2)
         # Moves 30 mm forward to find intersection
         self.pilot.move_forward()
         while (self.sensor.read_colour == "w"):
@@ -140,12 +141,11 @@ class SweepLineFollower:
         time.sleep(5)
 
     def run(self):
-        self.pilot.move_distance(100)
-        print("moving 100 mm")
-        time.sleep(5)
         self.turn_logic("right")
+        '''
         distance_mm = 20000
         self.move_forward(distance_mm)
+        '''
         return
         while True:
             # Sweep the colour sensor once
