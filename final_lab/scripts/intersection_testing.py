@@ -17,6 +17,9 @@ print('hi')
 wait_ready_sensors(True)
 
 try:
+    line_follower.turn_logic("left")
+
+    '''
     driving_controller.pivot_90("left")
     print("pivot 90 left")
     time.sleep(4)
@@ -35,12 +38,12 @@ try:
 
     driving_controller.turn_in_place(360)
     print("turn in place, clockwise?")
-    time.sleep(15)
+    time.sleep(10)
 
     driving_controller.turn_in_place(-360)
     print("turn in place, counter-clockwise?")
-    time.sleep(15)
-
+    time.sleep(10)
+'''
 
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
