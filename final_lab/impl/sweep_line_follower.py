@@ -127,6 +127,7 @@ class SweepLineFollower:
             raise Exception("Wrong direction input")
         
         print("Moving arm")
+        time.sleep(0.1)
         # Wait for sensor arm to be stopped before proceeding
         self.sensor.motor.wait_is_stopped()
 
@@ -144,10 +145,14 @@ class SweepLineFollower:
         self.pilot.pivot_90(direction)
 
         # Wait for pivot to complete before proceeding
+        time.sleep(0.1)
         getattr(self.pilot, f"{'right' if direction == 'left' else 'left'}_motor").wait_is_stopped()
 
         # Set colour arm back to the normal position
         self.sensor.motor.set_position(0)
+        time.sleep(0.1)
+        self.sensor.motor.wait_is_stopped()
+        time.sleep(0.1)
 
     def run(self):
         self.turn_logic("right")
