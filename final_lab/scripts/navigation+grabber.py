@@ -29,7 +29,7 @@ wait_ready_sensors(True)
 try:
     color_sensor_controller.set_arm_at_angle(90)
     line_follower.move_forward(100,force=True)
-    init_power = 60
+    init_power = 150
     grabber_controller.start_loading()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         driving_controller.move_forward_by_power(init_power)
@@ -40,7 +40,7 @@ try:
     driving_controller.stop_motors()
 
     line_follower.move_forward(20,force=True)
-    init_power = 60
+    init_power = 150
     grabber_controller.load_bloc()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         driving_controller.move_forward_by_power(init_power)
