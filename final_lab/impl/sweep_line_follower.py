@@ -144,7 +144,7 @@ class SweepLineFollower:
         self.pilot.pivot_90(direction)
 
         # Wait for pivot to complete before proceeding
-        getattr(self.pilot, f"{"right" if direction == "left" else "left"}_motor").wait_is_stopped()
+        getattr(self.pilot, f"{'right' if direction == 'left' else 'left'}_motor").wait_is_stopped()
 
         # Set colour arm back to the normal position
         self.sensor.motor.set_position(0)
