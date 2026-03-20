@@ -34,13 +34,13 @@ try:
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         pass
     driving_controller.stop_motors()
-    
-    line_follower.move_forward(100,force=True)
-    grabber_controller.load_bloc()
-    while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
-        pass
-    driving_controller.stop_motors()
-    color_sensor_controller.set_arm_at_angle(0)
+
+    # line_follower.move_forward(100,force=True)
+    # grabber_controller.load_bloc()
+    # while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
+    #     pass
+    # driving_controller.stop_motors()
+    # color_sensor_controller.set_arm_at_angle(0)
 
 except KeyboardInterrupt:
     color_sensor_controller.set_arm_at_angle(0)
