@@ -1,5 +1,5 @@
 import sys
-#sys.path.append("../")
+sys.path.append("../")
 
 import traceback
 from utils.brick import wait_ready_sensors, reset_brick, Motor
