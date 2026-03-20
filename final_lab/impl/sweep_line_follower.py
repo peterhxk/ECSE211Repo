@@ -27,6 +27,7 @@ class SweepLineFollower:
         
         Args:
             max_distance (int): The distance to move forward for, in millimetres.
+            force (bool): If true, the robot will move forward for the max_distance regardless of the colour sensor readings.
         """
 
         # Reset encoder values
