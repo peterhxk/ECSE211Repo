@@ -1,4 +1,4 @@
-from controllers.driving_controller import DrivingController
+from controllers.driving_controller import DrivingController as DC
 
 if __name__ == "__main__":
     while True:

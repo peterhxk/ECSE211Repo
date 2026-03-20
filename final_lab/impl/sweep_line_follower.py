@@ -2,6 +2,8 @@ from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
 import math
 import time 
+from typing import Literal
+import data.measurements as consts
 
 class SweepLineFollower:
 
@@ -25,7 +27,9 @@ class SweepLineFollower:
         
         Args:
             max_distance (int): The distance to move forward for, in millimetres.
+            force (bool): If true, the robot will move forward for the max_distance regardless of the colour sensor readings.
         """
+
 
         # Reset encoder values
         self.pilot.reset_encoders()
@@ -46,9 +50,10 @@ class SweepLineFollower:
 
             # print(self.pilot.get_avg_encoder_value())
             # print(self.sensor.read_colour())
-            
+            print(self.pilot.get_avg_encoder_value())
             distance += (math.pi/180) * (self.pilot.get_avg_encoder_value() - last_encoder_value) * (self.pilot.WHEEL_DIAMETER_MM/2)
-            
+            last_encoder_value = self.pilot.get_avg_encoder_value()
+
             print(self.sensor.read_colour())
             if not force and self.sensor.read_colour() == "w":
                 if moving_forward:
@@ -61,14 +66,16 @@ class SweepLineFollower:
                 angle = results[0][0]
 
                 # Positive angles -> line is detected on the left
-                self.pilot.pivot("left" if angle > 0 else "right")
+                self.pilot.pivot("right" if angle > 0 else "left")
                 
                 # Rotate for an amount of time based on theta
                 # time t as a function of angle theta
                 t = abs(self.f_theta(angle, 150))
                 print(f"sleeping for {t}")
-                time.sleep(t)
+                time.sleep(t/2)
                 #self.move_forward(50, force=True)
+                last_encoder_value = 0 
+                self.pilot.reset_encoders()
             time.sleep(0.1)
         print(f"advancement of {max_distance} distance completed")
         return
@@ -76,27 +83,21 @@ class SweepLineFollower:
     # Helper
     def f_theta(self, angle, dps):
 
-        # Define constants
-        dis_wheels_mm = 159
-        l_rod_mm = 65
-        l_axle_rod_mm = 69
-        dia_wheel_mm = 42.6
-
         # Calculation
         # phi: turning angle for robot wheels
 
         x = 180-abs(angle)
-        c = math.sqrt(l_rod_mm**2+l_axle_rod_mm**2+2*l_rod_mm*l_axle_rod_mm* \
+        c = math.sqrt(consts.l_rod_mm**2 + consts.l_axle_rod_mm**2 + 2 * consts.l_rod_mm * consts.l_axle_rod_mm * \
                             abs(math.cos(math.radians(x))))
-        phi = math.degrees(math.asin(l_rod_mm*math.sin(math.radians(x))/c))
+        phi = math.degrees(math.asin(consts.l_rod_mm*math.sin(math.radians(x))/c))
         print(f"turning angle for robot {phi}")
         
         # For one wheel stationary rotation
 
         # circumference of wheel
-        cir = dia_wheel_mm*math.pi
+        cir = consts.dia_wheel_mm*math.pi
         # total d needed for wheel to travel
-        d = dis_wheels_mm*phi*math.pi/180
+        d = consts.dis_wheels_mm * phi * math.pi/180
         print(f"total_d to travel {d}")
 
 
@@ -117,9 +118,54 @@ class SweepLineFollower:
         return t
 
 
+    def turn_logic(self, direction: Literal["left", "right"]):
+        """ Turn the robot while pivoting around 1 wheel with intersection in front.
+        Prerequisite: Robot is directly facing the intersection between X mm and 30 mm
+        Input: 
+        """
+        self.pilot.stop_motors()
+
+        if direction == "right":
+            self.sensor.set_arm_at_angle(consts.angle_pivot)
+        elif direction == "left":
+            self.sensor.set_arm_at_angle(-consts.angle_pivot)
+        else:
+            raise Exception("Wrong direction input")
+        
+        print("Moving arm")
+        time.sleep(0.1)
+        # Wait for sensor arm to be stopped before proceeding
+        self.sensor.motor.wait_is_stopped()
+
+        # Moves 30 mm forward to find intersection
+        self.pilot.move_forward()
+        print(f"The colors detected are : {self.sensor.get_rgb()}")
+
+        while (self.sensor.read_colour() == "w"):
+            print("reading white")
+
+        print("stopping motors")
+        self.pilot.stop_motors()
+        
+        print(f"pivoting {direction}")
+        self.pilot.pivot_90(direction)
+
+        # Wait for pivot to complete before proceeding
+        time.sleep(0.1)
+        getattr(self.pilot, f"{'right' if direction == 'left' else 'left'}_motor").wait_is_stopped()
+
+        # Set colour arm back to the normal position
+        self.sensor.set_arm_at_angle(0)
+        time.sleep(0.1)
+        self.sensor.motor.wait_is_stopped()
+        time.sleep(0.1)
+
     def run(self):
+        self.turn_logic("right")
+        '''
         distance_mm = 20000
         self.move_forward(distance_mm)
+        '''
         return
         while True:
             # Sweep the colour sensor once
@@ -166,3 +212,7 @@ class SweepLineFollower:
                 self.pilot.left_motor.set_dps(self.K_R * theta)
 
                 # @TODO: Complete logic
+                
+                # 1st idea: make the run method sleep until we turned enough (we need to turn at specifc angle and power)
+                
+                pass

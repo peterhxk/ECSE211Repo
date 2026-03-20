@@ -4,6 +4,8 @@ import json
 from enum import Enum
 from typing import Literal, List, Tuple, Union, NamedTuple, Optional
 import math
+import data.measurements as consts
+
 
 def normalize_colours(r, g, b):
     total = r+g+b
@@ -21,15 +23,15 @@ class ColourSensorController (EV3ColorSensor):
     MAX_SWEEP_ANGLE = {
         "left": {
             SweepDirection.RIGHT: 0,
-            SweepDirection.LEFT: -45
+            SweepDirection.LEFT: -60
         },
         "right": {
-            SweepDirection.RIGHT: 45,
+            SweepDirection.RIGHT: 60,
             SweepDirection.LEFT: 0
         },
         "full": {
-            SweepDirection.RIGHT: 45,
-            SweepDirection.LEFT: -45
+            SweepDirection.RIGHT: 60,
+            SweepDirection.LEFT: -60
         }
     }
 
@@ -47,6 +49,8 @@ class ColourSensorController (EV3ColorSensor):
 
         # Reset the value of the motor encoder.
         self.motor.reset_encoder()
+        # Sets maximum speed of motor.
+        motor.set_limits(0, self.MOTOR_POWER_DPS)
 
     def _is_at_boundary(self, range: Literal["left", "right", "full"]) -> bool:
         """
@@ -54,6 +58,22 @@ class ColourSensorController (EV3ColorSensor):
         of the colour sensor is beyond the pre-defined threshold. If `True`, then we need to switch the direction
         """
         return self.sweep_dir.value * self.motor.get_position() >= self.sweep_dir.value * self.MAX_SWEEP_ANGLE[range][self.sweep_dir]
+
+    def set_arm_at_angle(self, angle: float):
+        """
+        ISSUE: currently the arm is moving too fast
+        Sets the arm at {angle} degrees off the origin (straight ahead) 
+        
+        angle > 0 -> right?
+        angle < 0 -> left?
+        """
+        self.motor.set_limits(0, self.MOTOR_POWER_DPS)
+        self.motor.set_position(angle)
+        self.motor.wait_is_moving()
+
+    def read_current_angle(self):
+        pass
+
 
     def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True) -> List[Tuple[int, str, int]]:
         """Sweeps the colour sensor arm and checks the colour.
@@ -135,6 +155,7 @@ class ColourSensorController (EV3ColorSensor):
             time.sleep(0.01)
             duration += 0.1
 
+
     def read_colour(self):
         cur_rgb = self.get_rgb()
         cur_r = cur_rgb[0]
@@ -143,6 +164,37 @@ class ColourSensorController (EV3ColorSensor):
         # Uncomment for rgb data adjustment
         # print(cur_rgb)
         with open("data/colours.json", "r") as f:
+            colours = json.load(f)
+        colour_to_distance = {}
+        for colour, rgb in colours.items():
+            r = int(rgb[0])
+            g = int(rgb[1])
+            b = int(rgb[2])
+
+            distance = ((cur_r - r)**2+(cur_g - g)**2+(cur_b - b)**2)**(1/2)
+            colour_to_distance[colour] = distance
+        
+        shortest_d = None
+        closest_colour = None
+        for colour, d in colour_to_distance.items():
+            if not closest_colour or d < shortest_d:
+                shortest_d = d
+                closest_colour = colour
+        return closest_colour
+
+    def read_colour_pivot(self):
+        """
+        This function is no longer useful due to updated hardware. 
+        Read colour, but intended to be used when sensor is tilted at 81 degrees (angle to pivot on intersection).
+        Uses pivot_colours.json instead
+        """
+        cur_rgb = self.get_rgb()
+        cur_r = cur_rgb[0]
+        cur_g = cur_rgb[1]
+        cur_b = cur_rgb[2]
+        # Uncomment for rgb data adjustment
+        # print(cur_rgb)
+        with open("data/pivot_colours.json", "r") as f:
             colours = json.load(f)
         colour_to_distance = {}
         for colour, rgb in colours.items():

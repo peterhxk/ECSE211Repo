@@ -1,5 +1,5 @@
 import sys
-#sys.path.append("../")
+sys.path.append("../")
 
 import traceback
 from utils.brick import wait_ready_sensors, reset_brick, Motor
@@ -22,7 +22,7 @@ line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 wait_ready_sensors(True)
 
 try:
-    line_follower.run()
+    line_follower.move_forward(300)
 
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
