@@ -182,6 +182,7 @@ class ColourSensorController (EV3ColorSensor):
 
     def read_colour_pivot(self):
         """
+        This function is no longer useful due to updated hardware. 
         Read colour, but intended to be used when sensor is tilted at 81 degrees (angle to pivot on intersection).
         Uses pivot_colours.json instead
         """
