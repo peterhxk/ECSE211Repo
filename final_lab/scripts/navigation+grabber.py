@@ -27,6 +27,8 @@ line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 
 wait_ready_sensors(True)
 
+grabber_controller.initialize_sensors()
+
 def slow_decrease():
     global init_power
     while init_power > 30:
