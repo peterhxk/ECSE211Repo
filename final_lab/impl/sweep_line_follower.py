@@ -123,7 +123,8 @@ class SweepLineFollower:
         Prerequisite: Robot is directly facing the intersection between X mm and 30 mm
         Input: 
         """
-    
+        self.pilot.stop_motors()
+        
         if direction == "right":
             self.sensor.set_arm_at_angle(consts.angle_pivot)
         elif direction == "left":
