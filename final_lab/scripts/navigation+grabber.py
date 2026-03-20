@@ -28,8 +28,8 @@ wait_ready_sensors(True)
 
 try:
     color_sensor_controller.set_arm_at_angle(90)
-    line_follower.move_forward(30,force=True)
-    driving_controller.move_forward_by_power(15)
+    line_follower.move_forward(100,force=True)
+    driving_controller.move_forward_by_power(30)
     grabber_controller.start_loading()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         pass
