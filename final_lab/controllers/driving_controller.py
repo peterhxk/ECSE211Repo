@@ -41,6 +41,20 @@ class DrivingController:
         self.right_motor.set_dps(self.base_power)
         self.left_motor.set_dps(self.base_power)
 
+    def move_backward(self):
+        """
+        Sets the left and right motors to move the robot backward at a rate of `self.base_power`.
+        """
+        self.right_motor.set_dps(-self.base_power)
+        self.left_motor.set_dps(-self.base_power)
+
+    def move_forward_by_power(self, power):
+        """
+        Sets the left and right motors to move the robot forward at a rate of `power`.
+        """
+        self.right_motor.set_dps(power)
+        self.left_motor.set_dps(power)
+
     def move_distance(self, dist: float):
         """
         UNTESTED
