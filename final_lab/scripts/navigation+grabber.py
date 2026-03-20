@@ -33,7 +33,7 @@ try:
     grabber_controller.start_loading()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         pass
-    c
+    
 
     line_follower.move_forward(100,force=True)
     grabber_controller.load_bloc()
