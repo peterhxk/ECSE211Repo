@@ -45,6 +45,7 @@ try:
     color_sensor_controller.set_arm_at_angle(0)
 
 except KeyboardInterrupt:
+    color_sensor_controller.set_arm_at_angle(0)
     print("Interrupted via keyboard...")
 
 except Exception as err:
