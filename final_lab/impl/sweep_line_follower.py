@@ -136,7 +136,7 @@ class SweepLineFollower:
         # Moves 30 mm forward to find intersection
         self.pilot.move_forward()
         print(f"The colors detected are : {self.sensor.get_rgb()}")
-        while (self.sensor.read_colour_pivot == "w"):
+        while (self.sensor.read_colour() == "w"):
             print("reading white")
         print("stopping motors")
         self.pilot.stop_motors()
