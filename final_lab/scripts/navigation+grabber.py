@@ -30,11 +30,12 @@ try:
     color_sensor_controller.set_arm_at_angle(90)
     line_follower.move_forward(100,force=True)
     init_power = 150
+    driving_controller.move_forward_by_power(init_power)
     grabber_controller.start_loading()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
+        init_power /= 1.5
         driving_controller.move_forward_by_power(init_power)
-        init_power /= 1.1
-        time.sleep(0.01)
+        time.sleep(0.1)
         pass
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
     driving_controller.stop_motors()
@@ -44,8 +45,8 @@ try:
     grabber_controller.load_bloc()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         driving_controller.move_forward_by_power(init_power)
-        init_power /= 1.1
-        time.sleep(0.01)
+        init_power /= 1.5
+        time.sleep(0.1)
         pass
     driving_controller.stop_motors()
     color_sensor_controller.set_arm_at_angle(0)
