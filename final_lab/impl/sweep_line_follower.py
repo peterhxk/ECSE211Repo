@@ -30,6 +30,7 @@ class SweepLineFollower:
             force (bool): If true, the robot will move forward for the max_distance regardless of the colour sensor readings.
         """
 
+
         # Reset encoder values
         self.pilot.reset_encoders()
 
@@ -49,7 +50,7 @@ class SweepLineFollower:
 
             # print(self.pilot.get_avg_encoder_value())
             # print(self.sensor.read_colour())
-            
+            print(self.pilot.get_avg_encoder_value())
             distance += (math.pi/180) * (self.pilot.get_avg_encoder_value() - last_encoder_value) * (self.pilot.WHEEL_DIAMETER_MM/2)
             last_encoder_value = self.pilot.get_avg_encoder_value()
 
@@ -65,13 +66,13 @@ class SweepLineFollower:
                 angle = results[0][0]
 
                 # Positive angles -> line is detected on the left
-                self.pilot.pivot("left" if angle > 0 else "right")
+                self.pilot.pivot("right" if angle > 0 else "left")
                 
                 # Rotate for an amount of time based on theta
                 # time t as a function of angle theta
                 t = abs(self.f_theta(angle, 150))
                 print(f"sleeping for {t}")
-                time.sleep(t)
+                time.sleep(t/2)
                 #self.move_forward(50, force=True)
                 last_encoder_value = 0 
                 self.pilot.reset_encoders()

@@ -22,7 +22,7 @@ line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 wait_ready_sensors(True)
 
 try:
-    line_follower.turn_logic("left")
+    line_follower.move_forward(300)
 
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
