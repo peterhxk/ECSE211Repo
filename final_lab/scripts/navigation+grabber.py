@@ -46,6 +46,8 @@ try:
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
     driving_controller.stop_motors()
 
+    time.sleep(2)
+
     line_follower.move_forward(20,force=True)
     init_power = 60
     grabber_controller.load_bloc()
