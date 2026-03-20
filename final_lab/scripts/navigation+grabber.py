@@ -32,7 +32,7 @@ grabber_controller.initialize_sensors()
 def slow_decrease():
     global init_power
     while init_power > 30:
-        init_power /= 2
+        init_power = max(29, init_power/2)
         time.sleep(0.5)
 try:
     color_sensor_controller.set_arm_at_angle(90)
