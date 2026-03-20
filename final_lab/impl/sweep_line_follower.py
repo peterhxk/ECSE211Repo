@@ -30,6 +30,7 @@ class SweepLineFollower:
             force (bool): If true, the robot will move forward for the max_distance regardless of the colour sensor readings.
         """
 
+
         # Reset encoder values
         self.pilot.reset_encoders()
 
