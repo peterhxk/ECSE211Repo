@@ -777,6 +777,9 @@ class GrabberController:
     def kill(self):
         raise NotImplementedError()
 
+    def isBlockCaught(self) -> bool:
+        raise NotImplementedError()
+
 
 if __name__ == "__main__":
     controller = GrabberController("D", 4, False, True)
