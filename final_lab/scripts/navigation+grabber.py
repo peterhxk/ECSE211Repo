@@ -28,21 +28,17 @@ wait_ready_sensors(True)
 
 try:
     color_sensor_controller.set_arm_at_angle(90)
+    #line_follower.move_forward(100,force=True)
+    driving_controller.move_forward_by_power(25)
+    grabber_controller.start_loading()
+    while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
+        pass
+    c
+
     line_follower.move_forward(100,force=True)
-    #driving_controller.move_forward_by_power(25)
     grabber_controller.load_bloc()
-    while True:
-        if touch_sensor.is_pressed():
-        #if grabber_controller.isBlockCaught():
-            print("First block caught!")
-            break
-    line_follower.move_forward(100,force=True)
-    grabber_controller.load_bloc()
-    while True:
-        if touch_sensor.is_pressed():
-        #if grabber_controller.isBlockCaught():
-            print("First block caught!")
-            break
+    while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
+        pass
     driving_controller.stop_motors()
     color_sensor_controller.set_arm_at_angle(0)
 
