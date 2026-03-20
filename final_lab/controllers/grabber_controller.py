@@ -13,6 +13,7 @@ import glob
 import time
 import pickle
 from datetime import datetime
+from collections import deque
 
 
 class BlocLocation(Enum):
@@ -43,6 +44,16 @@ class GrabberController:
         self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
         self.calibration = calibration
         self.debug = debug
+
+        # Thread-safe state / async-like control
+        self.state_lock = threading.Lock()
+
+        self._block_caught_event = threading.Event()
+
+        self._load_thread = None
+        self._load_done_event = threading.Event()
+        self._load_cancel_event = threading.Event()
+        self._load_result = None
 
         # Hardware
         self.gyro = EV3GyroSensor(port=gyro_port, mode=EV3GyroSensor.Mode.DPS)
@@ -83,9 +94,50 @@ class GrabberController:
         self._current_record = None
         self._recording_lock = threading.Lock()
 
+        self._command_queue = deque()
+        self._input_thread = threading.Thread(target=self._input_worker, daemon=True)
+        self._input_thread.start()
+
     # ----------------------------
     # Setup / calibration
     # ----------------------------
+    def _load_bloc_worker(self):
+        try:
+            self._load_result = self.load_bloc(stop_event=self._load_cancel_event)
+        finally:
+            self._load_done_event.set()
+
+    def start_loading(self) -> bool:
+        """
+        Start load_bloc() in a background thread and return immediately.
+
+        Returns False if a loading operation is already in progress, True otherwise.
+        """
+        if self._load_thread is not None and self._load_thread.is_alive():
+            print("[INFO] Loading already in progress.")
+            return False
+
+        self._load_done_event.clear()
+        self._load_cancel_event.clear()
+        self._block_caught_event.clear()
+        self._load_result = None
+
+        self._load_thread = threading.Thread(target=self._load_bloc_worker, daemon=True)
+        self._load_thread.start()
+        return True
+
+    def is_loading(self) -> bool:
+        return self._load_thread is not None and self._load_thread.is_alive()
+
+    def loading_finished(self) -> bool:
+        return self._load_done_event.is_set()
+
+    def get_loading_result(self):
+        return self._load_result
+
+    def cancel_loading(self):
+        self._load_cancel_event.set()
+
     def initialize_sensors(self):
         print("[Calibration] Initializing sensors... Don't move the Gyro sensor")
         self.gyro.wait_ready()
@@ -417,14 +469,15 @@ class GrabberController:
     # detector + recorder use same samples
     # ----------------------------
     def _consecutive_gyro_trigger(
-        self,
-        operation_name: str,
-        detector_name: str,
-        predicate_from_dps,
-        needed=None,
-        sample_hz=None,
-        timeout=None,
-        extra=None,
+            self,
+            operation_name: str,
+            detector_name: str,
+            predicate_from_dps,
+            needed=None,
+            sample_hz=None,
+            timeout=None,
+            extra=None,
+            stop_event=None,
     ) -> bool:
         """
         Read the gyro ONCE per loop.
@@ -434,6 +487,7 @@ class GrabberController:
 
         Returns True when predicate_from_dps(dps) is true for `needed` consecutive samples.
         """
+
         needed = self.consecutive_needed if needed is None else int(needed)
         sample_hz = self.sample_hz if sample_hz is None else float(sample_hz)
         dt = 1.0 / sample_hz
@@ -453,6 +507,11 @@ class GrabberController:
 
         try:
             while hits < needed:
+
+                if stop_event is not None and stop_event.is_set():
+                    self._end_operation_recording(outcome="cancelled")
+                    return False
+
                 elapsed = time.time() - start
                 if timeout is not None and elapsed >= timeout:
                     self._end_operation_recording(outcome="timeout")
@@ -528,7 +587,7 @@ class GrabberController:
                 if self.bloc_count == 0:
                     self.motor.set_power(self.running_power)
 
-    def _is_motor_drop_detected(self, timeout=5.0) -> bool:
+    def _is_motor_drop_detected(self, timeout=5.0, stop_event=None) -> bool:
         """
         While motor is already running inward, detect a sustained drop in motor speed:
             speed < mu_in - k * sigma_in
@@ -546,6 +605,9 @@ class GrabberController:
         )
 
         while True:
+            if stop_event is not None and stop_event.is_set():
+                return False
+
             if timeout is not None and (time.time() - start) >= timeout:
                 return False
 
@@ -575,6 +637,7 @@ class GrabberController:
                     f"filtered_speed={speed_for_detection:.3f}, "
                     f"threshold={threshold:.3f}"
                 )
+                self._block_caught_event.set()
                 return True
 
             time.sleep(self.motor_sample_sleep)
@@ -582,7 +645,7 @@ class GrabberController:
     # ----------------------------
     # High-level actions
     # ----------------------------
-    def load_bloc(self) -> bool:
+    def load_bloc(self, stop_event=None) -> bool:
         """
         Returns True on success, False on failure.
 
@@ -598,6 +661,10 @@ class GrabberController:
         self.motor.set_power(self.running_power)
 
         try:
+            if stop_event is not None and stop_event.is_set():
+                print("[INFO] Loading cancelled before start.")
+                return False
+
             # First bloc: gyro-based detection with unified sample stream
             if self.bloc_count == 0:
                 threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
@@ -607,22 +674,29 @@ class GrabberController:
                     operation_name="load_first_bloc",
                     detector_name="gyro_inward_slow",
                     predicate_from_dps=lambda dps: self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT),
-                    needed=2, # decreased
+                    needed=2,
                     timeout=5.0,
                     extra={
                         "bloc_count_before": self.bloc_count,
                         "running_power": self.running_power,
                         "direction": "inward",
                     },
+                    stop_event=stop_event,
                 )
 
                 if not ok:
-                    print("Timeout waiting for first bloc to arrive.")
+                    print("Timeout or cancellation waiting for first bloc to arrive.")
+                    return False
+
+                if stop_event is not None and stop_event.is_set():
+                    print("[INFO] Loading cancelled after detection.")
                     return False
 
                 self.motor.set_power(0)
-                self.bloc_positions[0] = BlocLocation.UNDER_GYRO
-                self.bloc_count = 1
+                with self.state_lock:
+                    self.bloc_positions[0] = BlocLocation.UNDER_GYRO
+                    self.bloc_count = 1
+
                 print("Successfully loaded first bloc.")
                 return True
 
@@ -635,24 +709,29 @@ class GrabberController:
             print("Loading second bloc: using motor velocity drop detection...")
             time.sleep(self.motor_drop_warm_up_delay)
 
-            ok = self._is_motor_drop_detected(timeout=5.0)
+            if stop_event is not None and stop_event.is_set():
+                print("[INFO] Loading cancelled during second-bloc warm-up.")
+                return False
+
+            ok = self._is_motor_drop_detected(timeout=5.0, stop_event=stop_event)
             if not ok:
-                print("Timed out waiting for motor velocity drop while loading second bloc.")
+                print("Timed out or cancelled waiting for motor velocity drop while loading second bloc.")
                 return False
 
             self.motor.set_power(60)
             time.sleep(0.1)
             self.motor.set_power(0)
 
-            self.bloc_positions[0] = BlocLocation.BACK_STORAGE
-            self.bloc_positions[1] = BlocLocation.AT_GATE
-            self.bloc_count = 2
+            with self.state_lock:
+                self.bloc_positions[0] = BlocLocation.BACK_STORAGE
+                self.bloc_positions[1] = BlocLocation.AT_GATE
+                self.bloc_count = 2
+
             print("Successfully loaded second bloc.")
             return True
 
         finally:
-            if time.time() - start > 0:
-                self.motor.set_power(0)
+            self.motor.set_power(0)
 
     def unload_bloc(self) -> bool:
         """
@@ -725,11 +804,6 @@ class GrabberController:
     # Main loop
     # ----------------------------
     def loop(self):
-        """
-        Main loop of the grabber controller.
-        NEGATIVE DPS : inward tilt
-        POSITIVE DPS : outward tilt
-        """
         self.motor.set_power(-self.running_power)
         time.sleep(1)
         self.motor.set_power(0)
@@ -737,48 +811,71 @@ class GrabberController:
 
         try:
             while True:
-                user_command = input("Enter command (l=load, u=unload, q=quit): ").lower()
+                # -------------------------
+                # 1. Handle user commands
+                # -------------------------
+                if self._command_queue:
+                    cmd = self._command_queue.popleft()
 
-                if user_command == "l":
-                    print("Loading a package into the Grabber")
-                    success = self.load_bloc()
-                    if success:
-                        print(
-                            f"Successfully loaded bloc. Count={self.bloc_count}, "
-                            f"positions={self.bloc_positions}"
-                        )
-                    else:
-                        print("Failed to load bloc.")
-                    time.sleep(0.2)
+                    if cmd == "l":
+                        print("Starting non-blocking load...")
+                        self.start_loading()
 
-                elif user_command == "u":
-                    print("Unloading a package from the Grabber")
-                    success = self.unload_bloc()
-                    if success:
-                        print(
-                            f"Successfully unloaded bloc. Count={self.bloc_count}, "
-                            f"positions={self.bloc_positions}"
-                        )
-                    else:
-                        print("Failed to unload bloc.")
-                    time.sleep(0.2)
+                    elif cmd == "u":
+                        print("Unloading...")
+                        self.unload_bloc()
 
-                elif user_command == "q":
-                    time.sleep(0.2)
-                    print("Gently exiting program")
-                    raise KeyboardInterrupt
+                    elif cmd == "q":
+                        print("Exiting...")
+                        raise KeyboardInterrupt
 
+                # -------------------------
+                # 2. Periodic checks
+                # -------------------------
+                if self.is_loading():
+                    if self.isBlockCaught():
+                        print("[INFO] Block caught (velocity drop detected)")
+
+                    if self.loading_finished():
+                        print(f"[INFO] Loading finished: {self.get_loading_result()}")
+
+                # -------------------------
                 time.sleep(0.01)
 
         except KeyboardInterrupt:
             print("Stopping grabber controller loop.")
+            self.cancel_loading()
             self.motor.set_power(0)
 
     def kill(self):
         raise NotImplementedError()
 
     def isBlockCaught(self) -> bool:
-        raise NotImplementedError()
+        return self._block_caught_event.is_set()
+
+    def clearBlockCaught(self):
+        self._block_caught_event.clear()
+
+    def _input_worker(self):
+        while True:
+            try:
+                cmd = input("Enter command (l=load, u=unload, q=quit): ").lower()
+                self._command_queue.append(cmd)
+            except EOFError:
+                break
+
+    def get_loading_status(self) -> str:
+        if self._load_thread is not None and self._load_thread.is_alive():
+            if self._block_caught_event.is_set():
+                return "BLOCK_CAUGHT"
+            return "LOADING"
+
+        if self._load_done_event.is_set():
+            if self._load_result is True:
+                return "SUCCESS"
+            return "FAILED"
+
+        return "IDLE"
 
 
 if __name__ == "__main__":
