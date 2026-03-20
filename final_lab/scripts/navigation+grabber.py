@@ -20,7 +20,7 @@ color_sensor_motor = Motor("A")
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
 color_sensor_controller = ColourSensorController(2, color_sensor_motor)
-grabber_controller = GrabberController("D", 4, True, True) 
+grabber_controller = GrabberController("D", 4, True, False) 
 touch_sensor = TouchSensor(1)
 
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
@@ -32,7 +32,7 @@ grabber_controller.initialize_sensors()
 def slow_decrease():
     global init_power
     while init_power > 30:
-        init_power /= 1.1
+        init_power /= 2
 try:
     color_sensor_controller.set_arm_at_angle(90)
     line_follower.move_forward(100,force=True)
@@ -40,7 +40,7 @@ try:
     driving_controller.move_forward_by_power(init_power)
     grabber_controller.start_loading()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
-        threading.Timer(0.1,slow_decrease).start()
+        threading.Timer(1,slow_decrease).start()
         driving_controller.move_forward_by_power(init_power)
         pass
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
