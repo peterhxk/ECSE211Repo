@@ -28,7 +28,7 @@ wait_ready_sensors(True)
 
 try:
     color_sensor_controller.set_arm_at_angle(90)
-    line_follower.mover_forward(100,force=True)
+    line_follower.move_forward(100,force=True)
     #driving_controller.move_forward_by_power(25)
     grabber_controller.load_bloc()
     while True:
@@ -36,7 +36,7 @@ try:
         #if grabber_controller.isBlockCaught():
             print("First block caught!")
             break
-    line_follower.mover_forward(100,force=True)
+    line_follower.move_forward(100,force=True)
     grabber_controller.load_bloc()
     while True:
         if touch_sensor.is_pressed():
