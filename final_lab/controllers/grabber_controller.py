@@ -864,6 +864,19 @@ class GrabberController:
             except EOFError:
                 break
 
+    def get_loading_status(self) -> str:
+        if self._load_thread is not None and self._load_thread.is_alive():
+            if self._block_caught_event.is_set():
+                return "BLOCK_CAUGHT"
+            return "LOADING"
+
+        if self._load_done_event.is_set():
+            if self._load_result is True:
+                return "SUCCESS"
+            return "FAILED"
+
+        return "IDLE"
+
 
 if __name__ == "__main__":
     controller = GrabberController("D", 4, False, True)
