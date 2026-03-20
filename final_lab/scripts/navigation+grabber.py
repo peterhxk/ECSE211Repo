@@ -28,11 +28,12 @@ wait_ready_sensors(True)
 
 try:
     color_sensor_controller.set_arm_at_angle(90)
-    line_follower.move_forward(50,force=True)
-    driving_controller.move_forward_by_power(30)
+    line_follower.move_forward(100,force=True)
+    driving_controller.move_forward_by_power(60)
     grabber_controller.start_loading()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         pass
+    print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
     driving_controller.stop_motors()
 
     # line_follower.move_forward(100,force=True)
