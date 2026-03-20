@@ -9,6 +9,7 @@ from impl.sweep_line_follower import SweepLineFollower
 import time
 import data.measurements as consts
 from controllers.grabber_controller import GrabberController
+import threading
 
 # Sensor declaration
 
@@ -26,6 +27,10 @@ line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 
 wait_ready_sensors(True)
 
+def slow_decrease():
+    global init_power
+    while init_power > 30:
+        init_power /= 1.1
 try:
     color_sensor_controller.set_arm_at_angle(90)
     line_follower.move_forward(100,force=True)
@@ -33,9 +38,8 @@ try:
     driving_controller.move_forward_by_power(init_power)
     grabber_controller.start_loading()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
-        init_power /= 1.5
+        threading.Timer(0.1,slow_decrease).start()
         driving_controller.move_forward_by_power(init_power)
-        time.sleep(0.1)
         pass
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
     driving_controller.stop_motors()
@@ -44,9 +48,8 @@ try:
     init_power = 150
     grabber_controller.load_bloc()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
+        threading.Timer(0.1,slow_decrease).start()
         driving_controller.move_forward_by_power(init_power)
-        init_power /= 1.5
-        time.sleep(0.1)
         pass
     driving_controller.stop_motors()
     color_sensor_controller.set_arm_at_angle(0)
