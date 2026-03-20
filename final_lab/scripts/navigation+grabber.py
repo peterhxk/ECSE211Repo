@@ -40,7 +40,7 @@ try:
     init_power = 150
     driving_controller.move_forward_by_power(init_power)
     grabber_controller.start_loading()
-    threading.Thread(slow_decrease).start()
+    threading.Thread(target=slow_decrease).start()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         driving_controller.move_forward_by_power(init_power)
         pass
@@ -50,7 +50,7 @@ try:
     line_follower.move_forward(20,force=True)
     init_power = 150
     grabber_controller.load_bloc()
-    threading.Thread(slow_decrease).start()
+    threading.Thread(target=slow_decrease).start()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         driving_controller.move_forward_by_power(init_power)
         pass
