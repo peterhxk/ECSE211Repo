@@ -72,7 +72,7 @@ class SweepLineFollower:
                 # time t as a function of angle theta
                 t = abs(self.f_theta(angle, 150))
                 print(f"sleeping for {t}")
-                time.sleep(t)
+                time.sleep(t/1.5)
                 #self.move_forward(50, force=True)
                 last_encoder_value = 0 
                 self.pilot.reset_encoders()
