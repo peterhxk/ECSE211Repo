@@ -23,15 +23,15 @@ class ColourSensorController (EV3ColorSensor):
     MAX_SWEEP_ANGLE = {
         "left": {
             SweepDirection.RIGHT: 0,
-            SweepDirection.LEFT: -90
+            SweepDirection.LEFT: -75
         },
         "right": {
-            SweepDirection.RIGHT: 90,
+            SweepDirection.RIGHT: 75,
             SweepDirection.LEFT: 0
         },
         "full": {
-            SweepDirection.RIGHT: 90,
-            SweepDirection.LEFT: -90
+            SweepDirection.RIGHT: 75,
+            SweepDirection.LEFT: -75
         }
     }
 
