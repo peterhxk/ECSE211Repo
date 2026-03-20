@@ -124,7 +124,7 @@ class SweepLineFollower:
         Input: 
         """
         self.pilot.stop_motors()
-        
+
         if direction == "right":
             self.sensor.set_arm_at_angle(consts.angle_pivot)
         elif direction == "left":
@@ -155,7 +155,7 @@ class SweepLineFollower:
         getattr(self.pilot, f"{'right' if direction == 'left' else 'left'}_motor").wait_is_stopped()
 
         # Set colour arm back to the normal position
-        self.sensor.motor.set_position(0)
+        self.sensor.set_arm_at_angle(0)
         time.sleep(0.1)
         self.sensor.motor.wait_is_stopped()
         time.sleep(0.1)
