@@ -25,9 +25,9 @@ wait_ready_sensors(True)
 try:
     line_follower.move_forward(80)
     line_follower.turn_logic("left")
-    line_follower.move_forward(230-consts.dis_wheels_mm/2)
+    line_follower.move_forward(230-consts.dis_wheels_mm)
     line_follower.turn_logic("right")
-    line_follower.move_forward(330-consts.dis_wheels_mm/2)
+    line_follower.move_forward(330-consts.dis_wheels_mm)
 
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
