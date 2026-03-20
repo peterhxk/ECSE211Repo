@@ -52,7 +52,8 @@ class SweepLineFollower:
             # print(self.sensor.read_colour())
             print(self.pilot.get_avg_encoder_value())
             distance += (math.pi/180) * (self.pilot.get_avg_encoder_value() - last_encoder_value) * (self.pilot.WHEEL_DIAMETER_MM/2)
-            
+            last_encoder_value = self.pilot.get_avg_encoder_value()
+
             print(self.sensor.read_colour())
             if not force and self.sensor.read_colour() == "w":
                 if moving_forward:
@@ -73,6 +74,8 @@ class SweepLineFollower:
                 print(f"sleeping for {t}")
                 time.sleep(t)
                 #self.move_forward(50, force=True)
+                last_encoder_value = 0 
+                self.pilot.reset_encoders()
             time.sleep(0.1)
         print(f"advancement of {max_distance} distance completed")
         return
