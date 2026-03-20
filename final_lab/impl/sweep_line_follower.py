@@ -125,18 +125,29 @@ class SweepLineFollower:
             self.sensor.set_arm_at_angle(-consts.angle_pivot)
         else:
             raise Exception("Wrong direction input")
+        
         print("Moving arm")
-        time.sleep(2)
+        # Wait for sensor arm to be stopped before proceeding
+        self.sensor.motor.wait_is_stopped()
+
         # Moves 30 mm forward to find intersection
         self.pilot.move_forward()
         print(f"The colors detected are : {self.sensor.get_rgb()}")
+
         while (self.sensor.read_colour() == "w"):
             print("reading white")
+
         print("stopping motors")
         self.pilot.stop_motors()
+        
         print(f"pivoting {direction}")
         self.pilot.pivot_90(direction)
-        time.sleep(5)
+
+        # Wait for pivot to complete before proceeding
+        getattr(self.pilot, f"{"right" if direction == "left" else "left"}_motor").wait_is_stopped()
+
+        # Set colour arm back to the normal position
+        self.sensor.motor.set_position(0)
 
     def run(self):
         self.turn_logic("right")
