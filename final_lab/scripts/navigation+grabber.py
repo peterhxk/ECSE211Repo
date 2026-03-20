@@ -20,7 +20,7 @@ color_sensor_motor = Motor("A")
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
 color_sensor_controller = ColourSensorController(2, color_sensor_motor)
-grabber_controller = GrabberController("D", 4, True, False) 
+grabber_controller = GrabberController("D", 4, False, True) 
 touch_sensor = TouchSensor(1)
 
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
