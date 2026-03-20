@@ -33,7 +33,7 @@ def slow_decrease():
     global init_power
     while init_power > 30:
         init_power = max(29, init_power/2)
-        time.sleep(0.5)
+        time.sleep(1)
 try:
     color_sensor_controller.set_arm_at_angle(90)
     line_follower.move_forward(100,force=True)
