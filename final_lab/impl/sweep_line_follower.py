@@ -78,27 +78,21 @@ class SweepLineFollower:
     # Helper
     def f_theta(self, angle, dps):
 
-        # Define constants
-        dis_wheels_mm = 159
-        l_rod_mm = 65
-        l_axle_rod_mm = 69
-        dia_wheel_mm = 42.6
-
         # Calculation
         # phi: turning angle for robot wheels
 
         x = 180-abs(angle)
-        c = math.sqrt(l_rod_mm**2+l_axle_rod_mm**2+2*l_rod_mm*l_axle_rod_mm* \
+        c = math.sqrt(consts.l_rod_mm**2 + consts.l_axle_rod_mm**2 + 2 * consts.l_rod_mm * consts.l_axle_rod_mm * \
                             abs(math.cos(math.radians(x))))
-        phi = math.degrees(math.asin(l_rod_mm*math.sin(math.radians(x))/c))
+        phi = math.degrees(math.asin(consts.l_rod_mm*math.sin(math.radians(x))/c))
         print(f"turning angle for robot {phi}")
         
         # For one wheel stationary rotation
 
         # circumference of wheel
-        cir = dia_wheel_mm*math.pi
+        cir = consts.dia_wheel_mm*math.pi
         # total d needed for wheel to travel
-        d = dis_wheels_mm*phi*math.pi/180
+        d = consts.dis_wheels_mm * phi * math.pi/180
         print(f"total_d to travel {d}")
 
 
