@@ -45,7 +45,7 @@ try:
         pass
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
     driving_controller.stop_motors()
-    grabber_controller.end_operation_recording()
+    grabber_controller._end_operation_recording()
 
     time.sleep(2)
 
