@@ -7,6 +7,7 @@ from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
 from impl.sweep_line_follower import SweepLineFollower
 import time
+import data.measurements as consts
 
 # Sensor declaration
 
@@ -24,9 +25,9 @@ wait_ready_sensors(True)
 try:
     line_follower.move_forward(80)
     line_follower.turn_logic("left")
-    line_follower.move_forward(230)
+    line_follower.move_forward(230-consts.dis_wheels_mm/2)
     line_follower.turn_logic("right")
-    line_follower.move_forward(330)
+    line_follower.move_forward(330-consts.dis_wheels_mm/2)
 
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
