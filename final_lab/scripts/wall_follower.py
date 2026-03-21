@@ -1,4 +1,4 @@
-from utils.brick import wait_ready_sensors, reset_brick, Motor
+from utils.brick import wait_ready_sensors, reset_brick, Motor, EV3UltrasonicSensor
 from controllers.color_sensor_controller import ColourSensorController
 from archive.driving_controller import DrivingController
 from impl.wall_follower import WallFollower
@@ -6,7 +6,7 @@ from impl.wall_follower import WallFollower
 # sensor declaration
 left_motor = Motor("D")
 right_motor = Motor("C")
-ultrasonic_sensor = ColourSensorController(1)
+ultrasonic_sensor = EV3UltrasonicSensor(1)
 
 
 driving_controller = DrivingController(left_motor, right_motor)
