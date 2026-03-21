@@ -657,7 +657,6 @@ class GrabberController:
             print("Already loaded 2 blocs, aborting.")
             return False
 
-        start = time.time()
         self.motor.set_power(self.running_power)
 
         try:
@@ -719,10 +718,6 @@ class GrabberController:
             if not ok:
                 print("Timed out or cancelled waiting for motor velocity drop while loading second bloc.")
                 return False
-
-            self.motor.set_power(60)
-            time.sleep(0.1)
-            self.motor.set_power(0)
 
             with self.state_lock:
                 self.bloc_positions[0] = BlocLocation.BACK_STORAGE

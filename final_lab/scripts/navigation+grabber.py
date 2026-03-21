@@ -60,7 +60,8 @@ try:
 
     #grabber_controller._end_operation_recording()
     grabber_controller._end_operation_recording()
-    time.sleep(1)
+    print("[DEBUG] Loading first block complete. Waiting 5s before loading second block")
+    time.sleep(5)
     # stop for now
 
     line_follower.move_forward(20,force=True)
