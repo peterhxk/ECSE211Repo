@@ -60,7 +60,7 @@ try:
 
     #grabber_controller._end_operation_recording()
     grabber_controller._end_operation_recording()
-    time.sleep(0.5)
+    time.sleep(1)
     # stop for now
 
     line_follower.move_forward(20,force=True)
