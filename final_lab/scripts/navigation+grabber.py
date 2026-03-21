@@ -44,7 +44,13 @@ try:
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         pass
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
+    if grabber_controller.isBlockCaught():
+        print("[DEBUG] Block Caught ! Stopping drive")
     driving_controller.stop_motors()
+    while grabber_controller.get_loading_status() == "SUCCESS":
+        pass
+
+    time.sleep(2)
     grabber_controller._end_operation_recording()
 
     sys.exit(0)
