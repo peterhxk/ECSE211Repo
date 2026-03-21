@@ -47,14 +47,14 @@ try:
     if grabber_controller.isBlockCaught():
         print("[DEBUG] Block Caught ! Stopping drive")
     driving_controller.stop_motors()
-    while grabber_controller.get_loading_status() == "SUCCESS":
+    while grabber_controller.is_loading():
         print("[DEBUG] Status of loader is {}".format(grabber_controller.get_loading_status()))
         if grabber_controller.get_loading_status() == "FAILED":
             raise RuntimeError("Failure to catch block. Should we back up the robot and start over ?")
     print("[DEBUG] Loading first block complete")
 
     #grabber_controller._end_operation_recording()
-
+    grabber_controller._end_operation_recording()
     time.sleep(0.5)
     # stop for now
 
@@ -66,7 +66,7 @@ try:
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         pass
     driving_controller.stop_motors()
-    while grabber_controller.get_loading_status() == "SUCCESS":
+    while grabber_controller.is_loading():
         print("[DEBUG] Status of loader is {}".format(grabber_controller.get_loading_status()))
         if  grabber_controller.get_loading_status() == "FAILED":
             raise RuntimeError("Failure to catch block. Should we back up the robot and start over ?")
