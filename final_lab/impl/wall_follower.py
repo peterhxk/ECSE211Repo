@@ -38,7 +38,7 @@ class WallFollower:
         prev_error = 0.0
         prev_time = time.time()
 
-        Kp = 0.5
+        Kp = 2.0
         Ki = 0.01
         Kd = 0.2
 
