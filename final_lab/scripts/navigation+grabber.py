@@ -37,7 +37,7 @@ def slow_decrease():
 try:
     color_sensor_controller.set_arm_at_angle(90)
     line_follower.move_forward(100,force=True)
-    init_power = 60
+    init_power = 30
     driving_controller.move_forward_by_power(init_power)
     grabber_controller.start_loading()
     #threading.Thread(target=slow_decrease).start()
