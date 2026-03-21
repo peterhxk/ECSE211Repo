@@ -47,6 +47,7 @@ try:
     if grabber_controller.isBlockCaught():
         print("[DEBUG] Block Caught ! Stopping drive")
     driving_controller.stop_motors()
+    grabber_controller.clearBlockCaught()
     start = time.time()
     while grabber_controller.is_loading():
         if time.time() - start > 1:
@@ -69,6 +70,7 @@ try:
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         pass
     driving_controller.stop_motors()
+    grabber_controller.clearBlockCaught()
     while grabber_controller.is_loading():
         print("[DEBUG] Status of loader is {}".format(grabber_controller.get_loading_status()))
         if  grabber_controller.get_loading_status() == "FAILED":
