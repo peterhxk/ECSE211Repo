@@ -64,6 +64,8 @@ try:
     #grabber_controller._end_operation_recording()
     grabber_controller._end_operation_recording()
     print("[DEBUG] Loading first block complete. Waiting 5s before loading second block")
+    if bloc_count != 1:
+        raise RuntimeError("Failure to catch block. Should we back up the robot and start over ?")
     time.sleep(5)
     # stop for now
 
