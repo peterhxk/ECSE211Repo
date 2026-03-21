@@ -47,7 +47,7 @@ try:
     driving_controller.stop_motors()
     grabber_controller._end_operation_recording()
 
-    return
+    sys.exit(0)
     # stop for now
 
     line_follower.move_forward(20,force=True)
