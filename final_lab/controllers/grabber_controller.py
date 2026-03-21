@@ -587,12 +587,7 @@ class GrabberController:
                 if self.bloc_count == 0:
                     self.motor.set_power(self.running_power)
 
-    def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5,stop_event=None) -> bool:
-        """
-        While motor is already running inward, detect a sustained drop in motor speed:
-            speed < mu_in - k * sigma_in
-        for N consecutive samples.
-        """
+    def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5, stop_event=None) -> bool:
         threshold = self.motor_mu_in - self.motor_drop_k * self.motor_sigma_in
         hits = 0
         start = time.time()
@@ -608,7 +603,8 @@ class GrabberController:
             if stop_event is not None and stop_event.is_set():
                 return False
 
-            if timeout is not None and (time.time() - start) >= timeout:
+            elapsed = time.time() - start
+            if timeout is not None and elapsed >= timeout:
                 return False
 
             raw_speed = self.motor.get_speed()
@@ -618,7 +614,11 @@ class GrabberController:
 
             raw_speed = float(raw_speed)
 
-            if self.use_motor_moving_average and self.motor_moving_avg_window > 1 and time.time() - start > warmup_delay: #NEW : only add samples past the warmup delay
+            if elapsed < warmup_delay:
+                time.sleep(self.motor_sample_sleep)
+                continue
+
+            if self.use_motor_moving_average and self.motor_moving_avg_window > 1:
                 ma_window.append(raw_speed)
                 speed_for_detection = sum(ma_window) / len(ma_window)
             else:
@@ -707,7 +707,7 @@ class GrabberController:
 
             self.motor.set_power(self.motor_calibration_power)
             print("Loading second bloc: using motor velocity drop detection...")
-            time.sleep(self.motor_drop_warm_up_delay)
+            #time.sleep(self.motor_drop_warm_up_delay)
 
             if stop_event is not None and stop_event.is_set():
                 print("[INFO] Loading cancelled during second-bloc warm-up.")
