@@ -48,7 +48,7 @@ try:
         print("[DEBUG] Block Caught ! Stopping drive")
     driving_controller.stop_motors()
     while grabber_controller.get_loading_status() == "SUCCESS":
-        pass
+        print("[DEBUG] Status of loader is {}".format(grabber_controller.get_loading_status()))
     print("[DEBUG] Loading first block complete")
 
     #grabber_controller._end_operation_recording()
