@@ -579,7 +579,7 @@ class GrabberController:
 
                 cooldown = time.time()
 
-                boosted_power = self.running_power * 1.6#min(1.5 * self.motor.get_power(), self.running_power * 1.4)
+                boosted_power = self.running_power * min(1.5 * self.motor.get_power(), self.running_power * 1.4)
                 self.motor.set_power(boosted_power)
 
                 time.sleep(duration)
