@@ -560,7 +560,7 @@ class GrabberController:
     # ----------------------------
     # Motor drop detection
     # ----------------------------
-    def increase_on_velocity_drop(self, duration=0.5):
+    def increase_on_velocity_drop(self, duration=0.6):
         start = time.time()
         cooldown = time.time()
         timeout = 1.0
@@ -579,7 +579,7 @@ class GrabberController:
 
                 cooldown = time.time()
 
-                boosted_power = self.running_power * 1.4#min(1.5 * self.motor.get_power(), self.running_power * 1.4)
+                boosted_power = self.running_power * 1.6#min(1.5 * self.motor.get_power(), self.running_power * 1.4)
                 self.motor.set_power(boosted_power)
 
                 time.sleep(duration)
