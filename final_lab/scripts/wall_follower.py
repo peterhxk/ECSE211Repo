@@ -5,7 +5,7 @@ from impl.wall_follower import WallFollower
 
 # sensor declaration
 left_motor = Motor("D")
-right_motor = Motor("C")
+right_motor = Motor("A")
 ultrasonic_sensor = EV3UltrasonicSensor(1)
 
 
