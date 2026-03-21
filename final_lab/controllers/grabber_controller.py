@@ -79,7 +79,7 @@ class GrabberController:
 
         self.motor_dry_run_time = 5.0
         self.motor_drop_k = 4.0
-        self.motor_drop_consecutive_needed = 8
+        self.motor_drop_consecutive_needed = 5
         self.use_motor_moving_average = True
         self.motor_moving_avg_window = 5
         self.motor_drop_warm_up_delay = 0.5
@@ -574,7 +574,7 @@ class GrabberController:
                 time.sleep(0.01)
                 continue
 
-            if self._is_motor_drop_detected(timeout=5.0):
+            if self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.1):
                 print("[Motor drop detected] Temporarily increasing velocity to prevent blocking")
 
                 cooldown = time.time()
@@ -587,7 +587,7 @@ class GrabberController:
                 if self.bloc_count == 0:
                     self.motor.set_power(self.running_power)
 
-    def _is_motor_drop_detected(self, timeout=5.0, stop_event=None) -> bool:
+    def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5,stop_event=None) -> bool:
         """
         While motor is already running inward, detect a sustained drop in motor speed:
             speed < mu_in - k * sigma_in
@@ -618,7 +618,7 @@ class GrabberController:
 
             raw_speed = float(raw_speed)
 
-            if self.use_motor_moving_average and self.motor_moving_avg_window > 1:
+            if self.use_motor_moving_average and self.motor_moving_avg_window > 1 and time.time() - start > warmup_delay: #NEW : only add samples past the warmup delay
                 ma_window.append(raw_speed)
                 speed_for_detection = sum(ma_window) / len(ma_window)
             else:
@@ -714,7 +714,8 @@ class GrabberController:
                 print("[INFO] Loading cancelled during second-bloc warm-up.")
                 return False
 
-            ok = self._is_motor_drop_detected(timeout=5.0, stop_event=stop_event)
+            ok = self._is_motor_drop_detected(timeout=5.0, ,warmup_delay=1.0,stop_event=stop_event)
+            #TODO : problem is that if the first block is only after the gyro sensor it might temporarily jam the grabber thus triggering the velocity drop event
             if not ok:
                 print("Timed out or cancelled waiting for motor velocity drop while loading second bloc.")
                 return False
@@ -783,7 +784,7 @@ class GrabberController:
             print("Unloading last bloc: using motor velocity drop detection...")
             time.sleep(0.6)
 
-            ok = self._is_motor_drop_detected(timeout=5.0)
+            ok = self._is_motor_drop_detected(timeout=5.0,warmup_delay=0)
             if not ok:
                 print("Timed out waiting for motor velocity drop while unloading last bloc.")
                 return False
