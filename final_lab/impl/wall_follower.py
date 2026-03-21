@@ -42,7 +42,7 @@ class WallFollower:
         Ki = 0.01
         Kd = 0.2
 
-        target_degrees = (straight_distance / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
+        target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
 
         self.motor_controller.move_forward()
 
