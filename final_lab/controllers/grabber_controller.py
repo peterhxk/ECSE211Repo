@@ -79,7 +79,7 @@ class GrabberController:
 
         self.motor_dry_run_time = 5.0
         self.motor_drop_k = 4.0
-        self.motor_drop_consecutive_needed = 5
+        self.motor_drop_consecutive_needed = 8
         self.use_motor_moving_average = True
         self.motor_moving_avg_window = 5
         self.motor_drop_warm_up_delay = 0.5
