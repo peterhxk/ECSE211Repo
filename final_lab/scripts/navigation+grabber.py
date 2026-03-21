@@ -35,9 +35,9 @@ def slow_decrease():
         init_power = max(29, init_power/2)
         time.sleep(1)
 try:
-    color_sensor_controller.set_arm_at_angle(90)
+    color_sensor_controller.set_arm_at_angle(85)
     line_follower.move_forward(100,force=True)
-    init_power = 30
+    init_power = 20
     driving_controller.move_forward_by_power(init_power)
     grabber_controller.start_loading()
     #threading.Thread(target=slow_decrease).start()
@@ -50,10 +50,10 @@ try:
     while grabber_controller.get_loading_status() == "SUCCESS":
         pass
     print("[DEBUG] Loading first block complete")
-    time.sleep(10)
-    grabber_controller._end_operation_recording()
 
-    sys.exit(0)
+    #grabber_controller._end_operation_recording()
+
+    time.sleep(10)
     # stop for now
 
     line_follower.move_forward(20,force=True)
