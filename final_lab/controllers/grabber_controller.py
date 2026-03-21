@@ -692,6 +692,7 @@ class GrabberController:
                     print("[INFO] Loading cancelled after detection.")
                     return False
 
+                print("[INFO] First bloc gyro event triggered")
                 self.motor.set_power(0)
                 with self.state_lock:
                     self.bloc_positions[0] = BlocLocation.UNDER_GYRO
