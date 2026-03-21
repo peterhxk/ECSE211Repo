@@ -47,8 +47,11 @@ try:
     if grabber_controller.isBlockCaught():
         print("[DEBUG] Block Caught ! Stopping drive")
     driving_controller.stop_motors()
+    start = time.time()
     while grabber_controller.is_loading():
-        print("[DEBUG] Status of loader is {}".format(grabber_controller.get_loading_status()))
+        if time.time() - start > 1:
+            print("[DEBUG] Status of loader is {}".format(grabber_controller.get_loading_status()))
+            start = time.time()
         if grabber_controller.get_loading_status() == "FAILED":
             raise RuntimeError("Failure to catch block. Should we back up the robot and start over ?")
     print("[DEBUG] Loading first block complete")
