@@ -37,7 +37,7 @@ def slow_decrease():
 try:
     color_sensor_controller.set_arm_at_angle(85)
     line_follower.move_forward(100,force=True)
-    init_power = 20
+    init_power = 15
     driving_controller.move_forward_by_power(init_power)
     grabber_controller.start_loading()
     #threading.Thread(target=slow_decrease).start()
@@ -49,21 +49,29 @@ try:
     driving_controller.stop_motors()
     while grabber_controller.get_loading_status() == "SUCCESS":
         print("[DEBUG] Status of loader is {}".format(grabber_controller.get_loading_status()))
+        if grabber_controller.get_loading_status() == "FAILED":
+            raise RuntimeError("Failure to catch block. Should we back up the robot and start over ?")
     print("[DEBUG] Loading first block complete")
 
     #grabber_controller._end_operation_recording()
 
-    time.sleep(10)
+    time.sleep(0.5)
     # stop for now
 
     line_follower.move_forward(20,force=True)
-    init_power = 60
+    init_power = 15
     grabber_controller.load_bloc()
     driving_controller.move_forward_by_power(init_power)
     #threading.Thread(target=slow_decrease).start()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
         pass
     driving_controller.stop_motors()
+    while grabber_controller.get_loading_status() == "SUCCESS":
+        print("[DEBUG] Status of loader is {}".format(grabber_controller.get_loading_status()))
+        if  grabber_controller.get_loading_status() == "FAILED":
+            raise RuntimeError("Failure to catch block. Should we back up the robot and start over ?")
+    print("[DEBUG] Loading second block complete")
+
     color_sensor_controller.set_arm_at_angle(0)
 
 except KeyboardInterrupt:
