@@ -19,6 +19,6 @@ try:
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 except Exception as err:
-    print(err)
+    print(err)  
 finally:    
     exit()

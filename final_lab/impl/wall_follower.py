@@ -81,5 +81,4 @@ class WallFollower:
             self.motor_controller.set_left_motor(self.motor_controller.base_power - adjustment)
             self.motor_controller.set_right_motor(self.motor_controller.base_power + adjustment)
 
-        self.motor_controller.left_motor.stop()
-        self.motor_controller.right_motor.stop()
+        self.motor_controller.stop_motors()
