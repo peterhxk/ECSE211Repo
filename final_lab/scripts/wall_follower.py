@@ -1,6 +1,6 @@
 from utils.brick import wait_ready_sensors, reset_brick, Motor, EV3UltrasonicSensor
 from controllers.color_sensor_controller import ColourSensorController
-from archive.driving_controller import DrivingController
+from controllers.driving_controller import DrivingController
 from impl.wall_follower import WallFollower
 
 # sensor declaration
