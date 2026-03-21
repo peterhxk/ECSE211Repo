@@ -59,6 +59,7 @@ class WallFollower:
 
             # outlier filtering step
             raw = self.ultrasonic_sensor.get_cm()
+            print(raw)
             median_window.append(raw)
             denoised = statistics.median(median_window)
 
