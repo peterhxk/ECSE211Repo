@@ -38,9 +38,9 @@ class WallFollower:
         prev_error = 0.0
         prev_time = time.time()
 
-        Kp = 2.0
-        Ki = 0.01
-        Kd = 0.2
+        Kp = 4.0
+        Ki = 0.5
+        Kd = 0.8
 
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
 
