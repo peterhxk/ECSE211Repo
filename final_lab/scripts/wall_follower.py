@@ -15,7 +15,7 @@ wait_ready_sensors(True)
 
 try:
     follower = WallFollower(driving_controller, ultrasonic_sensor)
-    follower.run(10, 30)
+    follower.run(4, 25)
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 except Exception as err:
