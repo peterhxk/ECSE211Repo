@@ -59,7 +59,6 @@ class WallFollower:
 
             # outlier filtering step
             raw = self.ultrasonic_sensor.get_cm()
-            print(raw)
             median_window.append(raw)
             denoised = statistics.median(median_window)
 
@@ -72,6 +71,7 @@ class WallFollower:
             distance_cm = ema_estimate
 
             # PID control part
+            print(distance_cm)
             error = wall_distance - distance_cm
             integral = max(-50.0, min(50.0, integral + error * dt))
             derivative = (error - prev_error) / dt
