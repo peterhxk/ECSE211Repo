@@ -49,8 +49,8 @@ try:
     driving_controller.stop_motors()
     while grabber_controller.get_loading_status() == "SUCCESS":
         pass
-
-    time.sleep(2)
+    print("[DEBUG] Loading first block complete")
+    time.sleep(10)
     grabber_controller._end_operation_recording()
 
     sys.exit(0)
