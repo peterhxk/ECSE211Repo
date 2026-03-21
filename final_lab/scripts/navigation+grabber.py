@@ -47,7 +47,8 @@ try:
     driving_controller.stop_motors()
     grabber_controller._end_operation_recording()
 
-    time.sleep(2)
+    return
+    # stop for now
 
     line_follower.move_forward(20,force=True)
     init_power = 60
