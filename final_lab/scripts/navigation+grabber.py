@@ -55,6 +55,7 @@ try:
             start = time.time()
         if grabber_controller.get_loading_status() == "FAILED":
             raise RuntimeError("Failure to catch block. Should we back up the robot and start over ?")
+        grabber_controller.increase_on_velocity_drop()
     print("[DEBUG] Loading first block complete")
 
     #grabber_controller._end_operation_recording()
