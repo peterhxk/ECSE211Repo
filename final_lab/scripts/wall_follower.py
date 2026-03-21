@@ -9,7 +9,7 @@ right_motor = Motor("C")
 ultrasonic_sensor = EV3UltrasonicSensor(1)
 
 
-driving_controller = DrivingController(left_motor, right_motor, 50)
+driving_controller = DrivingController(left_motor, right_motor, 80)
 print("Waiting for sensors to be ready...")
 wait_ready_sensors(True)
 
