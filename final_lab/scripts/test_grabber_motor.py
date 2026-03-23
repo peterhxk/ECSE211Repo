@@ -9,7 +9,7 @@ from tqdm import tqdm
 sys.path.append("../utils")
 from brick import EV3GyroSensor, Motor,reset_brick
 
-grabber_motor = EV3GyroSensor("D")
+grabber_motor = Motor("D")
 
 try :
     grabber_motor.set_dps(50)
