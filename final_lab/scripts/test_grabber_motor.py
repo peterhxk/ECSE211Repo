@@ -13,7 +13,7 @@ import time
 grabber_motor = Motor("D")
 
 try :
-    grabber_motor.set_dps(50)
+    grabber_motor.set_dps(300)
     starter = time.time()
     while True:
         if time.time() - starter > 1:
