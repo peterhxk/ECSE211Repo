@@ -575,7 +575,7 @@ class GrabberController:
                 continue
 
             if self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.1):
-                print("[Motor drop detected] Temporarily increasing velocity to prevent blocking")
+                print(f"[Motor drop detected] Temporarily increasing velocity to prevent blocking. Speed set to {self.running_power * 1.5}")
 
                 cooldown = time.time()
 
