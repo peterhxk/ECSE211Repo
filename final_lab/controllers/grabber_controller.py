@@ -70,10 +70,10 @@ class GrabberController:
         # Gyro detection knobs
         self.sample_hz = 50
         self.consecutive_needed = 15
-        self.running_power = 60
+        self.running_dps = 250
 
         # Motor-drop detection knobs
-        self.motor_calibration_power = 45
+        self.motor_calibration_dps = 250
         self.motor_sample_sleep = 0.02
         self.motor_eject_time = 2.0
 
@@ -84,7 +84,7 @@ class GrabberController:
         self.motor_moving_avg_window = 5
         self.motor_drop_warm_up_delay = 0.5
 
-        if self.running_power > 70:
+        if self.running_dps > 400:
             print("Warning: running power too high. Pick a lower value")
 
         # Empirical gyro trace recording
@@ -142,7 +142,7 @@ class GrabberController:
         print("[Calibration] Initializing sensors... Don't move the Gyro sensor")
         self.gyro.wait_ready()
         self.gyro.reset_measure()
-        self.motor.set_power(0)
+        self.motor.set_dps(0)
         print("Reset measures; motor stopped.")
 
         self.calibrate_motor_drop_detection(calibration=self.calibration)
@@ -248,12 +248,12 @@ class GrabberController:
         print(f"[Gyro calibration] mu={self.mu:.3f}, sigma={self.sigma:.3f}")
         return self.mu, self.sigma
 
-    def _sample_motor_speeds(self, power, duration, sleep_time):
+    def _sample_motor_speeds(self, dps, duration, sleep_time):
         """
-        Run motor at constant power for duration seconds and collect raw signed speed samples.
+        Run motor at constant dps for duration seconds and collect raw signed speed samples.
         """
         samples = []
-        self.motor.set_power(power)
+        self.motor.set_dps(dps)
         start = time.time()
 
         try:
@@ -263,7 +263,7 @@ class GrabberController:
                     samples.append(float(speed))
                 time.sleep(sleep_time)
         finally:
-            self.motor.set_power(0)
+            self.motor.set_dps(0)
 
         return samples
 
@@ -286,14 +286,14 @@ class GrabberController:
                 raise RuntimeError("Calibration requested but debug mode is disabled.")
 
             print("[Motor calibration] Ejecting outward first...")
-            self.motor.set_power(-self.motor_calibration_power)
+            self.motor.set_dps(-self.motor_calibration_dps)
             time.sleep(self.motor_eject_time)
-            self.motor.set_power(0)
+            self.motor.set_dps(0)
             time.sleep(0.5)
 
             print("[Motor calibration] Dry run outward...")
             outward_samples = self._sample_motor_speeds(
-                power=-self.motor_calibration_power,
+                dps=-self.motor_calibration_dps,
                 duration=self.motor_dry_run_time,
                 sleep_time=self.motor_sample_sleep,
             )
@@ -312,7 +312,7 @@ class GrabberController:
 
             print("[Motor calibration] Dry run inward...")
             inward_samples = self._sample_motor_speeds(
-                power=self.motor_calibration_power,
+                dps=self.motor_calibration_dps,
                 duration=self.motor_dry_run_time,
                 sleep_time=self.motor_sample_sleep,
             )
@@ -327,7 +327,7 @@ class GrabberController:
                 "date": datetime.now().isoformat(),
                 "motor_mu_in": self.motor_mu_in,
                 "motor_sigma_in": self.motor_sigma_in,
-                "motor_calibration_power": self.motor_calibration_power,
+                "motor_calibration_dps": self.motor_calibration_dps,
                 "motor_dry_run_time": self.motor_dry_run_time,
                 "motor_sample_sleep": self.motor_sample_sleep,
                 "motor_drop_k": self.motor_drop_k,
@@ -575,17 +575,17 @@ class GrabberController:
                 continue
 
             if self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.1):
-                print(f"[Motor drop detected] Temporarily increasing velocity to prevent blocking. Speed set to {self.running_power * 1.5}")
+                print(f"[Motor drop detected] Temporarily increasing velocity to prevent blocking. Speed set to {self.running_dps * 1.5}")
 
                 cooldown = time.time()
 
-                boosted_power = self.running_power * 1.5 #min(1.2 * self.motor.get_power(), self.running_power * 1.3)
-                self.motor.set_power(boosted_power)
+                boosted_power = self.running_dps * 1.5 #min(1.2 * self.motor.get_power(), self.running_dps * 1.3)
+                self.motor.set_dps(boosted_power)
 
                 time.sleep(duration)
 
                 if self.bloc_count == 0:
-                    self.motor.set_power(self.running_power)
+                    self.motor.set_dps(self.running_dps)
 
     def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5, stop_event=None) -> bool:
         threshold = self.motor_mu_in - self.motor_drop_k * self.motor_sigma_in
@@ -657,7 +657,7 @@ class GrabberController:
             print("Already loaded 2 blocs, aborting.")
             return False
 
-        self.motor.set_power(self.running_power)
+        self.motor.set_dps(self.running_dps)
 
         try:
             if stop_event is not None and stop_event.is_set():
@@ -677,7 +677,7 @@ class GrabberController:
                     timeout=5.0,
                     extra={
                         "bloc_count_before": self.bloc_count,
-                        "running_power": self.running_power,
+                        "running_dps": self.running_dps,
                         "direction": "inward",
                     },
                     stop_event=stop_event,
@@ -692,7 +692,7 @@ class GrabberController:
                     return False
 
                 print("[INFO] First bloc gyro event triggered")
-                self.motor.set_power(0)
+                self.motor.set_dps(0)
                 with self.state_lock:
                     self.bloc_positions[0] = BlocLocation.UNDER_GYRO
                     self.bloc_count = 1
@@ -705,7 +705,7 @@ class GrabberController:
                 print("Error: internal state inconsistency: bloc count is 1 but no bloc is loaded.")
                 return False
 
-            self.motor.set_power(self.motor_calibration_power)
+            self.motor.set_dps(self.motor_calibration_dps)
             print("Loading second bloc: using motor velocity drop detection...")
             #time.sleep(self.motor_drop_warm_up_delay)
 
@@ -728,7 +728,7 @@ class GrabberController:
             return True
 
         finally:
-            self.motor.set_power(0)
+            self.motor.set_dps(0)
 
     def unload_bloc(self) -> bool:
         """
@@ -746,7 +746,7 @@ class GrabberController:
 
         try:
             if self.bloc_count == 2:
-                self.motor.set_power(-1.2 * self.running_power)
+                self.motor.set_dps(-1.2 * self.running_dps)
 
                 unloaded = self._consecutive_gyro_trigger(
                     operation_name="unload_from_2_to_1",
@@ -756,12 +756,12 @@ class GrabberController:
                     timeout=5.0,
                     extra={
                         "bloc_count_before": self.bloc_count,
-                        "running_power": self.running_power,
+                        "running_dps": self.running_dps,
                         "direction": "outward",
                     },
                 )
 
-                self.motor.set_power(0)
+                self.motor.set_dps(0)
 
                 if not unloaded:
                     print("Timeout unloading (no outward SLOW tilt detected).")
@@ -775,7 +775,7 @@ class GrabberController:
                 return True
 
             # only one bloc left
-            self.motor.set_power(-45)
+            self.motor.set_dps(-self.running_dps)
             print("Unloading last bloc: using motor velocity drop detection...")
             time.sleep(0.6)
 
@@ -784,9 +784,9 @@ class GrabberController:
                 print("Timed out waiting for motor velocity drop while unloading last bloc.")
                 return False
 
-            self.motor.set_power(-60)
+            self.motor.set_dps(-self.running_dps)
             time.sleep(0.1)
-            self.motor.set_power(0)
+            self.motor.set_dps(0)
 
             self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
             self.bloc_count = 0
@@ -795,15 +795,15 @@ class GrabberController:
             return True
 
         finally:
-            self.motor.set_power(0)
+            self.motor.set_dps(0)
 
     # ----------------------------
     # Main loop
     # ----------------------------
     def loop(self):
-        self.motor.set_power(-self.running_power)
+        self.motor.set_dps(-self.running_dps)
         time.sleep(1)
-        self.motor.set_power(0)
+        self.motor.set_dps(0)
         print("Ejected all blocs")
 
         try:
@@ -842,7 +842,7 @@ class GrabberController:
         except KeyboardInterrupt:
             print("Stopping grabber controller loop.")
             self.cancel_loading()
-            self.motor.set_power(0)
+            self.motor.set_dps(0)
 
     def kill(self):
         raise NotImplementedError()
