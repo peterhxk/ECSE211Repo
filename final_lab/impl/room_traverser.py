@@ -1,14 +1,31 @@
-from utils.brick import wait_ready_sensors, EV3UltrasonicSensor
+from lab_3.test.test_record_angles import MOTOR_POWER
+from utils.brick import reset_brick, wait_ready_sensors, EV3UltrasonicSensor
 from controllers.driving_controller import DrivingController
 from controllers.color_sensor_controller import ColourSensorController
 from collections import deque
 import statistics
 import time
 from data.ports_brick import Ports
+from enum import Enum
+
+class RoomType(Enum):
+    CORNER_SINGLE = 1
+    WALL_SINGLE = 2
+    CORNER_DOUBLE_FIRST_HALF = 3
+    CORNER_DOUBLE_SECOND_HALF = 4
+
+room_type_to_wall_distance_map = {
+    RoomType.CORNER_SINGLE: 4,
+    RoomType.WALL_SINGLE: 50,
+    RoomType.CORNER_DOUBLE_FIRST_HALF: 30,
+    RoomType.CORNER_DOUBLE_SECOND_HALF: 4
+
+}
 
 class RoomTraverser:
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_BASE_MM = 159
+    MOTOR_POWER = 80
     
     # PID constants
     Kp = 0.265
@@ -31,13 +48,13 @@ class RoomTraverser:
     
     Inputs:
     - wall_distance: The left distance from the wall to maintain while moving (in CM).
-    - straight_distance: The MAXIMUM straight distance that the robot moves until the method returns.
+    - straight_distance: The MAXIMUM straight distance that the robot moves until the method returns. Defaults to 25cm.
     - detect_bed: Whether the robot should be detecting a bed or not (indicates whether the color sensor arm should be looking for a bed)
 
     Returns:
     - Tuple of (bed color detected or None, distance travelled in CM)
     """
-    def run(self, wall_distance: float, straight_distance: float, detect_bed: bool = False) -> tuple[str | None, float]:
+    def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False) -> tuple[str | None, float]:
         # reset motor encoders
         self.motor_controller.reset_encoders()
 
@@ -95,7 +112,7 @@ class RoomTraverser:
 
             # PID control part
             print(distance_cm)
-            error = wall_distance - distance_cm
+            error = room_type_to_wall_distance_map[room_type] - distance_cm
             integral = max(-50.0, min(50.0, integral + error * dt))
             derivative = (error - prev_error) / dt
             prev_error = error
@@ -113,3 +130,35 @@ class RoomTraverser:
             return (detected_color, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
         else:
             return (None, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
+        
+    """
+    The main function to traverse a room depending on the room type. Everything is self contained here.
+    This is the only function to call when you are in front of a room.
+
+    Input:
+    - room_type: The type of the room to traverse. This determines the path taken by the robot.
+    """
+    def traverse_a_room(self, room_type: RoomType) -> None:
+        try:
+            # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
+            traverse_results = self.run(room_type, 25, detect_bed=True)
+            bed_found = traverse_results[0] is not None
+            bed_color_found = traverse_results[0]
+            distance_travelled = traverse_results[1]
+            
+            if bed_found:
+                print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
+                print("DROPPING BLOCK!!!")
+                time.sleep(2)
+            else:
+                print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
+            
+            print("Going back.")
+            self.run(room_type, -1 * distance_travelled, detect_bed=False)
+
+        except KeyboardInterrupt:
+            print("Interrupted via keyboard...")
+        except Exception as err:
+            print(err)  
+        finally:  
+            reset_brick()  
