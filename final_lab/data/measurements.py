@@ -1,4 +1,5 @@
 dis_wheels_mm = 159
+"""distance between wheels"""
  
 l_rod_mm = 65
 """Length of the colour arm rod"""
@@ -24,3 +25,4 @@ dist_pivot_mm = 79.5
 
 dist_move_mm = dist_axle_intersect_mm-dist_pivot_mm
 """distance robot need to move after detecting intersection"""
+

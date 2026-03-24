@@ -137,7 +137,6 @@ class SweepLineFollower:
         # Wait for sensor arm to be stopped before proceeding
         self.sensor.motor.wait_is_stopped()
 
-        # Moves 30 mm forward to find intersection
         self.pilot.move_forward()
         print(f"The colors detected are : {self.sensor.get_rgb()}")
 
