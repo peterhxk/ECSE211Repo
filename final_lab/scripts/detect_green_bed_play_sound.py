@@ -15,8 +15,8 @@ def move_back():
     left_motor.set_dps(-100)
     right_motor.set_dps(-100)
     time.sleep(1.5)
-    left_motor.stop()
-    right_motor.stop()
+    left_motor.set_dps(0)
+    right_motor.set_dps(0)
 
 driving_controller = DrivingController(left_motor, right_motor, 100)
 color_sensor_controller = ColourSensorController(1)
