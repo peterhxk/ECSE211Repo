@@ -839,7 +839,7 @@ class GrabberController:
             print("Already loaded 2 blocs, aborting.")
             return False
 
-        self.motor.set_dps(self.running_dps)
+        self.motor.set_dps(self.running_dps*1.5)
 
         try:
             if stop_event is not None and stop_event.is_set():

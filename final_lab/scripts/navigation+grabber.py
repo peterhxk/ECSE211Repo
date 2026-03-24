@@ -47,7 +47,7 @@ try:
         if time.time() - starter > 1.0:
             print("Still loading")
             print(grabber_controller.get_loading_status())
-            threading.Thread(target=grabber_controller.increase_on_velocity_drop, daemon=True).start()
+            #threading.Thread(target=grabber_controller.increase_on_velocity_drop, daemon=True).start()
             starter = time.time()
 
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
