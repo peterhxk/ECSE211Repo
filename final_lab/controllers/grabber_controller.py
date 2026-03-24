@@ -86,6 +86,11 @@ class GrabberController:
 
         self.gyro_calibration_file = "" # used to keep track of what calibration was used for the gyro
 
+        self._unload_thread = None
+        self._unload_done_event = threading.Event()
+        self._unload_cancel_event = threading.Event()
+        self._unload_result = None
+
         if self.running_dps > 400:
             print("Warning: running power too high. Pick a lower value")
 
