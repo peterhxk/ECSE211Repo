@@ -43,6 +43,7 @@ try:
     print("moved past start loading")
     #threading.Thread(target=slow_decrease).start()
     starter = time.time()
+    driving_controller.stop_motors()
     while not grabber_controller.isBlockCaught() and grabber_controller.get_loading_status() == "LOADING":
         if time.time() - starter > 1.0:
             print("Still loading")
