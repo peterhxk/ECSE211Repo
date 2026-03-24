@@ -75,7 +75,7 @@ class ColourSensorController (EV3ColorSensor):
         """Sweeps the colour sensor arm and checks the colour.
 
         Args:
-            colour (str): The colour to search for (e.g., "b" for black).
+            colour (str): The colour to search for (e.g., "b" for black) OR list of colours to search for. e.g. ["b", "red", "green"]
             range (str): "left", "right" or "full". Determines the sweep arc.
             stop_on_match (bool): If True, exits early on the first detection.
 
