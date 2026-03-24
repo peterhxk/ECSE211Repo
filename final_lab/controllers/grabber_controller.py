@@ -759,7 +759,7 @@ class GrabberController:
         time.sleep(warmup)
 
         normal_dps = self.running_dps
-        boosted_dps = int(normal_dps * 1.3)
+        boosted_dps = int(normal_dps * 15)
 
         trigger_threshold = normal_dps * trigger_ratio
         rearm_threshold = normal_dps * rearm_ratio
@@ -774,7 +774,6 @@ class GrabberController:
             )
 
         while True:
-            print("ALIVE")
             # Stop monitoring once first-bloc loading is no longer the active situation
             if self.bloc_count != 0 or self.get_loading_status() != "LOADING":
                 if self.debug:
