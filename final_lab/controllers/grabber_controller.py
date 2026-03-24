@@ -740,7 +740,7 @@ class GrabberController:
     # ----------------------------
     def increase_on_velocity_drop(
             self,
-            pulse_time=0.4,
+            pulse_time=1.0,
             warmup=0.5,
             trigger_ratio=2 / 3,
             rearm_ratio=0.9,
