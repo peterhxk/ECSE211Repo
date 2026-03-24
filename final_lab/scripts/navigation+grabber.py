@@ -9,6 +9,7 @@ from impl.sweep_line_follower import SweepLineFollower
 import time
 from controllers.grabber_controller import GrabberController
 from data.ports_brick import Ports
+import threading
 
 # Sensor declaration
 
@@ -43,9 +44,10 @@ try:
     #threading.Thread(target=slow_decrease).start()
     starter = time.time()
     while not grabber_controller.isBlockCaught() and grabber_controller.get_loading_status() == "LOADING":
-        if time.time() - starter > 0.6:
+        if time.time() - starter > 1.0:
             print("Still loading")
             print(grabber_controller.get_loading_status())
+            threading.Thread(target=grabber_controller.increase_on_velocity_drop, daemon=True).start()
             starter = time.time()
 
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")

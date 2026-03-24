@@ -738,72 +738,34 @@ class GrabberController:
     # ----------------------------
     # Motor drop detection
     # ----------------------------
-    def increase_on_velocity_drop(
-            self,
-            pulse_time=0.25,
-            warmup=0.5,
-            trigger_ratio=0.6,
-            rearm_ratio=0.85,
-            sample_sleep=0.01,
-    ):
-        time.sleep(warmup)
+    def increase_on_velocity_drop(self, duration=0.6):
+        start = time.time()
+        cooldown = time.time()
+        timeout = 1.0
 
-        normal_dps = self.running_dps
-        boosted_dps = min(int(normal_dps * 2.7), 600)
-
-        trigger_threshold = normal_dps * trigger_ratio
-        rearm_threshold = normal_dps * rearm_ratio
-        starter = time.time()
-
-        armed = True
-
-        if self.debug:
-            print(
-                f"[Boost monitor] Started: "
-                f"normal={normal_dps:.1f}, boost={boosted_dps:.1f}, "
-                f"trigger<{trigger_threshold:.1f}, rearm>{rearm_threshold:.1f}, "
-                f"pulse_time={pulse_time:.2f}s"
-            )
-
-        while True:
-            if self.bloc_count != 0 or self.get_loading_status() != "LOADING":
-                if self.debug:
-                    self.motor.set_dps(0)
-                    print("[Boost monitor] Exiting.")
+        while (time.time() - start) < timeout:
+            # stop thread if loading finished
+            if self.bloc_count != 0:
                 return
 
-            speed = self.motor.get_speed()
-            if speed is None:
-                time.sleep(sample_sleep)
+            if (time.time() - cooldown) < duration:
+                time.sleep(0.01)
                 continue
 
-            speed = float(speed)
+            if self.motor.get_dps() < self.running_dps * 2 / 3:
+                print(f"[Motor drop detected] Temporarily increasing velocity to prevent blocking. Speed set to {self.running_dps * 5}")
 
-            if armed and speed < trigger_threshold:
-                print(
-                    f"[Motor drop detected] speed={speed:.1f} < {trigger_threshold:.1f} -> boost"
-                )
+                cooldown = time.time()
 
-                armed = False
+                boosted_power = self.running_dps * 5 #min(1.2 * self.motor.get_power(), self.running_dps * 1.3)
+                self.motor.set_dps(boosted_power)
 
-                # Pick ONE mode, not both
-                self.motor.set_power(100)
-                time.sleep(pulse_time)
+                time.sleep(duration)
 
-                if speed > trigger_threshold*0.8:
-                    self.motor.set_dps(normal_dps)
-                    if self.debug:
-                        print("[Boost monitor] Restored nominal speed")
+                if self.bloc_count == 0:
+                    self.motor.set_dps(self.running_dps)
 
-            elif not armed and time.time() - starter > 0.5:
-                armed = True
-                starter = time.time()
-                if self.debug:
-                    print(
-                        f"[Boost monitor] Rearmed: speed={speed:.1f} > {rearm_threshold:.1f}"
-                    )
 
-            time.sleep(sample_sleep)
 
     def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5, stop_event=None) -> bool:
         #Looks at the derivative of the velocity (acceleration) because sometimes the drop might be too subtle to be observed by looking at constant velocity threshold
@@ -886,7 +848,6 @@ class GrabberController:
 
             # First bloc: gyro-based detection with unified sample stream
             if self.bloc_count == 0:
-                threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
                 print("[INFO] Started velocity drop detection thread")
 
                 ok = self._consecutive_gyro_trigger(
