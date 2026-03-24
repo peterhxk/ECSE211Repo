@@ -319,16 +319,21 @@ def main():
 
         ax.set_xlabel("Time (s)")
         ax.set_ylabel("Gyro DPS")
+        filename = os.path.splitext(os.path.basename(rec.get("_path", "")))[0]
+        output_path = os.path.join("plots", f"{filename}.png")
         ax.set_title(
+            #f"{filename} |"
             f"{rec.get('operation')} | {rec.get('outcome')} | "
             f"{extra.get('detector', 'unknown')} | needed={needed}"
         )
         ax.grid(True)
         ax.legend()
         fig.tight_layout()
+        fig.savefig(output_path, dpi=150)
 
-    plt.show()
+    #plt.show()
 
 
 if __name__ == "__main__":
+    os.makedirs("plots", exist_ok=True)
     main()
