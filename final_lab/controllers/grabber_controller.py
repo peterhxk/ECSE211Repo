@@ -753,6 +753,7 @@ class GrabberController:
 
         trigger_threshold = normal_dps * trigger_ratio
         rearm_threshold = normal_dps * rearm_ratio
+        starter = time.time()
 
         armed = True
 
@@ -796,8 +797,9 @@ class GrabberController:
                     self.motor.set_dps(0)
                     return
 
-            elif not armed and speed > rearm_threshold:
+            elif not armed and time.time() - starter > 0.5:
                 armed = True
+                starter = time.time()
                 if self.debug:
                     print(
                         f"[Boost monitor] Rearmed: speed={speed:.1f} > {rearm_threshold:.1f}"
