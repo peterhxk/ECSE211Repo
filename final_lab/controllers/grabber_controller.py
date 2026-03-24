@@ -84,6 +84,8 @@ class GrabberController:
         self.motor_moving_avg_window = 5
         self.motor_drop_warm_up_delay = 0.8
 
+        self.gyro_calibration_file = "" # used to keep track of what calibration was used for the gyro
+
         if self.running_dps > 400:
             print("Warning: running power too high. Pick a lower value")
 
@@ -210,12 +212,14 @@ class GrabberController:
                 "sigma": self.sigma,
                 "seconds": seconds,
                 "sample_hz": sample_hz,
+                "samples": samples,  # <-- added samples
             }
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             calibration_file = os.path.join(
                 calibration_dir, f"gyro_calibration_{timestamp}.pkl"
             )
+            self.gyro_calibration_file = f"gyro_calibration_{timestamp}.pkl"
 
             with open(calibration_file, "wb") as f:
                 pickle.dump(calibration_data, f)
@@ -234,6 +238,7 @@ class GrabberController:
                 )
 
             latest_file = calibration_files[-1]
+            self.gyro_calibration_file = latest_file
 
             with open(latest_file, "rb") as f:
                 calibration_data = pickle.load(f)
@@ -420,6 +425,7 @@ class GrabberController:
             "extra": extra or {},
             "samples": [],
             "outcome": None,
+            "gyro_calibration": self.gyro_calibration_file,
         }
 
     def _append_gyro_sample_to_record(
@@ -479,18 +485,25 @@ class GrabberController:
             extra=None,
             stop_event=None,
     ) -> bool:
-        """
-        Read the gyro ONCE per loop.
-        Use the same sample for:
-          1) detection
-          2) recording
-
-        Returns True when predicate_from_dps(dps) is true for `needed` consecutive samples.
-        """
-
         needed = self.consecutive_needed if needed is None else int(needed)
         sample_hz = self.sample_hz if sample_hz is None else float(sample_hz)
         dt = 1.0 / sample_hz
+
+        detector_threshold = None
+        detector_direction = None
+
+        if detector_name == "gyro_outwards_fast":
+            detector_threshold = self._gyro_threshold_outwards(GyroTilt.FAST_TILT)
+            detector_direction = "outwards"
+        elif detector_name == "gyro_outward_slow":
+            detector_threshold = self._gyro_threshold_outwards(GyroTilt.SLOW_TILT)
+            detector_direction = "outwards"
+        elif detector_name == "gyro_inwards_fast":
+            detector_threshold = self._gyro_threshold_inwards(GyroTilt.FAST_TILT)
+            detector_direction = "inwards"
+        elif detector_name == "gyro_inwards_slow":
+            detector_threshold = self._gyro_threshold_inwards(GyroTilt.SLOW_TILT)
+            detector_direction = "inwards"
 
         self._begin_operation_recording(
             operation_name=operation_name,
@@ -499,6 +512,8 @@ class GrabberController:
                 **(extra or {}),
                 "detector": detector_name,
                 "needed": needed,
+                "detector_threshold": detector_threshold,
+                "detector_direction": detector_direction,
             },
         )
 
@@ -507,7 +522,6 @@ class GrabberController:
 
         try:
             while hits < needed:
-
                 if stop_event is not None and stop_event.is_set():
                     self._end_operation_recording(outcome="cancelled")
                     return False
@@ -533,7 +547,6 @@ class GrabberController:
                 }
 
                 cond = bool(predicate_from_dps(dps))
-
                 detector_flags["active_detector"] = cond
 
                 self._append_gyro_sample_to_record(
@@ -574,8 +587,8 @@ class GrabberController:
                 time.sleep(0.01)
                 continue
 
-            if self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.1):
-                print(f"[Motor drop detected] Temporarily increasing velocity to prevent blocking. Speed set to {self.running_dps * 1.5}")
+            if self.motor.get_dps() < self.motor.running_dps*2/3: #self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.1):
+                print(f"[Motor drop detected] Motor velocity dropped below 2/3 of running DPS. Temporarily increasing velocity")
 
                 cooldown = time.time()
 
@@ -590,6 +603,7 @@ class GrabberController:
                     self.motor.set_dps(0)
 
     def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5, stop_event=None) -> bool:
+        #Looks at the derivative of the velocity (acceleration) because sometimes the drop might be too subtle to be observed by looking at constant velocity threshold
         threshold = self.motor_mu_in - self.motor_drop_k * self.motor_sigma_in
         hits = 0
         start = time.time()

@@ -48,7 +48,8 @@ try:
             print("Still loading")
             print(grabber_controller.get_loading_status())
             starter = time.time()
-            grabber_controller.increase_on_velocity_drop(0.5)
+            grabber_controller.increase_on_velocity_drop(0.5) # because the moment the first block gets caught into the grabber usually stalls the motor we increase the motor velocity when that happens
+
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
     if grabber_controller.isBlockCaught():
         print("[DEBUG] Block Caught ! Stopping drive")
