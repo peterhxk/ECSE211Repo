@@ -78,11 +78,11 @@ class GrabberController:
         self.motor_eject_time = 2.0
 
         self.motor_dry_run_time = 5.0
-        self.motor_drop_k = 4.0
-        self.motor_drop_consecutive_needed = 5
+        self.motor_drop_k = 2.0
+        self.motor_drop_consecutive_needed = 2
         self.use_motor_moving_average = True
         self.motor_moving_avg_window = 5
-        self.motor_drop_warm_up_delay = 0.5
+        self.motor_drop_warm_up_delay = 0.8
 
         if self.running_dps > 400:
             print("Warning: running power too high. Pick a lower value")
@@ -692,6 +692,7 @@ class GrabberController:
                     return False
 
                 print("[INFO] First bloc gyro event triggered")
+                #time.sleep(2) # make sure bloc goes to back
                 self.motor.set_dps(0)
                 with self.state_lock:
                     self.bloc_positions[0] = BlocLocation.UNDER_GYRO
@@ -705,7 +706,7 @@ class GrabberController:
                 print("Error: internal state inconsistency: bloc count is 1 but no bloc is loaded.")
                 return False
 
-            self.motor.set_dps(self.motor_calibration_dps)
+            self.motor.set_dps(self.running_dps)
             print("Loading second bloc: using motor velocity drop detection...")
             #time.sleep(self.motor_drop_warm_up_delay)
 
