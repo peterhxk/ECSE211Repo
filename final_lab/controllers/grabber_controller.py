@@ -384,7 +384,7 @@ class GrabberController:
         return -12.0 if tilt == GyroTilt.SLOW_TILT else -8.0
 
     def _floor_for_outwards(self, tilt: GyroTilt) -> float:
-        return 8.0 if tilt == GyroTilt.SLOW_TILT else 9.0
+        return 8.0 if tilt == GyroTilt.SLOW_TILT else 12.0
 
     def _gyro_threshold_inwards(self, tilt: GyroTilt) -> float:
         k = self._k_for_tilt(tilt)
@@ -877,6 +877,6 @@ class GrabberController:
 
 
 if __name__ == "__main__":
-    controller = GrabberController("D", 4, True , True)
+    controller = GrabberController("D", 4, False , True)
     controller.initialize_sensors()
     controller.loop()
