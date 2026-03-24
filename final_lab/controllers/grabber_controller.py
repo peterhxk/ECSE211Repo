@@ -587,7 +587,7 @@ class GrabberController:
                 time.sleep(0.01)
                 continue
 
-            if self.motor.get_dps() < self.motor.running_dps*2/3: #self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.1):
+            if self.motor.get_dps() < self.running_dps*2/3: #self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.1):
                 print(f"[Motor drop detected] Motor velocity dropped below 2/3 of running DPS. Temporarily increasing velocity")
 
                 cooldown = time.time()
