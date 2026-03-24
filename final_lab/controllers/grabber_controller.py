@@ -666,7 +666,7 @@ class GrabberController:
 
             # First bloc: gyro-based detection with unified sample stream
             if self.bloc_count == 0:
-                threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
+                #threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
                 print("[INFO] Started velocity drop detection thread")
 
                 ok = self._consecutive_gyro_trigger(
