@@ -774,6 +774,7 @@ class GrabberController:
             )
 
         while True:
+            print("ALIVE")
             # Stop monitoring once first-bloc loading is no longer the active situation
             if self.bloc_count != 0 or self.get_loading_status() != "LOADING":
                 if self.debug:
