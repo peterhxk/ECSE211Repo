@@ -961,6 +961,8 @@ class GrabberController:
                 # -------------------------
                 # 1. Handle user commands
                 # -------------------------
+                if self.kill_switch:
+                    raise KeyboardInterrupt
                 if self._command_queue:
                     cmd = self._command_queue.popleft()
 
