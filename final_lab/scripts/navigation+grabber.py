@@ -101,13 +101,13 @@ try:
     driving_controller.stop_motors()
     grabber_controller.start_unloading()
     starter = time.time()
-    while grabber_controller.get_loading_status() == "UNLOADING":
+    while grabber_controller.get_unloading_status() == "UNLOADING":
         if time.time() - starter > 1:
             print("waiting for block to unload")
             starter = time.time()
-    if grabber_controller.get_loading_status() == "FAILED" or grabber_controller.bloc_count != 1:
-        print(grabber_controller.get_loading_status())
-        print(grabber_controller.bloc_count)
+    if grabber_controller.get_unloading_status() == "FAILED" or grabber_controller.bloc_count != 1:
+        print(grabber_controller.get_unloading_status())
+        print(grabber_controller.bloc_count)    
         raise RuntimeError("Failure to unload block. Should we back up the robot and start over ?")
     print("Successfully unloaded block!")
 
