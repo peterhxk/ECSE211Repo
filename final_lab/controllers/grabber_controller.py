@@ -587,34 +587,28 @@ class GrabberController:
     # ----------------------------
     # Motor drop detection
     # ----------------------------
-    def increase_on_velocity_drop(self, duration=0.6):
+    def increase_on_velocity_drop(self, pulse_time=0.2, timeout=0.6):
         start = time.time()
-        cooldown = time.time()
-        timeout = 1.0
+        normal_dps = self.running_dps
+        boosted_dps = int(self.running_dps * 1.3)
 
         while (time.time() - start) < timeout:
-            # stop thread if loading finished
-            if self.bloc_count != 0:
+            if self.bloc_count != 0 or self.get_loading_status() != "LOADING":
                 return
 
-            if (time.time() - cooldown) < duration:
-                time.sleep(0.01)
-                continue
+            speed = self.motor.get_dps()  # or get_speed(), whichever is truly measured
+            if speed is not None and speed < normal_dps * 2 / 3:
+                print("[Motor drop detected] Temporary velocity boost")
+                self.motor.set_dps(boosted_dps)
+                time.sleep(pulse_time)
 
-            if self.motor.get_dps() < self.running_dps*2/3: #self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.1):
-                print(f"[Motor drop detected] Motor velocity dropped below 2/3 of running DPS. Temporarily increasing velocity")
-
-                cooldown = time.time()
-
-                boosted_power = self.running_dps * 30 #min(1.2 * self.motor.get_power(), self.running_dps * 1.3)
-                self.motor.set_dps(boosted_power)
-
-                time.sleep(duration)
-
-                if self.bloc_count == 0:
-                    self.motor.set_dps(self.running_dps)
+                if self.bloc_count == 0 and self.get_loading_status() == "LOADING":
+                    self.motor.set_dps(normal_dps)
                 else:
                     self.motor.set_dps(0)
+                return
+
+            time.sleep(0.01)
 
     def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5, stop_event=None) -> bool:
         #Looks at the derivative of the velocity (acceleration) because sometimes the drop might be too subtle to be observed by looking at constant velocity threshold
@@ -667,6 +661,7 @@ class GrabberController:
                     f"filtered_speed={speed_for_detection:.3f}, "
                     f"threshold={threshold:.3f}"
                 )
+                print("Setting BLOCK CAUGHT flag")
                 self._block_caught_event.set()
                 return True
 
@@ -697,7 +692,7 @@ class GrabberController:
             # First bloc: gyro-based detection with unified sample stream
             if self.bloc_count == 0:
                 threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
-                #print("[INFO] Started velocity drop detection thread")
+                print("[INFO] Started velocity drop detection thread")
 
                 ok = self._consecutive_gyro_trigger(
                     operation_name="load_first_bloc",
