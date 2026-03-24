@@ -534,7 +534,7 @@ class GrabberController:
     # Gyro thresholds / predicates
     # ----------------------------
     def _k_for_tilt(self, tilt: GyroTilt) -> float:
-        return 11.0 if tilt == GyroTilt.SLOW_TILT else 16.0
+        return 10.0 if tilt == GyroTilt.SLOW_TILT else 15.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
         return -self.sigma*2 if tilt == GyroTilt.SLOW_TILT else -self.sigma*3
