@@ -111,6 +111,22 @@ try:
         raise RuntimeError("Failure to unload block. Should we back up the robot and start over ?")
     print("Successfully unloaded block!")
 
+    time.sleep(5)
+    init_power = 15
+    line_follower.move_forward(20,force=True)
+    driving_controller.stop_motors()
+    grabber_controller.start_unloading()
+    starter = time.time()
+    while grabber_controller.get_unloading_status() == "UNLOADING":
+        if time.time() - starter > 1:
+            print("waiting for block to unload")
+            starter = time.time()
+    if grabber_controller.get_unloading_status() == "FAILED" or grabber_controller.bloc_count != 0:
+        print(grabber_controller.get_unloading_status())
+        print(grabber_controller.bloc_count)
+        raise RuntimeError("Failure to unload last block. Should we back up the robot and start over ?")
+    print("Successfully unloaded block!")
+
 except KeyboardInterrupt:
     color_sensor_controller.set_arm_at_angle(0)
     print("Interrupted via keyboard...")
