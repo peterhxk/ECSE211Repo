@@ -176,7 +176,7 @@ class GrabberController:
                     operation_name="unload_from_2_to_1",
                     detector_name="gyro_inwards_fast",
                     predicate_from_dps=lambda dps: self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT),
-                    needed=2,
+                    needed=1,
                     timeout=5.0,
                     extra={
                         "bloc_count_before": self.bloc_count,
