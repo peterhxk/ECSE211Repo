@@ -494,7 +494,7 @@ class GrabberController:
         detector_floor = None
 
         if detector_name == "gyro_outwards_fast":
-            detector_floor = self._floor_for_inwards(GyroTilt.FAST_TILT)
+            detector_floor = self._floor_for_outwards(GyroTilt.FAST_TILT)
             k = self._k_for_tilt(GyroTilt.FAST_TILT)
             detector_threshold = self.mu + k * self.sigma
             detector_direction = "outwards"
