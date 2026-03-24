@@ -126,9 +126,9 @@ class SweepLineFollower:
         self.pilot.stop_motors()
 
         if direction == "right":
-            self.sensor.set_arm_at_angle(consts.angle_pivot)
+            self.sensor.set_arm_at_angle(consts.turn_angle)
         elif direction == "left":
-            self.sensor.set_arm_at_angle(-consts.angle_pivot)
+            self.sensor.set_arm_at_angle(-consts.turn_angle)
         else:
             raise Exception("Wrong direction input")
         
@@ -146,6 +146,10 @@ class SweepLineFollower:
 
         print("stopping motors")
         self.pilot.stop_motors()
+
+        print("move straight to align")
+        self.pilot.move_distance(consts.dist_move_mm)
+        self.pilot.left_motor.wait_is_stopped()
         
         print(f"pivoting {direction}")
         self.pilot.pivot_90(direction)
