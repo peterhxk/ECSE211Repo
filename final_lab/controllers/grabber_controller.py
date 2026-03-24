@@ -26,6 +26,7 @@ class BlocLocation(Enum):
 class GyroTilt(Enum):
     SLOW_TILT = 1
     FAST_TILT = 2
+    FAST_TILT_KILL = 3
 
 
 class GrabberController:
@@ -90,6 +91,7 @@ class GrabberController:
         self._unload_done_event = threading.Event()
         self._unload_cancel_event = threading.Event()
         self._unload_result = None
+        self.kill_switch = False
 
         if self.running_dps > 400:
             print("Warning: running power too high. Pick a lower value")
@@ -534,7 +536,12 @@ class GrabberController:
     # Gyro thresholds / predicates
     # ----------------------------
     def _k_for_tilt(self, tilt: GyroTilt) -> float:
-        return 10.0 if tilt == GyroTilt.SLOW_TILT else 16.0
+        if tilt == GyroTilt.SLOW_TILT:
+            return 10.0
+        elif tilt == GyroTilt.FAST_TILT_KILL :
+            return 25.0
+        else: 
+            return 16.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
         return -self.sigma*2 if tilt == GyroTilt.SLOW_TILT else -self.sigma*3
@@ -668,19 +675,19 @@ class GrabberController:
         # threshold is mu - k sigma
         #
 
-
-        self._begin_operation_recording(
-            operation_name=operation_name,
-            timeout=timeout,
-            extra={
-                **(extra or {}),
-                "detector": detector_name,
-                "needed": needed,
-                "detector_threshold": detector_threshold, # the mu - k sigma threshold
-                "detector_direction": detector_direction,
-                "detector_floor": detector_floor, # the floor
-            },
-        )
+        if detector_name is None:
+            self._begin_operation_recording(
+                operation_name=operation_name,
+                timeout=timeout,
+                extra={
+                    **(extra or {}),
+                    "detector": detector_name,
+                    "needed": needed,
+                    "detector_threshold": detector_threshold, # the mu - k sigma threshold
+                    "detector_direction": detector_direction,
+                    "detector_floor": detector_floor, # the floor
+                },
+            )
 
         hits = 0
         start = time.time()
@@ -918,7 +925,27 @@ class GrabberController:
     # ----------------------------
     # Main loop
     # ----------------------------
+
+    def monitor_kill(self):
+        while True:
+            if self._consecutive_gyro_trigger(
+                operation_name=None,
+                detector_name=None,
+                predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL),
+                needed=2,
+                timeout=1.0,
+                extra={
+                    "bloc_count_before": self.bloc_count,
+                    "running_dps": self.running_dps,
+                    "direction": "outwards",
+                },
+                stop_event=None,
+            ):
+                print("[INFO] KILL SWITCH ACTIVATED")
+                self.kill_switch = True
+                break
     def loop(self):
+        self._kill_thread = threading.Thread(target=self.monitor_kill, daemon=True)
         self.motor.set_dps(-self.running_dps)
         time.sleep(1)
         self.motor.set_dps(0)
