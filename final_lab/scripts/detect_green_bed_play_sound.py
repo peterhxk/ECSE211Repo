@@ -7,7 +7,7 @@ from utils.brick import EV3ColorSensor
 import time
 from utils.brick import Sound
 
-left_motor = Motor("A")
+left_motor = Motor("C")
 right_motor = Motor("B")
 tone1 = Sound(duration=100, pitch="A3", volume=100)
 
