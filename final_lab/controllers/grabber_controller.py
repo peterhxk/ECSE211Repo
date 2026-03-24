@@ -738,7 +738,7 @@ class GrabberController:
     def increase_on_velocity_drop(self, pulse_time=0.2, timeout=0.6):
         start = time.time()
         normal_dps = self.running_dps
-        boosted_dps = int(self.running_dps * 1.6)
+        boosted_dps = int(self.running_dps * 3.5)
 
         while (time.time() - start) < timeout:
             if self.bloc_count != 0 or self.get_loading_status() != "LOADING":
