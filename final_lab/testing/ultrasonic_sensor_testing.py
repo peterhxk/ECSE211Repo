@@ -6,7 +6,7 @@ import math
 import statistics
 from collections import deque
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from utils.brick import (
     wait_ready_sensors,
@@ -175,20 +175,20 @@ def print_stats(raw_values, median_values, ema_values, control_values):
     print(f"Mean abs error vs control (EMA):    {ema_mean_err:.2f} cm")
 
 
-def plot_data(times, raw_values, median_values, ema_values, control_values):
-    plt.figure(figsize=(11, 6))
-    plt.plot(times, control_values, label="Control / expected distance")
-    plt.plot(times, raw_values, label="Raw ultrasonic")
-    plt.plot(times, median_values, label="Median filtered")
-    plt.plot(times, ema_values, label="EMA smoothed")
+# def plot_data(times, raw_values, median_values, ema_values, control_values):
+#     plt.figure(figsize=(11, 6))
+#     plt.plot(times, control_values, label="Control / expected distance")
+#     plt.plot(times, raw_values, label="Raw ultrasonic")
+#     plt.plot(times, median_values, label="Median filtered")
+#     plt.plot(times, ema_values, label="EMA smoothed")
 
-    plt.xlabel("Time from recording start (s)")
-    plt.ylabel("Distance (cm)")
-    plt.title("Ultrasonic Sensor vs Controlled Motion")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+#     plt.xlabel("Time from recording start (s)")
+#     plt.ylabel("Distance (cm)")
+#     plt.title("Ultrasonic Sensor vs Controlled Motion")
+#     plt.legend()
+#     plt.grid(True)
+#     plt.tight_layout()
+#     plt.show()
 
 
 def main():
