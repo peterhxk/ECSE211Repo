@@ -14,7 +14,7 @@ from data.ports_brick import Ports
 
 left_motor = Motor(Ports.LEFT_MOTOR.value)
 right_motor = Motor(Ports.RIGHT_MOTOR.value)
-color_sensor_motor = Motor(Ports.COLOR_SENSOR.value)
+color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
