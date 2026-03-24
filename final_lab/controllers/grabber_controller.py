@@ -675,7 +675,7 @@ class GrabberController:
         # threshold is mu - k sigma
         #
 
-        if detector_name is None:
+        if detector_name == "":
             self._begin_operation_recording(
                 operation_name=operation_name,
                 timeout=timeout,
@@ -929,8 +929,8 @@ class GrabberController:
     def monitor_kill(self):
         while True:
             if self._consecutive_gyro_trigger(
-                operation_name=None,
-                detector_name=None,
+                operation_name="",
+                detector_name="",
                 predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL),
                 needed=2,
                 timeout=1.0,
