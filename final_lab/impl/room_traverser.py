@@ -60,8 +60,9 @@ class RoomTraverser:
         self.motor_controller.move_forward()
 
         while True:
-            if detect_bed: color_sensor_sweep_result = self.color_sensor_controller.sweep(colour="green", sweep_range="full", stop_on_match=True)
-            if color_sensor_sweep_result and color_sensor_sweep_result[0][1] == "green":
+            if detect_bed:
+                color_sensor_sweep_result = self.color_sensor_controller.sweep(colour=["green", "red"], sweep_range="full", stop_on_match=True)
+            if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
                 # if color detected, stop moving.
                 bed_detected = True
                 break
@@ -103,6 +104,7 @@ class RoomTraverser:
 
         self.motor_controller.stop_motors()
         if bed_detected:
-            return ("green", (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
+            detected_color = color_sensor_sweep_result[0][1]
+            return (detected_color, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
         else:
             return (None, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
