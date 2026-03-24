@@ -735,18 +735,23 @@ class GrabberController:
     # ----------------------------
     # Motor drop detection
     # ----------------------------
-    def increase_on_velocity_drop(self, pulse_time=0.2, timeout=0.6):
+    def increase_on_velocity_drop(self, pulse_time=0.2, timeout=0.6, warmup=0.5):
+        # 🔥 Warm-up phase: ignore motor readings
+        time.sleep(warmup)
+
         start = time.time()
         normal_dps = self.running_dps
-        boosted_dps = int(self.running_dps * 3.5)
+        boosted_dps = int(self.running_dps * 1.3)
 
         while (time.time() - start) < timeout:
             if self.bloc_count != 0 or self.get_loading_status() != "LOADING":
                 return
 
-            speed = self.motor.get_dps()  # or get_speed(), whichever is truly measured
+            speed = self.motor.get_dps()
+
             if speed is not None and speed < normal_dps * 2 / 3:
                 print("[Motor drop detected] Temporary velocity boost")
+
                 self.motor.set_dps(boosted_dps)
                 time.sleep(pulse_time)
 
@@ -754,6 +759,7 @@ class GrabberController:
                     self.motor.set_dps(normal_dps)
                 else:
                     self.motor.set_dps(0)
+
                 return
 
             time.sleep(0.01)
