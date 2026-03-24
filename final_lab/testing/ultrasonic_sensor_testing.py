@@ -215,7 +215,7 @@ def main():
         times, raw_values, median_values, ema_values, control_values = data
 
         print_stats(raw_values, median_values, ema_values, control_values)
-        plot_data(times, raw_values, median_values, ema_values, control_values)
+        # plot_data(times, raw_values, median_values, ema_values, control_values)
 
     except KeyboardInterrupt:
         print("\nCtrl+C pressed. Exiting.")
