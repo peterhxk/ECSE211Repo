@@ -212,7 +212,7 @@ class GrabberController:
 
             ok = self._is_motor_drop_detected(
                 timeout=5.0,
-                warmup_delay=0.6, # add some delay
+                warmup_delay=0.9, # add some delay
                 stop_event=stop_event,
             )
 
@@ -1028,6 +1028,6 @@ class GrabberController:
 
 
 if __name__ == "__main__":
-    controller = GrabberController("D", 4, True , True)
+    controller = GrabberController("D", 4, False , True)
     controller.initialize_sensors()
     controller.loop()
