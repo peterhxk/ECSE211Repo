@@ -742,8 +742,8 @@ class GrabberController:
             self,
             pulse_time=1.0,
             warmup=0.5,
-            trigger_ratio=2 / 3,
-            rearm_ratio=0.9,
+            trigger_ratio=1/ 3,
+            rearm_ratio=0.1,
             sample_sleep=0.01,
     ):
         """
@@ -802,7 +802,7 @@ class GrabberController:
                 if self.bloc_count == 0 and self.get_loading_status() == "LOADING" and speed > rearm_threshold:
                     self.motor.set_dps(normal_dps)
                     print("Set to normal")
-                else:
+                if self.get_loading_status() != "LOADING":
                     self.motor.set_dps(0)
                     print("Set to 0 ")
                     return
