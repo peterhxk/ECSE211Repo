@@ -171,7 +171,7 @@ class GrabberController:
 
             if self.bloc_count == 2:
                 self.motor.set_dps(-1.2 * self.running_dps)
-
+                print("[INFO] STARTING UNLOADING SECOND BLOCK")
                 unloaded = self._consecutive_gyro_trigger(
                     operation_name="unload_from_2_to_1",
                     detector_name="gyro_outward_slow",
