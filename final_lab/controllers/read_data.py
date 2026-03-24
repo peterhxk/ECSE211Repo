@@ -7,12 +7,12 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 
 
-CALIBRATION_DIR = "gyro_calibrations"
-RECORDINGS_DIR = "gyro_operation_recordings"
+CALIBRATION_DIR = "../scripts/gyro_calibrations"
+RECORDINGS_DIR = "../scripts/gyro_operation_recordings"
 
 
 def load_operation_records(recordings_dir=RECORDINGS_DIR):
-    files = ["gyro_operation_recordings/load_first_bloc_20260324_221534.pkl"]
+    files = ["gyro_operation_recordings/load_first_bloc_20260324_224222.pkl"]
     #files = sorted(glob.glob(os.path.join(recordings_dir, "*.pkl")))
     records = []
 
@@ -320,7 +320,7 @@ def main():
         ax.set_xlabel("Time (s)")
         ax.set_ylabel("Gyro DPS")
         filename = os.path.splitext(os.path.basename(rec.get("_path", "")))[0]
-        output_path = os.path.join("plots", f"{filename}.png")
+        output_path = os.path.join("../scripts/plots", f"{filename}.png")
         ax.set_title(
             #f"{filename} |"
             f"{rec.get('operation')} | {rec.get('outcome')} | "
@@ -335,5 +335,5 @@ def main():
 
 
 if __name__ == "__main__":
-    os.makedirs("plots", exist_ok=True)
+    os.makedirs("../scripts/plots", exist_ok=True)
     main()
