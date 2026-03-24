@@ -877,6 +877,6 @@ class GrabberController:
 
 
 if __name__ == "__main__":
-    controller = GrabberController("D", 4, False, True)
+    controller = GrabberController("D", 4, True , True)
     controller.initialize_sensors()
     controller.loop()
