@@ -44,13 +44,13 @@ CSV_FILENAME = "ultrasonic_motion_data.csv"
 #
 # This repeats until you stop the program with Ctrl+C.
 # ============================================================
-FORWARD_TIME_S = 10.0
-WAIT_AFTER_FORWARD_S = 2.5
-BACKWARD_TIME_S = 6.0
-WAIT_AFTER_BACKWARD_S = 3.5
+FORWARD_TIME_S = 5.0
+WAIT_AFTER_FORWARD_S = 2.0
+BACKWARD_TIME_S = 5.0
+WAIT_AFTER_BACKWARD_S = 2.0
 
 FORWARD_SPEED_DPS = 180.0
-BACKWARD_SPEED_DPS = -140.0
+BACKWARD_SPEED_DPS = -180.0
 
 CYCLE_DURATION_S = (
     FORWARD_TIME_S
