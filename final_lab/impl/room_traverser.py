@@ -9,6 +9,14 @@ from data.ports_brick import Ports
 class RoomTraverser:
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_BASE_MM = 159
+    
+    # PID constants
+    Kp = 0.265
+    Ki = 0
+    Kd = 0.6
+
+    # filter parameter
+    ema_alpha = 0.4
 
     def __init__(self, motor_controller: DrivingController, ultrasonic_sensor: EV3UltrasonicSensor):
         self.motor_controller = motor_controller
@@ -39,17 +47,11 @@ class RoomTraverser:
 
         # filter parameters
         ema_estimate = None
-        ema_alpha = 0.4
 
         # PID stuff for wall following
         integral = 0.0
         prev_error = 0.0
         prev_time = time.time()
-
-        # calibrated to 60 deg/s, 4cm from wall.
-        Kp = 0.265
-        Ki = 0
-        Kd = 0.6
 
         bed_detected = False
 
@@ -83,7 +85,7 @@ class RoomTraverser:
             if ema_estimate is None:
                 ema_estimate = denoised
             else:
-                ema_estimate = ema_alpha * denoised + (1 - ema_alpha) * ema_estimate
+                ema_estimate = self.ema_alpha * denoised + (1 - self.ema_alpha) * ema_estimate
 
             distance_cm = ema_estimate
 
@@ -94,7 +96,7 @@ class RoomTraverser:
             derivative = (error - prev_error) / dt
             prev_error = error
 
-            adjustment = int(Kp * error + Ki * integral + Kd * derivative)
+            adjustment = int(self.Kp * error + self.Ki * integral + self.Kd * derivative)
 
             self.motor_controller.set_left_motor(self.motor_controller.base_power - adjustment)
             self.motor_controller.set_right_motor(self.motor_controller.base_power + adjustment)
