@@ -768,6 +768,7 @@ class GrabberController:
         while True:
             if self.bloc_count != 0 or self.get_loading_status() != "LOADING":
                 if self.debug:
+                    self.motor.set_dps(0)
                     print("[Boost monitor] Exiting.")
                 return
 
@@ -789,13 +790,10 @@ class GrabberController:
                 self.motor.set_power(100)
                 time.sleep(pulse_time)
 
-                if self.bloc_count == 0 and self.get_loading_status() == "LOADING":
+                if speed > trigger_threshold*0.8:
                     self.motor.set_dps(normal_dps)
                     if self.debug:
                         print("[Boost monitor] Restored nominal speed")
-                else:
-                    self.motor.set_dps(0)
-                    return
 
             elif not armed and time.time() - starter > 0.5:
                 armed = True
