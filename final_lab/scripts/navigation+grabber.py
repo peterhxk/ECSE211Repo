@@ -107,7 +107,7 @@ try:
             starter = time.time()
     if grabber_controller.get_unloading_status() == "FAILED" or grabber_controller.bloc_count != 1:
         print(grabber_controller.get_unloading_status())
-        print(grabber_controller.bloc_count)    
+        print(grabber_controller.bloc_count)
         raise RuntimeError("Failure to unload block. Should we back up the robot and start over ?")
     print("Successfully unloaded block!")
 

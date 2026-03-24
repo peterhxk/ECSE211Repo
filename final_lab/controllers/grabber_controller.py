@@ -171,12 +171,12 @@ class GrabberController:
 
             if self.bloc_count == 2:
                 self.motor.set_dps(-1.2 * self.running_dps)
-                print("[INFO] Unloading cancelled after start.")
+                print("[INFO] Unloading first bloc")
                 unloaded = self._consecutive_gyro_trigger(
                     operation_name="unload_from_2_to_1",
-                    detector_name="gyro_outward_slow",
+                    detector_name="gyro_inwards_fast",
                     predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.SLOW_TILT),
-                    needed=3,
+                    needed=2,
                     timeout=5.0,
                     extra={
                         "bloc_count_before": self.bloc_count,
@@ -534,7 +534,7 @@ class GrabberController:
         return 8.0 if tilt == GyroTilt.SLOW_TILT else 13.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
-        return -12.0 if tilt == GyroTilt.SLOW_TILT else -8.0
+        return -12.0 if tilt == GyroTilt.SLOW_TILT else -15.0
 
     def _floor_for_outwards(self, tilt: GyroTilt) -> float:
         return 12.0 if tilt == GyroTilt.SLOW_TILT else 15.0
