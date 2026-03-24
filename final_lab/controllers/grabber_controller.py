@@ -762,8 +762,9 @@ class GrabberController:
 
                 time.sleep(duration)
 
-                if self.bloc_count == 0:
-                    self.motor.set_dps(self.running_dps)
+                if self.get_loading_result() == "IDLE":
+                    self.motor.set_dps(0)
+                    print("Operation finished, terminating")
 
 
 
