@@ -55,7 +55,23 @@ class ColourSensorController (EV3ColorSensor):
         """
         return self.sweep_dir.value * self.motor.get_position() >= self.sweep_dir.value * self.MAX_SWEEP_ANGLE[range][self.sweep_dir]
 
-    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True) -> List[Tuple[int, str, int]]:
+    def set_arm_at_angle(self, angle: float):
+        """
+        ISSUE: currently the arm is moving too fast
+        Sets the arm at {angle} degrees off the origin (straight ahead) 
+        
+        angle > 0 -> right?
+        angle < 0 -> left?
+        """
+        self.motor.set_limits(0, self.MOTOR_POWER_DPS)
+        self.motor.set_position(angle)
+        self.motor.wait_is_moving()
+
+    def read_current_angle(self):
+        pass
+
+
+    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True, colours=[]) -> List[Tuple[int, str, int]]:
         """Sweeps the colour sensor arm and checks the colour.
 
         Args:
@@ -91,8 +107,9 @@ class ColourSensorController (EV3ColorSensor):
                 # Reverse the direction of the motor
                 self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
 
+            detected_colour = self.read_colour()
             # Check if a black line is found
-            if self.read_colour() == colour:
+            if detected_colour == colour or detected_colour in colours:
                 consecutive_count += 1
                 consecutive_positions.append(self.motor.get_position())
                 if consecutive_count >= 5:
