@@ -113,10 +113,15 @@ class GrabberController:
         """
         Start load_bloc() in a background thread and return immediately.
 
-        Returns False if a loading operation is already in progress, True otherwise.
+        Returns False if a loading operation is already in progress, or if
+        an unloading operation is currently running. True otherwise.
         """
         if self._load_thread is not None and self._load_thread.is_alive():
             print("[INFO] Loading already in progress.")
+            return False
+
+        if self._unload_thread is not None and self._unload_thread.is_alive():
+            print("[INFO] Cannot start loading while unloading is in progress.")
             return False
 
         self._load_done_event.clear()
@@ -139,6 +144,144 @@ class GrabberController:
 
     def cancel_loading(self):
         self._load_cancel_event.set()
+
+    def unload_bloc(self, stop_event=None) -> bool:
+        """
+        Unload logic:
+
+        If 2 blocs loaded:
+          - Run outward until slow outward gyro tilt is detected
+
+        If 1 bloc remaining:
+          - Use motor velocity drop detection
+        """
+        if self.bloc_count <= 0:
+            print("No blocs to unload.")
+            return False
+
+        try:
+            if stop_event is not None and stop_event.is_set():
+                print("[INFO] Unloading cancelled before start.")
+                return False
+
+            if self.bloc_count == 2:
+                self.motor.set_dps(-1.2 * self.running_dps)
+
+                unloaded = self._consecutive_gyro_trigger(
+                    operation_name="unload_from_2_to_1",
+                    detector_name="gyro_outward_slow",
+                    predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.SLOW_TILT),
+                    needed=3,
+                    timeout=5.0,
+                    extra={
+                        "bloc_count_before": self.bloc_count,
+                        "running_dps": self.running_dps,
+                        "direction": "outward",
+                    },
+                    stop_event=stop_event,
+                )
+
+                self.motor.set_dps(0)
+
+                if not unloaded:
+                    print("Timeout or cancellation unloading (no outward SLOW tilt detected).")
+                    return False
+
+                if stop_event is not None and stop_event.is_set():
+                    print("[INFO] Unloading cancelled after detection.")
+                    return False
+
+                with self.state_lock:
+                    self.bloc_positions[0] = BlocLocation.AT_GATE
+                    self.bloc_positions[1] = BlocLocation.UNLOADED
+                    self.bloc_count = max(0, self.bloc_count - 1)
+
+                print("Unloaded one bloc (2->1).")
+                return True
+
+            # only one bloc left
+            self.motor.set_dps(-self.running_dps)
+            print("Unloading last bloc: using motor velocity drop detection...")
+
+            ok = self._is_motor_drop_detected(
+                timeout=5.0,
+                warmup_delay=0.0,
+                stop_event=stop_event,
+            )
+
+            if not ok:
+                print("Timed out or cancelled waiting for motor velocity drop while unloading last bloc.")
+                return False
+
+            if stop_event is not None and stop_event.is_set():
+                print("[INFO] Unloading cancelled after drop detection.")
+                return False
+
+            self.motor.set_dps(-self.running_dps)
+            time.sleep(0.1)
+            self.motor.set_dps(0)
+
+            with self.state_lock:
+                self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
+                self.bloc_count = 0
+
+            print("Unloaded last bloc (1->0).")
+            return True
+
+        finally:
+            self.motor.set_dps(0)
+
+    def _unload_bloc_worker(self):
+        try:
+            self._unload_result = self.unload_bloc(stop_event=self._unload_cancel_event)
+        finally:
+            self._unload_done_event.set()
+
+    def start_unloading(self) -> bool:
+        """
+        Start unload_bloc() in a background thread and return immediately.
+
+        Returns False if an unloading operation is already in progress, or if
+        a loading operation is currently running. True otherwise.
+        """
+        if self._unload_thread is not None and self._unload_thread.is_alive():
+            print("[INFO] Unloading already in progress.")
+            return False
+
+        if self._load_thread is not None and self._load_thread.is_alive():
+            print("[INFO] Cannot start unloading while loading is in progress.")
+            return False
+
+        self._unload_done_event.clear()
+        self._unload_cancel_event.clear()
+        self._unload_result = None
+
+        self._unload_thread = threading.Thread(target=self._unload_bloc_worker, daemon=True)
+        self._unload_thread.start()
+        return True
+
+    def is_unloading(self) -> bool:
+        return self._unload_thread is not None and self._unload_thread.is_alive()
+
+    def unloading_finished(self) -> bool:
+        return self._unload_done_event.is_set()
+
+    def get_unloading_result(self):
+        return self._unload_result
+
+    def cancel_unloading(self):
+        self._unload_cancel_event.set()
+
+    def get_unloading_status(self) -> str:
+        if self._unload_thread is not None and self._unload_thread.is_alive():
+            return "UNLOADING"
+
+        if self._unload_done_event.is_set():
+            if self._unload_result is True:
+                return "SUCCESS"
+            return "FAILED"
+
+        return "IDLE"
 
     def initialize_sensors(self):
         print("[Calibration] Initializing sensors... Don't move the Gyro sensor")
@@ -383,7 +526,7 @@ class GrabberController:
     # Gyro thresholds / predicates
     # ----------------------------
     def _k_for_tilt(self, tilt: GyroTilt) -> float:
-        return 8.0 if tilt == GyroTilt.SLOW_TILT else 10.0
+        return 8.0 if tilt == GyroTilt.SLOW_TILT else 13.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
         return -12.0 if tilt == GyroTilt.SLOW_TILT else -8.0
@@ -844,9 +987,10 @@ class GrabberController:
                         print("Starting non-blocking load...")
                         self.start_loading()
 
+
                     elif cmd == "u":
-                        print("Unloading...")
-                        self.unload_bloc()
+                        print("Starting non-blocking unload...")
+                        self.start_unloading()
 
                     elif cmd == "q":
                         print("Exiting...")
@@ -856,11 +1000,11 @@ class GrabberController:
                 # 2. Periodic checks
                 # -------------------------
                 if self.is_loading():
-                    if self.isBlockCaught():
-                        print("[INFO] Block caught (velocity drop detected)")
-
-                    if self.loading_finished():
+                    if self.loading_finished() and not self.is_loading():
                         print(f"[INFO] Loading finished: {self.get_loading_result()}")
+
+                    if self.unloading_finished() and not self.is_unloading():
+                        print(f"[INFO] Unloading finished: {self.get_unloading_result()}")
 
                 # -------------------------
                 time.sleep(0.01)
@@ -868,6 +1012,7 @@ class GrabberController:
         except KeyboardInterrupt:
             print("Stopping grabber controller loop.")
             self.cancel_loading()
+            self.cancel_unloading()
             self.motor.set_dps(0)
 
     def kill(self):

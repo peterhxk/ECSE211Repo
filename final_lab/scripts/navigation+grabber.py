@@ -94,6 +94,21 @@ try:
 
     color_sensor_controller.set_arm_at_angle(0)
 
+    time.sleep(5)
+    # stop for now
+    init_power = 15
+    line_follower.move_forward(20,force=True)
+    driving_controller.stop_motors()
+    grabber_controller.start_unloading()
+    starter = time.time()
+    while grabber_controller.get_loading_status() == "UNLOADING":
+        if time.time() - starter > 1:
+            print("waiting for block to unload")
+            starter = time.time()
+    if grabber_controller.get_loading_status() == "FAILED" or grabber_controller.bloc_count != 1:
+        raise RuntimeError("Failure to unload block. Should we back up the robot and start over ?")
+    print("Successfully unloaded block!")
+
 except KeyboardInterrupt:
     color_sensor_controller.set_arm_at_angle(0)
     print("Interrupted via keyboard...")
