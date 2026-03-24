@@ -70,10 +70,10 @@ class GrabberController:
         # Gyro detection knobs
         self.sample_hz = 50
         self.consecutive_needed = 15
-        self.running_dps = 250
+        self.running_dps = 300
 
         # Motor-drop detection knobs
-        self.motor_calibration_dps = 250
+        self.motor_calibration_dps = 300
         self.motor_sample_sleep = 0.02
         self.motor_eject_time = 2.0
 
