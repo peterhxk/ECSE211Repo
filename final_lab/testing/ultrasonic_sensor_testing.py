@@ -87,7 +87,7 @@ def set_motor_speed_deg_per_s(motor, speed_deg_s):
     motor.set_dps(speed_deg_s)
 
 def stop_motor(motor):
-    motor.stop()
+    motor.set_dps(0)
 
 def stop_both(left_motor, right_motor):
     stop_motor(left_motor)
