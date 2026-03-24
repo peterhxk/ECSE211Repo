@@ -738,7 +738,7 @@ class GrabberController:
     # ----------------------------
     # Motor drop detection
     # ----------------------------
-    def increase_on_velocity_drop(self, pulse_time=0.2, timeout=None, warmup=0.5):
+    def increase_on_velocity_drop(self, pulse_time=0.5, timeout=None, warmup=0.5):
         # 🔥 Warm-up phase: ignore motor readings
         time.sleep(warmup)
 
