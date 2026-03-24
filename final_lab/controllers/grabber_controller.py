@@ -491,19 +491,32 @@ class GrabberController:
 
         detector_threshold = None
         detector_direction = None
+        detector_floor = None
 
         if detector_name == "gyro_outwards_fast":
-            detector_threshold = self._gyro_threshold_outwards(GyroTilt.FAST_TILT)
+            detector_floor = self._floor_for_inwards(GyroTilt.FAST_TILT)
+            k = self._k_for_tilt(GyroTilt.FAST_TILT)
+            detector_threshold = self.mu + k * self.sigma
             detector_direction = "outwards"
         elif detector_name == "gyro_outward_slow":
-            detector_threshold = self._gyro_threshold_outwards(GyroTilt.SLOW_TILT)
+            k = self._k_for_tilt(GyroTilt.SLOW_TILT)
+            detector_threshold = self.mu + k * self.sigma
+            detector_floor = self._floor_for_outwards(GyroTilt.SLOW_TILT)
             detector_direction = "outwards"
         elif detector_name == "gyro_inwards_fast":
-            detector_threshold = self._gyro_threshold_inwards(GyroTilt.FAST_TILT)
+            k = self._k_for_tilt(GyroTilt.FAST_TILT)
+            detector_threshold = self.mu - k * self.sigma
+            detector_floor = self._floor_for_inwards(GyroTilt.FAST_TILT)
             detector_direction = "inwards"
         elif detector_name == "gyro_inwards_slow":
-            detector_threshold = self._gyro_threshold_inwards(GyroTilt.SLOW_TILT)
+            k = self._k_for_tilt(GyroTilt.SLOW_TILT)
+            detector_threshold = self.mu - k * self.sigma
+            detector_floor = self._floor_for_inwards(GyroTilt.SLOW_TILT)
             detector_direction = "inwards"
+
+        # threshold is mu - k sigma
+        #
+
 
         self._begin_operation_recording(
             operation_name=operation_name,
@@ -512,8 +525,9 @@ class GrabberController:
                 **(extra or {}),
                 "detector": detector_name,
                 "needed": needed,
-                "detector_threshold": detector_threshold,
+                "detector_threshold": detector_threshold, # the mu - k sigma threshold
                 "detector_direction": detector_direction,
+                "detector_floor": detector_floor, # the floor
             },
         )
 
