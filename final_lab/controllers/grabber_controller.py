@@ -763,8 +763,6 @@ class GrabberController:
                 else:
                     self.motor.set_dps(0)
 
-                return
-
             time.sleep(0.01)
 
     def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5, stop_event=None) -> bool:
