@@ -944,6 +944,7 @@ class GrabberController:
                 print("[INFO] KILL SWITCH ACTIVATED")
                 self.kill_switch = True
                 break
+            print("IS alive")
     def loop(self):
         self._kill_thread = threading.Thread(target=self.monitor_kill, daemon=True)
         self.motor.set_dps(-self.running_dps)
