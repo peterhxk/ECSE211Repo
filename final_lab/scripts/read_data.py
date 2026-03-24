@@ -12,8 +12,8 @@ RECORDINGS_DIR = "gyro_operation_recordings"
 
 
 def load_operation_records(recordings_dir=RECORDINGS_DIR):
-    #files = ["gyro_operation_recordings/load_first_bloc_20260324_153915.pkl"]
-    files = sorted(glob.glob(os.path.join(recordings_dir, "*.pkl")))
+    files = ["gyro_operation_recordings/load_first_bloc_20260324_210953.pkl"]
+    #files = sorted(glob.glob(os.path.join(recordings_dir, "*.pkl")))
     records = []
 
     for path in files:
