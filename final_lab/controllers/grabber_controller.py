@@ -947,7 +947,6 @@ class GrabberController:
             ):
                 print("[INFO] KILL SWITCH ACTIVATED")
                 self.kill_switch = True
-                sys.exit(0)
                 break
     def loop(self):
         kill_thread = threading.Thread(target=self.monitor_kill, daemon=True).start()
@@ -962,6 +961,7 @@ class GrabberController:
                 # 1. Handle user commands
                 # -------------------------
                 if self.kill_switch:
+                    print("[INFO] KILL SWITCH ACTIVATED")
                     raise KeyboardInterrupt
                 if self._command_queue:
                     cmd = self._command_queue.popleft()
