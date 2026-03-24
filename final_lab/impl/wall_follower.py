@@ -4,6 +4,8 @@ from collections import deque
 import statistics
 import time
 
+# will soon be converted into a wall follower x color sensor sweeper combo
+# because otherwise the components will be too independent.
 class WallFollower:
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_BASE_MM = 159
@@ -16,13 +18,13 @@ class WallFollower:
         print("Wall follower ready.         ")
 
     """ 
-        Designed to make the robot follow a straight line
-        (indirectly achieved by left-following a wall)
-            - wall_distance: the distance from the wall that the robot should try to maintain
-            - straight_distance: the distance (in cm) that the robot will move forward by before stopping
+    Designed to make the robot follow a straight line in a room. 
+    (indirectly achieved by left-following a wall)
+        - wall_distance: the distance from the wall that the robot should try to maintain
+        - straight_distance: the distance (in cm) that the robot will move forward by before stopping
+        - detect_bed: whether to detect a bed (default is False)
     """
-
-    def run(self, wall_distance: float, straight_distance: float):
+    def run(self, wall_distance: float, straight_distance: float, detect_bed: bool = False):
         # reset motor encoders
         self.motor_controller.reset_encoders()
 
@@ -38,9 +40,10 @@ class WallFollower:
         prev_error = 0.0
         prev_time = time.time()
 
-        Kp = 4.0
-        Ki = 0.5
-        Kd = 0.8
+        # calibrated to 60 deg/s
+        Kp = 0.265
+        Ki = 0
+        Kd = 0.6
 
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
 
