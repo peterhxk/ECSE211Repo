@@ -33,7 +33,9 @@ try:
                     time_int = float(input("Time interval (sleep time): "))
                     amount = int(input("Number of readings: "))
                     rgb = int(input("rbg? 1 = True, 0 = False: "))
+                    pilot.move_distance(700)
                     sensor.read_colour_continuous(time_int, amount, rgb)
+
                 elif ans2 in ["4", "e", "E"]:
                     break
                 else:
