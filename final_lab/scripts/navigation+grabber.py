@@ -8,7 +8,7 @@ from controllers.driving_controller import DrivingController
 from impl.sweep_line_follower import SweepLineFollower
 import time
 from controllers.grabber_controller import GrabberController
-from ..data.ports_brick import Ports
+from data.ports_brick import Ports
 
 # Sensor declaration
 
