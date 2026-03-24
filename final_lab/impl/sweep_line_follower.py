@@ -118,10 +118,13 @@ class SweepLineFollower:
         return t
 
 
-    def turn_logic(self, direction: Literal["left", "right"]):
-        """ Turn the robot while pivoting around 1 wheel with intersection in front.
-        Prerequisite: Robot is directly facing the intersection between X mm and 30 mm
-        Input: 
+    def turn_logic(self, direction: Literal["left", "right"], heading: Literal["front", "back"] = "front"):
+        """
+        Detects the intersecting line, and performs robot turning logic to be aligned with the next line.
+
+        Args:
+            direction ("left" | "right"): The direction in which to turn.
+            heading ("front" | "back"): Whether the robot needs to advance ("front") or back up ("back") to find the intersecting line.
         """
         self.pilot.stop_motors()
 
@@ -137,7 +140,13 @@ class SweepLineFollower:
         # Wait for sensor arm to be stopped before proceeding
         self.sensor.motor.wait_is_stopped()
 
-        self.pilot.move_forward()
+        # Moves 30 mm forward to find intersection
+        if heading == "front":
+            self.pilot.move_forward()
+        elif heading == "back":
+            self.pilot.move_backward()
+        else:
+            raise Exception(f"Invalid parameter heading for method SweepLineFollower.turn_logic: {heading}. Valid options are front, back")
         print(f"The colors detected are : {self.sensor.get_rgb()}")
 
         while (self.sensor.read_colour() == "w"):
