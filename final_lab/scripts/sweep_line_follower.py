@@ -11,12 +11,12 @@ import time
 
 # Sensor declaration
 
-left_motor = Motor(Ports.LEFT_MOTOR)
-right_motor = Motor(Ports.RIGHT_MOTOR)
-color_sensor_motor = Motor(Ports.COLOR_MOTOR)
+left_motor = Motor(Ports.LEFT_MOTOR.value)
+right_motor = Motor(Ports.RIGHT_MOTOR.value)
+color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
-color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR, color_sensor_motor)
+color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
 
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 

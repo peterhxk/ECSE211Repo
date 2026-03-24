@@ -6,12 +6,12 @@ from impl.sweep_line_follower import SweepLineFollower
 from data.ports_brick import Ports
 import time
 
-left_motor = Motor(Ports.LEFT_MOTOR)
-right_motor = Motor(Ports.RIGHT_MOTOR)
-color_sensor_motor = Motor(Ports.COLOR_MOTOR)
+left_motor = Motor(Ports.LEFT_MOTOR.value)
+right_motor = Motor(Ports.RIGHT_MOTOR.value)
+color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 pilot = DrivingController(left_motor, right_motor, 150)
-sensor = ColourSensorController(Ports.COLOR_SENSOR, color_sensor_motor)
+sensor = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
 
 follow = SweepLineFollower(sensor, pilot)
 wait_ready_sensors(True)
