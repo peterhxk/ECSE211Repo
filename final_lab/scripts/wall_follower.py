@@ -1,7 +1,7 @@
 from utils.brick import wait_ready_sensors, reset_brick, Motor, EV3UltrasonicSensor
 from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
-from impl.wall_follower import WallFollower
+from final_lab.impl.room_traverser import RoomTraverser
 
 # sensor declaration
 left_motor = Motor("D")
@@ -14,7 +14,7 @@ print("Waiting for sensors to be ready...")
 wait_ready_sensors(True)
 
 try:
-    follower = WallFollower(driving_controller, ultrasonic_sensor)
+    follower = RoomTraverser(driving_controller, ultrasonic_sensor)
     follower.run(4, 25)
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")

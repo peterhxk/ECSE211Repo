@@ -1,30 +1,36 @@
-from utils.brick import wait_ready_sensors, EV3UltrasonicSensor
+from utils.brick import Motor, wait_ready_sensors, EV3UltrasonicSensor
 from controllers.driving_controller import DrivingController
+from controllers.color_sensor_controller import ColourSensorController
 from collections import deque
 import statistics
 import time
+from data.ports_brick import Ports
 
-# will soon be converted into a wall follower x color sensor sweeper combo
-# because otherwise the components will be too independent.
-class WallFollower:
+class RoomTraverser:
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_BASE_MM = 159
 
     def __init__(self, motor_controller: DrivingController, ultrasonic_sensor: EV3UltrasonicSensor):
         self.motor_controller = motor_controller
         self.ultrasonic_sensor = ultrasonic_sensor
-        print("initializing wall follower...", end="\r", flush=True)
+        self.color_sensor_motor = Motor(Ports.COLOR_SENSOR_MOTOR_PORT)
+        self.color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR, self.color_sensor_motor)
         wait_ready_sensors(True)
-        print("Wall follower ready.         ")
+        print("Room Traverser ready.")
 
     """ 
-    Designed to make the robot follow a straight line in a room. 
-    (indirectly achieved by left-following a wall)
-        - wall_distance: the distance from the wall that the robot should try to maintain
-        - straight_distance: the distance (in cm) that the robot will move forward by before stopping
-        - detect_bed: whether to detect a bed (default is False)
+    Designed to make a robot move in a straight line until it detects a bed OR until it reaches a certain distance.
+    Every call to the run() method is responsible for one straight forward or backwards path.
+    
+    Inputs:
+    - wall_distance: The left distance from the wall to maintain while moving (in CM).
+    - straight_distance: The MAXIMUM straight distance that the robot moves until the method returns.
+    - detect_bed: Whether the robot should be detecting a bed or not (indicates whether the color sensor arm should be looking for a bed)
+
+    Returns:
+    - Tuple of (bed color detected or None, distance travelled in CM)
     """
-    def run(self, wall_distance: float, straight_distance: float, detect_bed: bool = False):
+    def run(self, wall_distance: float, straight_distance: float, detect_bed: bool = False) -> tuple[str | None, float]:
         # reset motor encoders
         self.motor_controller.reset_encoders()
 
@@ -40,16 +46,24 @@ class WallFollower:
         prev_error = 0.0
         prev_time = time.time()
 
-        # calibrated to 60 deg/s
+        # calibrated to 60 deg/s, 4cm from wall.
         Kp = 0.265
         Ki = 0
         Kd = 0.6
+
+        bed_detected = False
 
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
 
         self.motor_controller.move_forward()
 
         while True:
+            if detect_bed: color_sensor_sweep_result = self.color_sensor_controller.sweep(colour="green", sweep_range="full", stop_on_match=True)
+            if color_sensor_sweep_result and color_sensor_sweep_result[0][1] == "green":
+                # if color detected, stop moving.
+                bed_detected = True
+                break
+
             # check travelled distance
             travelled_deg = self.motor_controller.get_avg_encoder_value()
 
@@ -86,3 +100,7 @@ class WallFollower:
             self.motor_controller.set_right_motor(self.motor_controller.base_power + adjustment)
 
         self.motor_controller.stop_motors()
+        if bed_detected:
+            return ("green", (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
+        else:
+            return (None, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
