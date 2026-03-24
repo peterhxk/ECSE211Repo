@@ -839,8 +839,6 @@ class GrabberController:
             print("Already loaded 2 blocs, aborting.")
             return False
 
-        self.motor.set_power(100)
-        time.sleep(0.01)
         self.motor.set_dps(self.running_dps)
 
         try:

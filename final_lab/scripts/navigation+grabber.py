@@ -47,6 +47,7 @@ try:
         if time.time() - starter > 1.0:
             print("Still loading")
             print(grabber_controller.get_loading_status())
+            grabber_controller.motor.set_dps(500)
             #threading.Thread(target=grabber_controller.increase_on_velocity_drop, daemon=True).start()
             starter = time.time()
 
