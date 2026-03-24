@@ -20,7 +20,7 @@ color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
-grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value,False, True)
+grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value,True, True)
 #touch_sensor = TouchSensor(1)
 
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
@@ -48,7 +48,6 @@ try:
         if time.time() - starter > 1.0:
             print("Still loading")
             print(grabber_controller.get_loading_status())
-            grabber_controller.motor.set_dps(500)
             #threading.Thread(target=grabber_controller.increase_on_velocity_drop, daemon=True).start()
             starter = time.time()
 
