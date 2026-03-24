@@ -874,6 +874,7 @@ class GrabberController:
 
                 print("[INFO] First bloc gyro event triggered")
                 #time.sleep(2) # make sure bloc goes to back
+                time.sleep(0.5)
                 self.motor.set_dps(0)
                 with self.state_lock:
                     self.bloc_positions[0] = BlocLocation.UNDER_GYRO
