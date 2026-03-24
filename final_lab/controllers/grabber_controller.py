@@ -647,6 +647,8 @@ class GrabberController:
         sample_hz = self.sample_hz if sample_hz is None else float(sample_hz)
         dt = 1.0 / sample_hz
 
+        record_enabled = bool(detector_name) and bool(operation_name)
+
         detector_threshold = None
         detector_direction = None
         detector_floor = None
@@ -657,25 +659,22 @@ class GrabberController:
             detector_threshold = self.mu + k * self.sigma
             detector_direction = "outwards"
         elif detector_name == "gyro_outward_slow":
+            detector_floor = self._floor_for_outwards(GyroTilt.SLOW_TILT)
             k = self._k_for_tilt(GyroTilt.SLOW_TILT)
             detector_threshold = self.mu + k * self.sigma
-            detector_floor = self._floor_for_outwards(GyroTilt.SLOW_TILT)
             detector_direction = "outwards"
         elif detector_name == "gyro_inwards_fast":
+            detector_floor = self._floor_for_inwards(GyroTilt.FAST_TILT)
             k = self._k_for_tilt(GyroTilt.FAST_TILT)
             detector_threshold = self.mu - k * self.sigma
-            detector_floor = self._floor_for_inwards(GyroTilt.FAST_TILT)
             detector_direction = "inwards"
         elif detector_name == "gyro_inwards_slow":
+            detector_floor = self._floor_for_inwards(GyroTilt.SLOW_TILT)
             k = self._k_for_tilt(GyroTilt.SLOW_TILT)
             detector_threshold = self.mu - k * self.sigma
-            detector_floor = self._floor_for_inwards(GyroTilt.SLOW_TILT)
             detector_direction = "inwards"
 
-        # threshold is mu - k sigma
-        #
-
-        if detector_name != "":
+        if record_enabled:
             self._begin_operation_recording(
                 operation_name=operation_name,
                 timeout=timeout,
@@ -683,9 +682,9 @@ class GrabberController:
                     **(extra or {}),
                     "detector": detector_name,
                     "needed": needed,
-                    "detector_threshold": detector_threshold, # the mu - k sigma threshold
+                    "detector_threshold": detector_threshold,
                     "detector_direction": detector_direction,
-                    "detector_floor": detector_floor, # the floor
+                    "detector_floor": detector_floor,
                 },
             )
 
@@ -694,13 +693,15 @@ class GrabberController:
 
         try:
             while hits < needed:
-                if stop_event is not None and stop_event.is_set() and detector_name != "":
-                    self._end_operation_recording(outcome="cancelled")
+                if stop_event is not None and stop_event.is_set():
+                    if record_enabled:
+                        self._end_operation_recording(outcome="cancelled")
                     return False
 
                 elapsed = time.time() - start
-                if timeout is not None and elapsed >= timeout and detector_name != "":
-                    self._end_operation_recording(outcome="timeout")
+                if timeout is not None and elapsed >= timeout:
+                    if record_enabled:
+                        self._end_operation_recording(outcome="timeout")
                     return False
 
                 raw = self.gyro.get_dps_measure()
@@ -721,12 +722,13 @@ class GrabberController:
                 cond = bool(predicate_from_dps(dps))
                 detector_flags["active_detector"] = cond
 
-                self._append_gyro_sample_to_record(
-                    elapsed_s=elapsed,
-                    dps=dps,
-                    z=z,
-                    detectors=detector_flags,
-                )
+                if record_enabled:
+                    self._append_gyro_sample_to_record(
+                        elapsed_s=elapsed,
+                        dps=dps,
+                        z=z,
+                        detectors=detector_flags,
+                    )
 
                 if cond:
                     hits += 1
@@ -735,12 +737,13 @@ class GrabberController:
 
                 time.sleep(dt)
 
-            if detector_name != "":
+            if record_enabled:
                 self._end_operation_recording(outcome="success")
             return True
 
         except Exception:
-            self._end_operation_recording(outcome="error")
+            if record_enabled:
+                self._end_operation_recording(outcome="error")
             raise
 
     # ----------------------------
