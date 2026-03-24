@@ -6,18 +6,18 @@ from utils.brick import wait_ready_sensors, reset_brick, Motor
 from utils.brick import EV3ColorSensor
 import time
 
-left_motor = Motor("A")
+left_motor = Motor("C")
 right_motor = Motor("B")
-
+motor = Motor("A")
 def move_back():
     left_motor.set_dps(-100)
     right_motor.set_dps(-100)
     time.sleep(1.5)
-    left_motor.stop()
-    right_motor.stop()
+    left_motor.set_dps(0)
+    right_motor.set_dps(0)
 
 driving_controller = DrivingController(left_motor, right_motor, 100)
-color_sensor_controller = ColourSensorController(1)
+color_sensor_controller = ColourSensorController(1, motor)
 
 wait_ready_sensors(True)
 

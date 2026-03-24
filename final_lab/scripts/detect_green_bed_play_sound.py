@@ -5,7 +5,7 @@ from impl.room_traverser import RoomTraverser
 from utils.brick import wait_ready_sensors, reset_brick, Motor
 from utils.brick import EV3ColorSensor
 import time
-from utils.brick import Sound
+from utils import Sound
 
 left_motor = Motor("C")
 right_motor = Motor("B")
