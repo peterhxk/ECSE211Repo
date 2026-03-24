@@ -740,26 +740,16 @@ class GrabberController:
     # ----------------------------
     def increase_on_velocity_drop(
             self,
-            pulse_time=1.0,
+            pulse_time=0.25,
             warmup=0.5,
-            trigger_ratio=1/ 3,
-            rearm_ratio=0.1,
+            trigger_ratio=0.6,
+            rearm_ratio=0.85,
             sample_sleep=0.01,
     ):
-        """
-        Continuously monitor motor speed while loading is active.
-
-        Behavior:
-        - Wait warmup before monitoring
-        - Trigger one boost pulse when measured speed drops below trigger threshold
-        - Do not retrigger while still in the same low-speed episode
-        - Rearm only after speed recovers above rearm threshold
-        - Exit when loading is no longer active or first bloc is no longer being loaded
-        """
         time.sleep(warmup)
 
         normal_dps = self.running_dps
-        boosted_dps = int(normal_dps * 30)
+        boosted_dps = min(int(normal_dps * 1.8), 600)
 
         trigger_threshold = normal_dps * trigger_ratio
         rearm_threshold = normal_dps * rearm_ratio
@@ -769,52 +759,48 @@ class GrabberController:
         if self.debug:
             print(
                 f"[Boost monitor] Started: "
+                f"normal={normal_dps:.1f}, boost={boosted_dps:.1f}, "
                 f"trigger<{trigger_threshold:.1f}, rearm>{rearm_threshold:.1f}, "
                 f"pulse_time={pulse_time:.2f}s"
             )
 
         while True:
-            # Stop monitoring once first-bloc loading is no longer the active situation
             if self.bloc_count != 0 or self.get_loading_status() != "LOADING":
                 if self.debug:
-                    print("[Boost monitor] Exiting: no longer in first-bloc loading state.")
+                    print("[Boost monitor] Exiting.")
                 return
 
-            speed = self.motor.get_speed()  # measured speed
+            speed = self.motor.get_speed()
             if speed is None:
                 time.sleep(sample_sleep)
                 continue
 
             speed = float(speed)
 
-            # Trigger exactly once per drop episode
             if armed and speed < trigger_threshold:
                 print(
-                    f"[Motor drop detected] measured_speed={speed:.1f} < "
-                    f"trigger_threshold={trigger_threshold:.1f} -> temporary boost"
+                    f"[Motor drop detected] speed={speed:.1f} < {trigger_threshold:.1f} -> boost"
                 )
 
                 armed = False
-                self.motor.set_dps(boosted_dps)
+
+                # Pick ONE mode, not both
                 self.motor.set_power(100)
                 time.sleep(pulse_time)
 
-                # Restore nominal command only if still loading first bloc
-                if self.bloc_count == 0 and self.get_loading_status() == "LOADING" and speed > rearm_threshold:
+                if self.bloc_count == 0 and self.get_loading_status() == "LOADING":
                     self.motor.set_dps(normal_dps)
-                    print("Set to normal")
-                if self.get_loading_status() != "LOADING":
+                    if self.debug:
+                        print("[Boost monitor] Restored nominal speed")
+                else:
                     self.motor.set_dps(0)
-                    print("Set to 0 ")
                     return
 
-            # Rearm only after enough recovery
-            elif not armed :#and speed > rearm_threshold:
+            elif not armed and speed > rearm_threshold:
                 armed = True
                 if self.debug:
                     print(
-                        f"[Boost monitor] Rearmed: measured_speed={speed:.1f} > "
-                        f"rearm_threshold={rearm_threshold:.1f}"
+                        f"[Boost monitor] Rearmed: speed={speed:.1f} > {rearm_threshold:.1f}"
                     )
 
             time.sleep(sample_sleep)
