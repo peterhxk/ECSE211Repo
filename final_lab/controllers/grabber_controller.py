@@ -384,7 +384,7 @@ class GrabberController:
         return -12.0 if tilt == GyroTilt.SLOW_TILT else -8.0
 
     def _floor_for_outwards(self, tilt: GyroTilt) -> float:
-        return 6.0 if tilt == GyroTilt.SLOW_TILT else 8.0
+        return 8.0 if tilt == GyroTilt.SLOW_TILT else 9.0
 
     def _gyro_threshold_inwards(self, tilt: GyroTilt) -> float:
         k = self._k_for_tilt(tilt)
@@ -671,14 +671,14 @@ class GrabberController:
 
                 ok = self._consecutive_gyro_trigger(
                     operation_name="load_first_bloc",
-                    detector_name="gyro_inward_slow",
+                    detector_name="gyro_outwards_fast",
                     predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT),
-                    needed=2,
+                    needed=3,
                     timeout=5.0,
                     extra={
                         "bloc_count_before": self.bloc_count,
                         "running_dps": self.running_dps,
-                        "direction": "inward",
+                        "direction": "outwards",
                     },
                     stop_event=stop_event,
                 )
