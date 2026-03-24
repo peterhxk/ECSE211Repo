@@ -32,7 +32,7 @@ WHEEL_CIRCUMFERENCE_CM = math.pi * WHEEL_DIAMETER_CM
 INITIAL_DISTANCE_CM = 60.0
 FORWARD_TOWARD_WALL = True
 
-CSV_FILENAME = "testing_data/ultrasonic_motion_data.csv"
+CSV_FILENAME = "ultrasonic_motion_data.csv"
 
 # ============================================================
 # Motion cycle config
