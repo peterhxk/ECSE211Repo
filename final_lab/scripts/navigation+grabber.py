@@ -40,9 +40,15 @@ try:
     init_power = 15
     driving_controller.move_forward_by_power(init_power)
     grabber_controller.start_loading()
+    print("moved past start loading")
     #threading.Thread(target=slow_decrease).start()
-    while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
-        pass
+    starter = time.time()
+    while not grabber_controller.isBlockCaught() and grabber_controller.get_loading_status() == "LOADING":
+        if time.time() - starter > 0.6:
+            print("Still loading")
+            print(grabber_controller.get_loading_status())
+            starter = time.time()
+            grabber_controller.increase_on_velocity_drop(0.5)
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
     if grabber_controller.isBlockCaught():
         print("[DEBUG] Block Caught ! Stopping drive")
@@ -56,9 +62,9 @@ try:
             start = time.time()
         if grabber_controller.get_loading_status() == "FAILED":
             raise RuntimeError("Failure to catch block. Should we back up the robot and start over ?")
-        if time.time() - watchdog > 0.6:
-            grabber_controller.increase_on_velocity_drop()
-            watchdog = time.time()
+#        if time.time() - watchdog > 0.6:
+#            grabber_controller.increase_on_velocity_drop()
+#            watchdog = time.time()
     print("[DEBUG] Loading first block complete")
 
     #grabber_controller._end_operation_recording()
@@ -74,8 +80,11 @@ try:
     grabber_controller.load_bloc()
     driving_controller.move_forward_by_power(init_power)
     #threading.Thread(target=slow_decrease).start()
+    starter = time.time()
     while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
-        pass
+        if time.time() - starter > 1: 
+          print("waiting for block to get caught")
+          starter = time.time()
     driving_controller.stop_motors()
     grabber_controller.clearBlockCaught()
     while grabber_controller.is_loading():

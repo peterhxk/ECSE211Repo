@@ -579,13 +579,15 @@ class GrabberController:
 
                 cooldown = time.time()
 
-                boosted_power = self.running_dps * 1.5 #min(1.2 * self.motor.get_power(), self.running_dps * 1.3)
+                boosted_power = self.running_dps * 1.6 #min(1.2 * self.motor.get_power(), self.running_dps * 1.3)
                 self.motor.set_dps(boosted_power)
 
                 time.sleep(duration)
 
                 if self.bloc_count == 0:
                     self.motor.set_dps(self.running_dps)
+                else:
+                    self.motor.set_dps(0)
 
     def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5, stop_event=None) -> bool:
         threshold = self.motor_mu_in - self.motor_drop_k * self.motor_sigma_in
@@ -666,7 +668,7 @@ class GrabberController:
 
             # First bloc: gyro-based detection with unified sample stream
             if self.bloc_count == 0:
-                #threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
+                threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
                 #print("[INFO] Started velocity drop detection thread")
 
                 ok = self._consecutive_gyro_trigger(
@@ -714,7 +716,7 @@ class GrabberController:
                 print("[INFO] Loading cancelled during second-bloc warm-up.")
                 return False
 
-            ok = self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.6,stop_event=stop_event)
+            ok = self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.8,stop_event=stop_event)
             #TODO : problem is that if the first block is only after the gyro sensor it might temporarily jam the grabber thus triggering the velocity drop event
             if not ok:
                 print("Timed out or cancelled waiting for motor velocity drop while loading second bloc.")
