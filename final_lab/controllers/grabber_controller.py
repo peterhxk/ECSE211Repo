@@ -378,13 +378,13 @@ class GrabberController:
     # Gyro thresholds / predicates
     # ----------------------------
     def _k_for_tilt(self, tilt: GyroTilt) -> float:
-        return 8.0 if tilt == GyroTilt.SLOW_TILT else 12.0
+        return 6.0 if tilt == GyroTilt.SLOW_TILT else 8.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
-        return -8.0 if tilt == GyroTilt.SLOW_TILT else -12.0
+        return -6.0 if tilt == GyroTilt.SLOW_TILT else -8.0
 
     def _floor_for_outwards(self, tilt: GyroTilt) -> float:
-        return 8.0 if tilt == GyroTilt.SLOW_TILT else 12.0
+        return 6.0 if tilt == GyroTilt.SLOW_TILT else 8.0
 
     def _gyro_threshold_inwards(self, tilt: GyroTilt) -> float:
         k = self._k_for_tilt(tilt)
@@ -667,7 +667,7 @@ class GrabberController:
             # First bloc: gyro-based detection with unified sample stream
             if self.bloc_count == 0:
                 #threading.Thread(target=self.increase_on_velocity_drop, daemon=True).start()
-                print("[INFO] Started velocity drop detection thread")
+                #print("[INFO] Started velocity drop detection thread")
 
                 ok = self._consecutive_gyro_trigger(
                     operation_name="load_first_bloc",
