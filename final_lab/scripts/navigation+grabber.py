@@ -19,7 +19,7 @@ color_sensor_motor = Motor(Ports.COLOR_SENSOR.value)
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
-grabber_controller = GrabberController(Ports.COLOR_MOTOR.value, Ports.GYRO_SENSOR.value,False, True)
+grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value,False, True)
 #touch_sensor = TouchSensor(1)
 
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
