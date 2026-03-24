@@ -17,7 +17,6 @@ ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR_PORT)
 driving_controller = DrivingController(left_motor, right_motor, MOTOR_POWER)
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR, color_motor)
 room_traverser = RoomTraverser(driving_controller, color_sensor_controller)
-grabber_controller = GrabberController(Ports.GRABBER_MOTOR_PORT, Ports.GYRO_SENSOR)
 
 print("Waiting for sensors to be ready...")
 
@@ -33,7 +32,6 @@ try:
     if bed_found:
         print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
         print("DROPPING BLOCK!!!")
-        grabber_controller.unload_block()
         time.sleep(2)
         print("Going back.")
         room_traverser.run(4, -1 * distance_travelled, detect_bed=False)
