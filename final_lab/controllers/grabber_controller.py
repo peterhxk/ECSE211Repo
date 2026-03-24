@@ -210,7 +210,7 @@ class GrabberController:
 
             ok = self._is_motor_drop_detected(
                 timeout=5.0,
-                warmup_delay=0.0,
+                warmup_delay=0.6, # add some delay
                 stop_event=stop_event,
             )
 
