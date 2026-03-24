@@ -326,6 +326,7 @@ class GrabberController:
         os.makedirs(calibration_dir, exist_ok=True)
 
         if calibration:
+            self.motor.set_dps(self.motor_calibration_dps)
             print(f"[Gyro calibration] Calibrating... Don't move sensor ({seconds}s)")
             dt = 1.0 / float(sample_hz)
 
@@ -374,6 +375,8 @@ class GrabberController:
 
             if self.debug:
                 print(f"[Gyro calibration] Saved to {calibration_file}")
+
+            self.motor.set_dps(0)
 
         else:
             calibration_files = sorted(
