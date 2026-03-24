@@ -675,7 +675,7 @@ class GrabberController:
         # threshold is mu - k sigma
         #
 
-        if detector_name == "":
+        if detector_name != "":
             self._begin_operation_recording(
                 operation_name=operation_name,
                 timeout=timeout,
@@ -694,12 +694,12 @@ class GrabberController:
 
         try:
             while hits < needed:
-                if stop_event is not None and stop_event.is_set():
+                if stop_event is not None and stop_event.is_set() and detector_name != "":
                     self._end_operation_recording(outcome="cancelled")
                     return False
 
                 elapsed = time.time() - start
-                if timeout is not None and elapsed >= timeout:
+                if timeout is not None and elapsed >= timeout and detector_name != "":
                     self._end_operation_recording(outcome="timeout")
                     return False
 
@@ -735,7 +735,8 @@ class GrabberController:
 
                 time.sleep(dt)
 
-            self._end_operation_recording(outcome="success")
+            if detector_name != "":
+                self._end_operation_recording(outcome="success")
             return True
 
         except Exception:
