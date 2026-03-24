@@ -540,7 +540,7 @@ class GrabberController:
             return 10.0
         elif tilt == GyroTilt.FAST_TILT_KILL :
             return 25.0
-        else: 
+        else:
             return 16.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
