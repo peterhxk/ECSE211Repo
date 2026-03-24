@@ -796,6 +796,7 @@ class GrabberController:
 
                 armed = False
                 self.motor.set_dps(boosted_dps)
+                self.motor.set_power(100)
                 time.sleep(pulse_time)
 
                 # Restore nominal command only if still loading first bloc
