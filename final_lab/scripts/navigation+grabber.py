@@ -7,21 +7,20 @@ from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
 from impl.sweep_line_follower import SweepLineFollower
 import time
-import data.measurements as consts
 from controllers.grabber_controller import GrabberController
-import threading
+from ..data.ports_brick import Ports
 
 # Sensor declaration
 
-left_motor = Motor("C")
-right_motor = Motor("B")
-color_sensor_motor = Motor("A")
+left_motor = Motor(Ports.LEFT_MOTOR.value)
+right_motor = Motor(Ports.RIGHT_MOTOR.value)
+color_sensor_motor = Motor(Ports.COLOR_SENSOR.value)
 
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
-color_sensor_controller = ColourSensorController(2, color_sensor_motor)
-grabber_controller = GrabberController("D", 4,False, True)
-touch_sensor = TouchSensor(1)
+color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
+grabber_controller = GrabberController(Ports.COLOR_MOTOR.value, Ports.GYRO_SENSOR.value,False, True)
+#touch_sensor = TouchSensor(1)
 
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 
