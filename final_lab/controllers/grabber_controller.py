@@ -145,7 +145,7 @@ class GrabberController:
         self.motor.set_dps(0)
         print("Reset measures; motor stopped.")
 
-        self.calibrate_motor_drop_detection(calibration=False)#self.calibration)
+        self.calibrate_motor_drop_detection(calibration=self.calibration)
         if self.calibration:
             print("Calibrated motor inward speed-drop mu and sigma.")
         else:
@@ -877,6 +877,6 @@ class GrabberController:
 
 
 if __name__ == "__main__":
-    controller = GrabberController("D", 4, False , True)
+    controller = GrabberController("D", 4, True , True)
     controller.initialize_sensors()
     controller.loop()
