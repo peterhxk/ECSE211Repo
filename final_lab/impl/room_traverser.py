@@ -1,4 +1,4 @@
-from utils.brick import Motor, wait_ready_sensors, EV3UltrasonicSensor
+from utils.brick import wait_ready_sensors, EV3UltrasonicSensor
 from controllers.driving_controller import DrivingController
 from controllers.color_sensor_controller import ColourSensorController
 from collections import deque
@@ -18,11 +18,10 @@ class RoomTraverser:
     # filter parameter
     ema_alpha = 0.4
 
-    def __init__(self, motor_controller: DrivingController, ultrasonic_sensor: EV3UltrasonicSensor):
+    def __init__(self, motor_controller: DrivingController, color_sensor_controller: ColourSensorController):
         self.motor_controller = motor_controller
-        self.ultrasonic_sensor = ultrasonic_sensor
-        self.color_sensor_motor = Motor(Ports.COLOR_SENSOR_MOTOR_PORT)
-        self.color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR, self.color_sensor_motor)
+        self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR_PORT)
+        self.color_sensor_controller = color_sensor_controller
         wait_ready_sensors(True)
         print("Room Traverser ready.")
 
@@ -57,9 +56,11 @@ class RoomTraverser:
 
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
 
-        self.motor_controller.move_forward()
+        motor_base_power = self.motor_controller.get_base_power()
+        self.motor_controller.move_forward(motor_base_power if straight_distance > 0 else -motor_base_power)
 
         while True:
+            color_sensor_sweep_result = None
             if detect_bed:
                 color_sensor_sweep_result = self.color_sensor_controller.sweep(colour=["green", "red"], sweep_range="full", stop_on_match=True)
             if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
@@ -70,7 +71,9 @@ class RoomTraverser:
             # check travelled distance
             travelled_deg = self.motor_controller.get_avg_encoder_value()
 
-            if travelled_deg >= target_degrees: 
+            if target_degrees > 0 and travelled_deg >= target_degrees:
+                break
+            elif target_degrees < 0 and travelled_deg <= target_degrees:
                 break
 
             now = time.time()
@@ -99,6 +102,8 @@ class RoomTraverser:
 
             adjustment = int(self.Kp * error + self.Ki * integral + self.Kd * derivative)
 
+            if straight_distance < 0:
+                adjustment = -adjustment
             self.motor_controller.set_left_motor(self.motor_controller.base_power - adjustment)
             self.motor_controller.set_right_motor(self.motor_controller.base_power + adjustment)
 
