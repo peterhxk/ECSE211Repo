@@ -174,9 +174,9 @@ class GrabberController:
                 print("[INFO] Unloading first bloc")
                 unloaded = self._consecutive_gyro_trigger(
                     operation_name="unload_from_2_to_1",
-                    detector_name="gyro_inwards_fast",
-                    predicate_from_dps=lambda dps: self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT),
-                    needed=1,
+                    detector_name="gyro_inwards_slow",
+                    predicate_from_dps=lambda dps: self._is_tilted_inwards_sample(dps, GyroTilt.SLOW_TILT),
+                    needed=2,
                     timeout=5.0,
                     extra={
                         "bloc_count_before": self.bloc_count,
@@ -995,6 +995,6 @@ class GrabberController:
 
 
 if __name__ == "__main__":
-    controller = GrabberController("D", 4, True , True)
+    controller = GrabberController("D", 4, False , True)
     controller.initialize_sensors()
     controller.loop()
