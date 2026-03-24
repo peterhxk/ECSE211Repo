@@ -759,7 +759,7 @@ class GrabberController:
         time.sleep(warmup)
 
         normal_dps = self.running_dps
-        boosted_dps = int(normal_dps * 15)
+        boosted_dps = int(normal_dps * 30)
 
         trigger_threshold = normal_dps * trigger_ratio
         rearm_threshold = normal_dps * rearm_ratio
