@@ -9,6 +9,7 @@ from utils.brick import Sound
 
 left_motor = Motor("C")
 right_motor = Motor("B")
+motor = Motor("A")
 tone1 = Sound(duration=100, pitch="A3", volume=100)
 
 def move_back():
@@ -19,7 +20,7 @@ def move_back():
     right_motor.set_dps(0)
 
 driving_controller = DrivingController(left_motor, right_motor, 100)
-color_sensor_controller = ColourSensorController(1)
+color_sensor_controller = ColourSensorController(1, motor)
 
 wait_ready_sensors(True)
 
