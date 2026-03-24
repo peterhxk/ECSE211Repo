@@ -846,7 +846,7 @@ class GrabberController:
                     operation_name="load_first_bloc",
                     detector_name="gyro_outwards_fast",
                     predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT),
-                    needed=2,
+                    needed=3,
                     timeout=5.0,
                     extra={
                         "bloc_count_before": self.bloc_count,
