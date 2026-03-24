@@ -799,14 +799,14 @@ class GrabberController:
                 time.sleep(pulse_time)
 
                 # Restore nominal command only if still loading first bloc
-                if self.bloc_count == 0 and self.get_loading_status() == "LOADING":
+                if self.bloc_count == 0 and self.get_loading_status() == "LOADING" and speed > rearm_threshold:
                     self.motor.set_dps(normal_dps)
                 else:
                     self.motor.set_dps(0)
                     return
 
             # Rearm only after enough recovery
-            elif not armed and speed > rearm_threshold:
+            elif not armed :#and speed > rearm_threshold:
                 armed = True
                 if self.debug:
                     print(
