@@ -12,7 +12,7 @@ RECORDINGS_DIR = "gyro_operation_recordings"
 
 
 def load_operation_records(recordings_dir=RECORDINGS_DIR):
-    files = ["gyro_operation_recordings/load_first_bloc_20260324_213207.pkl"]
+    files = ["gyro_operation_recordings/load_first_bloc_20260324_221534.pkl"]
     #files = sorted(glob.glob(os.path.join(recordings_dir, "*.pkl")))
     records = []
 
