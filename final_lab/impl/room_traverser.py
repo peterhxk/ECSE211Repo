@@ -110,7 +110,6 @@ class RoomTraverser:
             distance_cm = ema_estimate
 
             # PID control part
-            print(distance_cm)
             error = room_type_to_wall_distance_map[room_type] - distance_cm
             integral = max(-50.0, min(50.0, integral + error * dt))
             derivative = (error - prev_error) / dt
@@ -119,9 +118,11 @@ class RoomTraverser:
             adjustment = int(self.Kp * error + self.Ki * integral + self.Kd * derivative)
 
             if straight_distance < 0:
-                adjustment = -adjustment
-            self.motor_controller.set_left_motor(self.motor_controller.base_power - adjustment)
-            self.motor_controller.set_right_motor(self.motor_controller.base_power + adjustment)
+                const = -1
+            else:
+                const = 1
+            self.motor_controller.set_left_motor(const * (self.motor_controller.base_power - adjustment))
+            self.motor_controller.set_right_motor(const * (self.motor_controller.base_power + adjustment))
 
         self.motor_controller.stop_motors()
         if bed_detected:
@@ -140,7 +141,7 @@ class RoomTraverser:
     def traverse_a_room(self, room_type: RoomType) -> None:
         try:
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
-            traverse_results = self.run(room_type, 25, detect_bed=True)
+            traverse_results = self.run(room_type, 35, detect_bed=True)
             bed_found = traverse_results[0] is not None
             bed_color_found = traverse_results[0]
             distance_travelled = traverse_results[1]

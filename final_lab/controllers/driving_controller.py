@@ -22,6 +22,7 @@ class DrivingController:
         """
         # print(f"moving forward with {self.base_power}")
 
+        print(f"moving forward with {'base power' if power is None else power}")
         self.right_motor.set_dps(self.base_power if power is None else power)
         self.left_motor.set_dps(self.base_power if power is None else power)
 
