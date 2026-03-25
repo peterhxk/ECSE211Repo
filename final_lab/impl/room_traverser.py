@@ -78,7 +78,7 @@ class RoomTraverser:
         while True:
             color_sensor_sweep_result = None
             if detect_bed:
-                color_sensor_sweep_result = self.color_sensor_controller.sweep(colour=["green", "red"], range="full", stop_on_match=True)
+                color_sensor_sweep_result = self.color_sensor_controller.sweep(colours=["green", "red"], range="full", stop_on_match=True)
             if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
                 # if color detected, stop moving.
                 bed_detected = True
