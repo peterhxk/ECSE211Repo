@@ -2,7 +2,7 @@ from time import time
 from utils.brick import wait_ready_sensors, reset_brick, Motor
 from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
-from impl.room_traverser import RoomTraverser
+from impl.room_traverser import RoomTraverser, RoomType
 from data.ports_brick import Ports
 
 MOTOR_POWER = 80
@@ -23,7 +23,7 @@ wait_ready_sensors(True)
 if __name__ == "__main__":
     try:
         # Example usage: traverse a corner room while detecting for a bed
-        room_traverser.traverse_a_room(room_type=RoomTraverser.RoomType.CORNER_SINGLE)
+        room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE)
     except Exception as err:
         print(err)
     finally:
