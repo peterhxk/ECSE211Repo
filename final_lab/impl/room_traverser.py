@@ -29,7 +29,7 @@ class RoomTraverser:
     # PID constants
     Kp = 4
     Ki = 2
-    Kd = 1
+    Kd = 4
 
     # filter parameter
     ema_alpha = 0.4
