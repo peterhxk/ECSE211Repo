@@ -108,9 +108,9 @@ class ColourSensorController (EV3ColorSensor):
                 self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
 
             detected_colour = self.read_colour()
-            print(detected_colour)
             # Check if a black line is found
             if detected_colour == colour or detected_colour in colours:
+                print("target colour detected:", detected_colour)
                 consecutive_count += 1
                 consecutive_positions.append(self.motor.get_position())
                 if consecutive_count >= 5:
