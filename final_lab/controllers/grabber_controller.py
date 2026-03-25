@@ -107,6 +107,52 @@ class GrabberController:
         self._input_thread = threading.Thread(target=self._input_worker, daemon=True)
         self._input_thread.start()
 
+        self._gyro_thread = None
+        self._gyro_stop = threading.Event()
+        self._gyro_sample = None
+        self._gyro_sample_lock = threading.Lock()
+
+        self._kill_event = threading.Event()
+        self._active_gyro_detector = None
+        self._active_gyro_detector_lock = threading.Lock()
+
+        self._gyro_sample_seq = 0
+        self._gyro_sample_cond = threading.Condition(self._gyro_sample_lock)
+
+    def _gyro_worker(self):
+        dt = 1.0 / float(self.sample_hz)
+        kill_hits = 0
+
+        while not self._gyro_stop.is_set():
+            raw = self.gyro.get_dps_measure()
+            now = time.time()
+
+            if raw is None:
+                time.sleep(dt)
+                continue
+
+            dps = float(raw)
+            z = (dps - self.mu) / max(self.sigma, 1e-6)
+
+            with self._gyro_sample_cond:
+                self._gyro_sample = (now, dps, z)
+                self._gyro_sample_seq += 1
+                self._gyro_sample_cond.notify_all()
+
+            if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
+                kill_hits += 1
+                if kill_hits >= 3:
+                    self._kill_event.set()
+            else:
+                kill_hits = 0
+
+            time.sleep(dt)
+    def start_gyro_monitor(self):
+        if self._gyro_thread and self._gyro_thread.is_alive():
+            return
+        self._gyro_stop.clear()
+        self._gyro_thread = threading.Thread(target=self._gyro_worker, daemon=True)
+        self._gyro_thread.start()
     # ----------------------------
     # Setup / calibration
     # ----------------------------
@@ -628,6 +674,35 @@ class GrabberController:
 
             self._current_record = None
 
+    def _read_gyro_dps(self, last_seq=None, timeout=None):
+        """
+        Wait for a fresh gyro sample from the gyro worker.
+
+        Returns:
+            (seq, timestamp, dps, z) on success
+            None on timeout
+        """
+        with self._gyro_sample_cond:
+            if last_seq is None:
+                if self._gyro_sample is None:
+                    got = self._gyro_sample_cond.wait(timeout=timeout)
+                    if not got or self._gyro_sample is None:
+                        return None
+                ts, dps, z = self._gyro_sample
+                return self._gyro_sample_seq, ts, dps, z
+
+            end_time = None if timeout is None else (time.time() + timeout)
+
+            while self._gyro_sample_seq == last_seq:
+                remaining = None if end_time is None else (end_time - time.time())
+                if remaining is not None and remaining <= 0:
+                    return None
+                got = self._gyro_sample_cond.wait(timeout=remaining)
+                if not got and self._gyro_sample_seq == last_seq:
+                    return None
+
+            ts, dps, z = self._gyro_sample
+            return self._gyro_sample_seq, ts, dps, z
     # ----------------------------
     # Unified gyro stream:
     # detector + recorder use same samples
@@ -644,9 +719,6 @@ class GrabberController:
             stop_event=None,
     ) -> bool:
         needed = self.consecutive_needed if needed is None else int(needed)
-        sample_hz = self.sample_hz if sample_hz is None else float(sample_hz)
-        dt = 1.0 / sample_hz
-
         record_enabled = bool(detector_name) and bool(operation_name)
 
         detector_threshold = None
@@ -690,9 +762,15 @@ class GrabberController:
 
         hits = 0
         start = time.time()
+        last_seq = None
 
         try:
             while hits < needed:
+                if self.kill_switch or self._kill_event.is_set():
+                    if record_enabled:
+                        self._end_operation_recording(outcome="killed")
+                    return False
+
                 if stop_event is not None and stop_event.is_set():
                     if record_enabled:
                         self._end_operation_recording(outcome="cancelled")
@@ -704,13 +782,16 @@ class GrabberController:
                         self._end_operation_recording(outcome="timeout")
                     return False
 
-                raw = self.gyro.get_dps_measure()
-                if raw is None:
-                    time.sleep(dt)
-                    continue
+                remaining = None if timeout is None else max(0.0, timeout - elapsed)
+                sample = self._read_gyro_dps(last_seq=last_seq, timeout=remaining)
 
-                dps = float(raw)
-                z = (dps - self.mu) / max(self.sigma, 1e-6)
+                if sample is None:
+                    if record_enabled:
+                        self._end_operation_recording(outcome="timeout")
+                    return False
+
+                last_seq, ts, dps, z = sample
+                elapsed = ts - start
 
                 detector_flags = {
                     "slow_in": self._is_tilted_inwards_sample(dps, GyroTilt.SLOW_TILT),
@@ -735,8 +816,6 @@ class GrabberController:
                 else:
                     hits = 0
 
-                time.sleep(dt)
-
             if record_enabled:
                 self._end_operation_recording(outcome="success")
             return True
@@ -745,7 +824,6 @@ class GrabberController:
             if record_enabled:
                 self._end_operation_recording(outcome="error")
             raise
-
     # ----------------------------
     # Motor drop detection
     # ----------------------------
@@ -864,7 +942,7 @@ class GrabberController:
 
                 ok = self._consecutive_gyro_trigger(
                     operation_name="load_first_bloc",
-                    detector_name="gyro_inwards_fast",
+                    detector_name="gyro_outwards_fast", #TODO fix the inconsistency
                     predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT),
                     needed=1,
                     timeout=5.0,
@@ -931,25 +1009,16 @@ class GrabberController:
     # ----------------------------
 
     def monitor_kill(self):
-        while True:
-            if self._consecutive_gyro_trigger(
-                operation_name="",
-                detector_name="",
-                predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL),
-                needed=3,
-                timeout=2.0,
-                extra={
-                    "bloc_count_before": self.bloc_count,
-                    "running_dps": self.running_dps,
-                    "direction": "outwards",
-                },
-                stop_event=None,
-            ):
-                print("[INFO] KILL SWITCH ACTIVATED")
-                self.kill_switch = True
-                break
+        self._kill_event.wait()
+        print("[INFO] KILL SWITCH ACTIVATED")
+        self.kill_switch = True
+        self.cancel_loading()
+        self.cancel_unloading()
+        self.motor.set_dps(0)
+
     def loop(self):
-        kill_thread = threading.Thread(target=self.monitor_kill, daemon=True).start()
+        self.start_gyro_monitor()
+        threading.Thread(target=self.monitor_kill, daemon=True).start()
         self.motor.set_dps(-self.running_dps)
         time.sleep(1)
         self.motor.set_dps(0)
@@ -997,6 +1066,7 @@ class GrabberController:
             self.cancel_loading()
             self.cancel_unloading()
             self.motor.set_dps(0)
+            self._gyro_stop.set()
 
     def kill(self):
         raise NotImplementedError()
@@ -1033,4 +1103,5 @@ class GrabberController:
 if __name__ == "__main__":
     controller = GrabberController("D", 4, False , True)
     controller.initialize_sensors()
+
     controller.loop()
