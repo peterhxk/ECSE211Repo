@@ -22,14 +22,17 @@ class SweepLineFollower:
     def begin(self):
         self.pilot.move_forward()
     
-    def move_forward(self, max_distance, force = False):
+    def move_forward(self, max_distance, stop_on_colour = None):
         """Moves the robot forward as long as the colour sensor detects the black line.
+        The robot will stop moving forward if max_distance is reached, or if the colour stop_on_colour is detected.
         
         Args:
             max_distance (int): The distance to move forward for, in millimetres.
-            force (bool): If true, the robot will move forward for the max_distance regardless of the colour sensor readings.
+            stop_on_colour (str | None): The colour that, upon detection, will halt the motors.
         """
 
+        if stop_on_colour in ['b', 'w']:
+            print("\033[30;103m" + "WARNING: stop_on_colour is set to " + stop_on_colour + ". This may cause unexpected line following behaviour.")
 
         # Reset encoder values
         self.pilot.reset_encoders()
@@ -42,20 +45,17 @@ class SweepLineFollower:
         moving_forward = False
         starting_direction_right = True
 
-        while distance < max_distance:
+        while distance < max_distance and self.sensor.read_colour() != stop_on_colour:
             # Moving forward
             if not moving_forward:
                 self.pilot.move_forward()
                 moving_forward=True
 
-            # print(self.pilot.get_avg_encoder_value())
-            # print(self.sensor.read_colour())
-            print(self.pilot.get_avg_encoder_value())
             distance += (math.pi/180) * (self.pilot.get_avg_encoder_value() - last_encoder_value) * (self.pilot.WHEEL_DIAMETER_MM/2)
             last_encoder_value = self.pilot.get_avg_encoder_value()
 
-            print(self.sensor.read_colour())
-            if not force and self.sensor.read_colour() == "w":
+            # If the colour sensor has detected white, apply corrective feedback
+            if self.sensor.read_colour() == "w":
                 if moving_forward:
                     moving_forward = False
                     self.pilot.stop_motors()
@@ -172,59 +172,4 @@ class SweepLineFollower:
         self.sensor.motor.wait_is_stopped()
         time.sleep(0.1)
 
-    def run(self):
-        self.turn_logic("right")
-        '''
-        distance_mm = 20000
-        self.move_forward(distance_mm)
-        '''
-        return
-        while True:
-            # Sweep the colour sensor once
-            sweep_result = self.sensor.sweep(range="full")
-            print("Swept sensor", sweep_result)
-
-            if len(sweep_result) == 0:
-                # Could not find the black line. Sweep again.
-                print("Did not find black line")
-                continue 
-            
-            if len(sweep_result) == 1:
-                # We've found the black line. Figure out if we need to correct
-                print("Found black line.", sweep_result[0])
-                theta, *_ = sweep_result[0]
-
-                if -self.THETA_TOLERANCE <= theta <= self.THETA_TOLERANCE:
-                    # We are close enough to center that we can continue driving forward.
-                    print("close to center. theta: ", theta)
-
-                    self.pilot.move_forward()
-                else:
-                    # Adjust the motors to correct for the deviation
-                    print("too far off. theta: ", theta)
-
-                    adjustment = self.K_P * theta - self.K_D * (theta - self.last_theta)
-                    print(adjustment, self.pilot.base_power)
-                    self.pilot.adjust_direction(adjustment)
-
-                    print("right motor: ", self.pilot.right_motor.get_dps())
-                    print("left motor: ", self.pilot.left_motor.get_dps())
-
-                self.last_theta = theta
-
-            elif len(sweep_result) == 2 or len(sweep_result) == 3:
-                # We've reached an intersection.
-                print("found an intersection, ", len(sweep_result), " lines detected")
-
-                continue
-
-                theta, _ = sweep_result[1]
-
-                # Turn right
-                self.pilot.left_motor.set_dps(self.K_R * theta)
-
-                # @TODO: Complete logic
-                
-                # 1st idea: make the run method sleep until we turned enough (we need to turn at specifc angle and power)
-                
-                pass
+    

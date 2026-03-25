@@ -23,12 +23,12 @@ line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 wait_ready_sensors(True)
 
 try:
-    line_follower.move_forward(80)
-    line_follower.turn_logic("left")
-    # line_follower.move_forward(230-consts.dis_wheels_mm)
-    line_follower.turn_logic("right")
-    line_follower.move_forward(330-consts.dis_wheels_mm)
-
+    line_follower.pilot.move_distance(-50)
+    line_follower.pilot.right_motor.wait_is_stopped()
+    line_follower.turn_logic("right", "back")
+    line_follower.turn_logic("right", "front")
+    line_follower.move_forward(200, "o")
+    line_follower.move_backward(430)
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 
