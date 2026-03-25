@@ -53,7 +53,7 @@ class RoomTraverser:
     Returns:
     - Tuple of (bed color detected or None, distance travelled in CM)
     """
-    def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False) -> tuple[str | None, float]:
+    def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False):
         # reset motor encoders
         self.motor_controller.reset_encoders()
 
