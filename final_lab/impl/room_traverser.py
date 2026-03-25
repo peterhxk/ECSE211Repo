@@ -27,9 +27,9 @@ class RoomTraverser:
     MOTOR_POWER = 80
     
     # PID constants
-    Kp = 4
-    Ki = 2
-    Kd = 4
+    Kp = 8
+    Ki = 0
+    Kd = 6
 
     # filter parameter
     ema_alpha = 0.4
