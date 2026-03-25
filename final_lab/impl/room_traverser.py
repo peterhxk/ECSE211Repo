@@ -36,7 +36,7 @@ class RoomTraverser:
 
     def __init__(self, motor_controller: DrivingController, color_sensor_controller: ColourSensorController):
         self.motor_controller = motor_controller
-        self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR_PORT)
+        self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         self.color_sensor_controller = color_sensor_controller
         wait_ready_sensors(True)
         print("Room Traverser ready.")
