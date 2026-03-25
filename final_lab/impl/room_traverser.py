@@ -27,9 +27,9 @@ class RoomTraverser:
     MOTOR_POWER = 80
     
     # PID constants
-    Kp = 0.265
+    Kp = 2
     Ki = 0
-    Kd = 0.6
+    Kd = 2
 
     # filter parameter
     ema_alpha = 0.4
@@ -83,7 +83,7 @@ class RoomTraverser:
                 # if color detected, stop moving.
                 bed_detected = True
                 break
-                
+
             # check travelled distance
             travelled_deg = self.motor_controller.get_avg_encoder_value()
 
