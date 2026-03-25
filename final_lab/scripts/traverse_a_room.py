@@ -8,9 +8,9 @@ from data.ports_brick import Ports
 MOTOR_POWER = 80
 
 # sensor declaration
-left_motor = Motor(Ports.LEFT_MOTOR_PORT)
-right_motor = Motor(Ports.RIGHT_MOTOR_PORT)
-color_motor = Motor(Ports.COLOR_SENSOR_MOTOR_PORT)
+left_motor = Motor(Ports.LEFT_MOTOR)
+right_motor = Motor(Ports.RIGHT_MOTOR)
+color_motor = Motor(Ports.COLOR_MOTOR)
 
 driving_controller = DrivingController(left_motor, right_motor, MOTOR_POWER)
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR, color_motor)
