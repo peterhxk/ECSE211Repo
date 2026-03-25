@@ -1,4 +1,3 @@
-from lab_3.test.test_record_angles import MOTOR_POWER
 from utils.brick import reset_brick, wait_ready_sensors, EV3UltrasonicSensor
 from controllers.driving_controller import DrivingController
 from controllers.color_sensor_controller import ColourSensorController
