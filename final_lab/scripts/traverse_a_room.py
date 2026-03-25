@@ -2,7 +2,7 @@ from time import time
 from utils.brick import wait_ready_sensors, reset_brick, Motor
 from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
-from final_lab.impl.room_traverser import RoomTraverser
+from impl.room_traverser import RoomTraverser
 from data.ports_brick import Ports
 
 MOTOR_POWER = 80
