@@ -119,6 +119,11 @@ class GrabberController:
         self._gyro_sample_seq = 0
         self._gyro_sample_cond = threading.Condition(self._gyro_sample_lock)
 
+    def _is_fast_kill_sample(self, dps: float) -> bool:
+        return (
+                self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT_KILL)
+                or self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL)
+        )
     def _gyro_worker(self):
         dt = 1.0 / float(self.sample_hz)
         kill_hits = 0
@@ -135,6 +140,9 @@ class GrabberController:
                     continue
 
                 dps = float(raw)
+                if self._is_fast_kill_sample(dps):
+                    self._kill_event.set()  
+
                 z = (dps - self.mu) / max(self.sigma, 1e-6)
 
                 with self._gyro_sample_cond:
