@@ -135,10 +135,10 @@ class RoomTraverser:
             # Positive error = too close to left wall → steer RIGHT (away from wall).
             # Left wheel faster = steer right, so left gets +adj, right gets -adj.
             if straight_distance >= 0:
-                left_dps  = self.base_power + adjustment
+                left_dps  = self.base_power + adjustment * 1.1
                 right_dps = self.base_power - adjustment * 1.1
             else:
-                left_dps  = -self.base_power + adjustment
+                left_dps  = -self.base_power + adjustment * 1.1
                 right_dps = -self.base_power - adjustment * 1.1
 
             self.left_motor.set_dps(left_dps)
