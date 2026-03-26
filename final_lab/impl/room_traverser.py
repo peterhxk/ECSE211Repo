@@ -28,12 +28,15 @@ class RoomTraverser:
     MOTOR_POWER = 100
     
     # PID constants
-    Kp = 10
+    Kp = 8
     Ki = 0
     Kd = 0
 
-    # filter parameter
-    ema_alpha = 0.4
+    # Distance EMA — slightly lower = less twitchy error from ultrasonic noise
+    ema_alpha = 0.28
+
+    # Low-pass the *steering* command so motor DPS does not jump every loop
+    adjustment_smooth_alpha = 0.22
 
     def __init__(self, motor_controller: DrivingController, color_sensor_controller: ColourSensorController):
         self.motor_controller = motor_controller
@@ -65,10 +68,11 @@ class RoomTraverser:
         # filter parameters
         ema_estimate = None
 
-        # PID stuff for wall following
+        # PID state for wall following
         integral = 0.0
         prev_error = 0.0
         prev_time = time.time()
+        smoothed_adjustment = None
 
         bed_detected = False
 
@@ -111,16 +115,26 @@ class RoomTraverser:
 
             distance_cm = ema_estimate
 
-            # PID control part
+            # P (optional I/D later)
             error = room_type_to_wall_distance_map[room_type] - distance_cm
             integral = max(-50.0, min(50.0, integral + error * dt))
             derivative = (error - prev_error) / dt
-            # if the error is too large, skip the next iteration
-            # if error > prev_error * 2:
-            #     continue
             prev_error = error
 
-            adjustment = int(self.Kp * error + self.Ki * integral + self.Kd * derivative)
+            raw_adjustment = self.Kp * error + self.Ki * integral + self.Kd * derivative
+
+            # Keep differential steering bounded so one wheel does not reverse / stall abruptly
+            base = abs(motor_base_power)
+            max_steer = max(12, min(int(base * 0.42), base - 15))
+            raw_adjustment = max(-max_steer, min(max_steer, raw_adjustment))
+
+            a = self.adjustment_smooth_alpha
+            if smoothed_adjustment is None:
+                smoothed_adjustment = raw_adjustment
+            else:
+                smoothed_adjustment = a * raw_adjustment + (1.0 - a) * smoothed_adjustment
+
+            adjustment = int(round(smoothed_adjustment))
 
             if straight_distance < 0:
                 const = -1
