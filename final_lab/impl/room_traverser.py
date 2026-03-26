@@ -26,11 +26,8 @@ class RoomTraverser:
     
     # PID constants
     Kp = 8
-    Ki = 0
-    Kd = 0
-
-    # Distance EMA — slightly lower = less twitchy error from ultrasonic noise
-    ema_alpha = 0.28
+    Ki = 0.0
+    Kd = 1.2
 
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.22
@@ -135,15 +132,15 @@ class RoomTraverser:
             # Positive error = too close to left wall → steer RIGHT (away from wall).
             # Left wheel faster = steer right, so left gets +adj, right gets -adj.
             if straight_distance >= 0:
-                left_dps  = self.base_power + adjustment * 3
-                right_dps = self.base_power - adjustment * 3
+                left_dps  = self.base_power + adjustment * 5
+                right_dps = self.base_power - adjustment * 5
             else:
-                left_dps  = -self.base_power + adjustment * 3
-                right_dps = -self.base_power - adjustment * 3
+                left_dps  = -self.base_power + adjustment * 5
+                right_dps = -self.base_power - adjustment * 5
 
             self.left_motor.set_dps(left_dps)
             self.right_motor.set_dps(right_dps)
-            time.sleep(0.2)
+            time.sleep(0.08)
             self.left_motor.set_dps(self.base_power)
             self.right_motor.set_dps(self.base_power)
 
