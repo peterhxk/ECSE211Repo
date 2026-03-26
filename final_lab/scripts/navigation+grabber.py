@@ -18,7 +18,7 @@ right_motor = Motor(Ports.RIGHT_MOTOR.value)
 color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 
-driving_controller = DrivingController(left_motor, right_motor, 150)
+driving_controller = DrivingController(left_motor, right_motor, 100)
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
 grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value,False, True)
 #touch_sensor = TouchSensor(1)
@@ -38,6 +38,7 @@ try:
     color_sensor_controller.set_arm_at_angle(85)
     driving_controller.set_speed(4)
     driving_controller.move_distance(100) # move 100 mm before the first block
+    time.sleep(100)
     grabber_controller.start_loading()
     print("moved past start loading")
     #threading.Thread(target=slow_decrease).start()
