@@ -191,7 +191,7 @@ class RoomTraverser:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
             
             print("Going back.")
-            self.run(room_type, -1 * distance_travelled, detect_bed=False)
+            self.run(room_type, -1.5 * distance_travelled, detect_bed=False)
 
         except KeyboardInterrupt:
             print("Interrupted via keyboard...")
