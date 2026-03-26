@@ -14,7 +14,7 @@ class RoomType(Enum):
     CORNER_DOUBLE_SECOND_HALF = 4
 
 room_type_to_wall_distance_map = {
-    RoomType.CORNER_SINGLE: 18,
+    RoomType.CORNER_SINGLE: 4,
     RoomType.WALL_SINGLE: 50,
     RoomType.CORNER_DOUBLE_FIRST_HALF: 30,
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4
@@ -28,8 +28,8 @@ class RoomTraverser:
     
     # PID constants
     Kp = 4.5
-    Ki = 0.15
-    Kd = 6
+    Ki = 0
+    Kd = 0
 
     # filter parameter
     ema_alpha = 0.4
@@ -113,6 +113,9 @@ class RoomTraverser:
             error = room_type_to_wall_distance_map[room_type] - distance_cm
             integral = max(-50.0, min(50.0, integral + error * dt))
             derivative = (error - prev_error) / dt
+            # if the error is too large, skip the next iteration
+            if error > prev_error * 2:
+                continue
             prev_error = error
 
             adjustment = int(self.Kp * error + self.Ki * integral + self.Kd * derivative)
