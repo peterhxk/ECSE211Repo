@@ -122,7 +122,7 @@ class ColourSensorController (EV3ColorSensor):
                         results = self.colours_found
                         self.colours_found = []
                         self.motor.set_dps(0)
-                        self.motor.set_position(init_position)
+                        self.motor.set_position(self.MAX_SWEEP_ANGLE[range][SweepDirection.LEFT])
                         self.motor.wait_is_moving()
                         return results
             else:
