@@ -116,8 +116,8 @@ class RoomTraverser:
             integral = max(-50.0, min(50.0, integral + error * dt))
             derivative = (error - prev_error) / dt
             # if the error is too large, skip the next iteration
-            if error > prev_error * 2:
-                continue
+            # if error > prev_error * 2:
+            #     continue
             prev_error = error
 
             adjustment = int(self.Kp * error + self.Ki * integral + self.Kd * derivative)
@@ -126,6 +126,7 @@ class RoomTraverser:
                 const = -1
             else:
                 const = 1
+
             print("Motor powers: ", const * (self.motor_controller.base_power + adjustment), const * (self.motor_controller.base_power - adjustment))
             self.motor_controller.set_left_motor(const * (self.motor_controller.base_power + adjustment))
             self.motor_controller.set_right_motor(const * (self.motor_controller.base_power - adjustment))
