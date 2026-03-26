@@ -23,7 +23,7 @@ wait_ready_sensors(True)
 
 try:
     while True:
-        print(color_sensor_controller.read_colour())
+        print(color_sensor_controller.ingest_colours("green"))
         time.sleep(0.1)
 
 except KeyboardInterrupt:
