@@ -30,7 +30,11 @@ class DrivingController:
         self.base_power = power
 
     def convert_sensor_angle_to_robot_angle(self, angle: float):
-        pass
+        x = 180-abs(angle)
+        c = math.sqrt(consts.l_rod_mm**2 + consts.l_axle_rod_mm**2 + 2 * consts.l_rod_mm * consts.l_axle_rod_mm * \
+                            abs(math.cos(math.radians(x))))
+        phi = math.degrees(math.asin(consts.l_rod_mm*math.sin(math.radians(x))/c))
+        return phi
 
     def move_forward(self):
         """

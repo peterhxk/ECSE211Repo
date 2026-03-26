@@ -1,3 +1,13 @@
+"""
+Testing file, to test implemented color_sensor_controller, driving_controller 
+and sweep_line_follower functions.
+
+TO-DO:
+- Set angle (color sensor controller) DOES NOT work (???)
+- Sometimes the color sensor's arm moves at max speed? 
+
+"""
+
 import traceback
 from utils.brick import wait_ready_sensors, reset_brick, Motor
 from controllers.color_sensor_controller import ColourSensorController
