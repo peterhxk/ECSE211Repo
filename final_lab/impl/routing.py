@@ -35,5 +35,3 @@ class Routing(SweepLineFollower):
         self.pilot.move_distance(50)
         self.turn_logic("right", "front")
         self.turn_logic("right", "front", consts.dist_blocks_mm)
-
-    def 
