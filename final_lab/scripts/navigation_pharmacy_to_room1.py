@@ -1,34 +1,28 @@
 import sys
-sys.path.append("../")
+sys.path.append(".")
 
 import traceback
 from utils.brick import wait_ready_sensors, reset_brick, Motor
 from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
-from impl.sweep_line_follower import SweepLineFollower
-import time
-import data.measurements as consts
+from impl.routing import Routing
+from data.ports_brick import Ports
 
 # Sensor declaration
 
-left_motor = Motor("C")
-right_motor = Motor("B")
-color_sensor_motor = Motor("A")
+left_motor = Motor(Ports.LEFT_MOTOR.value)
+right_motor = Motor(Ports.RIGHT_MOTOR.value)
+color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
-color_sensor_controller = ColourSensorController(2, color_sensor_motor)
+color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
 
-line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
+routing = Routing(color_sensor_controller, driving_controller)
 
 wait_ready_sensors(True)
 
 try:
-    line_follower.move_forward(80)
-    line_follower.turn_logic("left")
-    # line_follower.move_forward(230-consts.dis_wheels_mm)
-    line_follower.turn_logic("right")
-    line_follower.move_forward(330-consts.dis_wheels_mm)
-
+    routing.room1_to_pharmacy()
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 

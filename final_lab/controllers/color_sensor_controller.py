@@ -75,7 +75,7 @@ class ColourSensorController (EV3ColorSensor):
         pass
 
 
-    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True) -> List[Tuple[int, str, int]]:
+    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True, colours=[]) -> List[Tuple[int, str, int]]:
         """Sweeps the colour sensor arm and checks the colour.
 
         Args:
@@ -111,8 +111,9 @@ class ColourSensorController (EV3ColorSensor):
                 # Reverse the direction of the motor
                 self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
 
+            detected_colour = self.read_colour()
             # Check if a black line is found
-            if self.read_colour() == colour:
+            if detected_colour == colour or detected_colour in colours:
                 consecutive_count += 1
                 consecutive_positions.append(self.motor.get_position())
                 if consecutive_count >= 5:
@@ -181,11 +182,28 @@ class ColourSensorController (EV3ColorSensor):
                 shortest_d = d
                 closest_colour = colour
         return closest_colour
+    
+    def read_colour_continuous(self, time_interval=0.1, amount=1000, rgb=False):
+        """
+        Reads the color every time interval, until amount. 
+        rbg flag returns rbg value instead of color.
+        """
+        if (rgb == False):
+            for _ in range(amount):
+                print(self.read_colour())
+                time.sleep(time_interval)
+        else:
+            for _ in range(amount):
+                print(self.get_rgb())
+                time.sleep(time_interval)
+
+
 
     def read_colour_pivot(self):
         """
         This function is no longer useful due to updated hardware. 
-        Read colour, but intended to be used when sensor is tilted at 81 degrees (angle to pivot on intersection).
+
+        Reads colour, but intended to be used when sensor is tilted at 81 degrees (angle to pivot on intersection).
         Uses pivot_colours.json instead
         """
         cur_rgb = self.get_rgb()

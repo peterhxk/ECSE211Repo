@@ -30,7 +30,15 @@ class DrivingController:
         self.base_power = power
 
     def convert_sensor_angle_to_robot_angle(self, angle: float):
-        pass
+        """
+        Given an angle read by colour sensor's arm. Return value that the robot needs
+        to turn in place.
+        """
+        x = 180-abs(angle)
+        c = math.sqrt(consts.l_rod_mm**2 + consts.l_axle_rod_mm**2 + 2 * consts.l_rod_mm * consts.l_axle_rod_mm * \
+                            abs(math.cos(math.radians(x))))
+        phi = math.degrees(math.asin(consts.l_rod_mm*math.sin(math.radians(x))/c))
+        return phi
 
     def move_forward(self):
         """
@@ -45,15 +53,9 @@ class DrivingController:
         """
         Sets the left and right motors to move the robot backward at a rate of `self.base_power`.
         """
+
         self.right_motor.set_dps(-self.base_power)
         self.left_motor.set_dps(-self.base_power)
-
-    def move_forward_by_power(self, power):
-        """
-        Sets the left and right motors to move the robot forward at a rate of `power`.
-        """
-        self.right_motor.set_dps(power)
-        self.left_motor.set_dps(power)
 
     def move_distance(self, dist: float):
         """
