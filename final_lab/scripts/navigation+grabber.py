@@ -61,40 +61,23 @@ try:
     if grabber_controller.isBlockCaught():
         print("[DEBUG] Block Caught ! Stopping drive")
     print("WAITING")
-    time.sleep(100)
     grabber_controller.clearBlockCaught()
-    start = time.time()
-    watchdog = time.time()
-    while grabber_controller.is_loading():
-        if time.time() - start > 1:
-            print("[DEBUG] Status of loader is {}".format(grabber_controller.get_loading_status()))
-            start = time.time()
-        if grabber_controller.get_loading_status() == "FAILED":
-            raise RuntimeError("Failure to catch block. Should we back up the robot and start over ?")
-#        if time.time() - watchdog > 0.6:
-#            grabber_controller.increase_on_velocity_drop()
-#            watchdog = time.time()
-    print("[DEBUG] Loading first block complete")
-
+    time.sleep(4)
     #grabber_controller._end_operation_recording()
     #grabber_controller._end_operation_recording()
     print("[DEBUG] Loading first block complete. Waiting 5s before loading second block")
     if grabber_controller.bloc_count != 1:
         raise RuntimeError("Failure to catch block.First block not registered")
-    time.sleep(5)
     # stop for now
-
-    line_follower.move_forward(20,force=True)
-    init_power = 15
-    grabber_controller.load_bloc()
-    driving_controller.move_forward_by_power(init_power)
+    driving_controller.move_distance(100)
     #threading.Thread(target=slow_decrease).start()
     starter = time.time()
-    while not grabber_controller.isBlockCaught() and not grabber_controller.get_loading_status() == "FAILED":
+    left_motor.wait_is_stopped(0.1)
+    driving_controller.stop_motors()
+    while not grabber_controller.isBlockCaught() and not grabber_controller.loading_finished():
         if time.time() - starter > 1: 
           print("waiting for block to get caught")
           starter = time.time()
-    driving_controller.stop_motors()
     grabber_controller.clearBlockCaught()
     while grabber_controller.is_loading():
         print("[DEBUG] Status of loader is {}".format(grabber_controller.get_loading_status()))
@@ -106,8 +89,8 @@ try:
 
     time.sleep(5)
     # stop for now
-    init_power = 15
-    line_follower.move_forward(20,force=True)
+    driving_controller.move_distance(20)
+    left_motor.wait_is_stopped(0.1)
     driving_controller.stop_motors()
     grabber_controller.start_unloading()
     starter = time.time()
@@ -122,9 +105,8 @@ try:
     print("Successfully unloaded block!")
 
     time.sleep(5)
-    init_power = 15
-    line_follower.move_forward(20,force=True)
-    driving_controller.stop_motors()
+    driving_controller.move_distance(20)
+    left_motor.wait_is_stopped(0.1)
     grabber_controller.start_unloading()
     starter = time.time()
     while grabber_controller.get_unloading_status() == "UNLOADING":
