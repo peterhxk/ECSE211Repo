@@ -174,7 +174,8 @@ class RoomTraverser:
             
             if bed_found:
                 print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
-                print("DROPPING BLOCK!!!")
+                if bed_color_found == "green":
+                    print("DROPPING BLOCK!!!")
                 time.sleep(2)
                 # self.grabber_controller.start_unloading()
                 # while not self.grabber_controller.unloading_finished():
