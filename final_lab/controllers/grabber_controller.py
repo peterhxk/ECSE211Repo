@@ -93,6 +93,8 @@ class GrabberController:
         self._unload_result = None
         self.kill_switch = False
 
+        self.start_gyro_monitor() # THIS IS KEY
+
         if self.running_dps > 400:
             print("Warning: running power too high. Pick a lower value")
 
