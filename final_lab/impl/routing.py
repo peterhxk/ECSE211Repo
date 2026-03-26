@@ -12,7 +12,7 @@ class Routing(SweepLineFollower):
         self.move_forward(200, "o")
     
     def room1_to_pharmacy(self):
-        self.move_backward(430)
+        self.pilot.move_backward(430)
     
     def room1_to_room2(self):
         self.turn_logic("right", "back")
