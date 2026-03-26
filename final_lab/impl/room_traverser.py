@@ -23,7 +23,7 @@ MAX_UPDATE_COUNT = 100
 class RoomTraverser:
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_BASE_MM = 159
-    MOTOR_POWER = 120
+    MOTOR_POWER = 160
     
     # PID constants
     Kp = 8
