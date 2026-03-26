@@ -1,463 +1,135 @@
 #!/usr/bin/env python3
+import time
 import math
 import statistics
-import threading
 from enum import Enum
 from collections import deque
+
 import sys
 from tqdm import tqdm
 sys.path.append("../utils")
-from brick import EV3GyroSensor, Motor
-import os
-import glob
-import time
-import pickle
-from datetime import datetime
-from collections import deque
+from brick import EV3GyroSensor, TouchSensor, Motor
 
 
 class BlocLocation(Enum):
-    BACK_STORAGE = 1      # in the back storage area
-    UNDER_GYRO = 2        # under the gyro arm
-    AT_GATE = 3           # closest to the end of the conveyor belts
-    UNLOADED = 4          # not yet loaded, or already unloaded
+    BACK_STORAGE = 1
+    UNDER_GYRO = 2
+    UNLOADED = 3
 
 
 class GyroTilt(Enum):
     SLOW_TILT = 1
     FAST_TILT = 2
-    FAST_TILT_KILL = 3
 
 
 class GrabberController:
     """
     Responsibilities:
-      1) Run the conveyor belt inwards / outwards
-      2) Detect events with the gyroscope using calibrated mu/sigma
+      1) Run the conveyor belt inwards / outwards (via motor power)
+      2) Detect events with the gyroscope (DPS thresholds based on calibrated mu/sigma)
       3) Detect second-bloc loading by motor velocity drop
-      4) Update internal state
-      5) Record gyro traces for empirical calibration
+      4) Update internal state (how many blocs are loaded and where they are)
+      5) Load / unload blocs
     """
 
-    def __init__(self, motor_port="A", gyro_port=3, calibration=True, debug=True):
+    def __init__(self):
         # Internal state
         self.bloc_count = 0
         self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
-        self.calibration = calibration
-        self.debug = debug
-
-        # Thread-safe state / async-like control
-        self.state_lock = threading.Lock()
-
-        self._block_caught_event = threading.Event()
-
-        self._load_thread = None
-        self._load_done_event = threading.Event()
-        self._load_cancel_event = threading.Event()
-        self._load_result = None
 
         # Hardware
-        self.gyro = EV3GyroSensor(port=gyro_port, mode=EV3GyroSensor.Mode.DPS)
-        self.motor = Motor(motor_port)
+        self.gyro = EV3GyroSensor(port=1, mode=EV3GyroSensor.Mode.DPS)
+        self.loading_button = TouchSensor(port=3)
+        self.unloading_button = TouchSensor(port=4)
+        self.motor = Motor("A")
 
-        # Idle gyro calibration
+        # Gaussian parameters for idle gyro DPS
         self.mu = 0.0
         self.sigma = 1.0
 
-        # Motor inward speed calibration
+        # Gaussian parameters for inward motor speed at power=45
         self.motor_mu_in = 0.0
         self.motor_sigma_in = 1.0
 
-        # Gyro detection knobs
+        # Detection / timing knobs
         self.sample_hz = 50
-        self.consecutive_needed = 15
-        self.running_dps = 300
+        self.consecutive_needed = 15  # gyro detection default
+        self.running_power = 60
 
         # Motor-drop detection knobs
-        self.motor_calibration_dps = 300
+        self.motor_calibration_power = 45
         self.motor_sample_sleep = 0.02
         self.motor_eject_time = 2.0
-
         self.motor_dry_run_time = 5.0
-        self.motor_drop_k = 0.5
-        self.motor_drop_consecutive_needed = 1
+        self.motor_drop_k = 3.0
+        self.motor_drop_consecutive_needed = 5
         self.use_motor_moving_average = True
         self.motor_moving_avg_window = 5
-        self.motor_drop_warm_up_delay = 0.8
 
-        self.gyro_calibration_file = "" # used to keep track of what calibration was used for the gyro
-
-        self._unload_thread = None
-        self._unload_done_event = threading.Event()
-        self._unload_cancel_event = threading.Event()
-        self._unload_result = None
-        self.kill_switch = False
-
-        if self.running_dps > 400:
+        if self.running_power > 70:
             print("Warning: running power too high. Pick a lower value")
 
-        # Empirical gyro trace recording
-        self.recordings_dir = "gyro_operation_recordings"
-        os.makedirs(self.recordings_dir, exist_ok=True)
-
-        self._current_record = None
-        self._recording_lock = threading.Lock()
-
-        self._command_queue = deque()
-        self._input_thread = threading.Thread(target=self._input_worker, daemon=True)
-        self._input_thread.start()
-
-        self._gyro_thread = None
-        self._gyro_stop = threading.Event()
-        self._gyro_sample = None
-        self._gyro_sample_lock = threading.Lock()
-
-        self._kill_event = threading.Event()
-        self._active_gyro_detector = None
-        self._active_gyro_detector_lock = threading.Lock()
-
-        self._gyro_sample_seq = 0
-        self._gyro_sample_cond = threading.Condition(self._gyro_sample_lock)
-
-    def _gyro_worker(self):
-        dt = 1.0 / float(self.sample_hz)
-        kill_hits = 0
-
-        while not self._gyro_stop.is_set():
-            raw = self.gyro.get_dps_measure()
-            now = time.time()
-
-            if raw is None:
-                time.sleep(dt)
-                continue
-
-            dps = float(raw)
-            z = (dps - self.mu) / max(self.sigma, 1e-6)
-
-            with self._gyro_sample_cond:
-                self._gyro_sample = (now, dps, z)
-                self._gyro_sample_seq += 1
-                self._gyro_sample_cond.notify_all()
-
-            if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
-                kill_hits += 1
-                if kill_hits >= 3:
-                    self._kill_event.set()
-            else:
-                kill_hits = 0
-
-            time.sleep(dt)
-    def start_gyro_monitor(self):
-        if self._gyro_thread and self._gyro_thread.is_alive():
-            return
-        self._gyro_stop.clear()
-        self._gyro_thread = threading.Thread(target=self._gyro_worker, daemon=True)
-        self._gyro_thread.start()
     # ----------------------------
     # Setup / calibration
     # ----------------------------
-    def _load_bloc_worker(self):
-        try:
-            self._load_result = self.load_bloc(stop_event=self._load_cancel_event)
-        finally:
-            self._load_done_event.set()
-
-    def start_loading(self) -> bool:
-        """
-        Start load_bloc() in a background thread and return immediately.
-
-        Returns False if a loading operation is already in progress, or if
-        an unloading operation is currently running. True otherwise.
-        """
-        if self._load_thread is not None and self._load_thread.is_alive():
-            print("[INFO] Loading already in progress.")
-            return False
-
-        if self._unload_thread is not None and self._unload_thread.is_alive():
-            print("[INFO] Cannot start loading while unloading is in progress.")
-            return False
-
-        self._load_done_event.clear()
-        self._load_cancel_event.clear()
-        self._block_caught_event.clear()
-        self._load_result = None
-
-        self._load_thread = threading.Thread(target=self._load_bloc_worker, daemon=True)
-        self._load_thread.start()
-        return True
-
-    def is_loading(self) -> bool:
-        return self._load_thread is not None and self._load_thread.is_alive()
-
-    def loading_finished(self) -> bool:
-        return self._load_done_event.is_set()
-
-    def get_loading_result(self):
-        return self._load_result
-
-    def cancel_loading(self):
-        self._load_cancel_event.set()
-
-    def unload_bloc(self, stop_event=None) -> bool:
-        """
-        Unload logic:
-
-        If 2 blocs loaded:
-          - Run outward until slow outward gyro tilt is detected
-
-        If 1 bloc remaining:
-          - Use motor velocity drop detection
-        """
-        if self.bloc_count <= 0:
-            print("No blocs to unload.")
-            return False
-
-        try:
-            if stop_event is not None and stop_event.is_set():
-                print("[INFO] Unloading cancelled before start.")
-                return False
-
-            if self.bloc_count == 2:
-                self.motor.set_dps(-1.3 * self.running_dps)
-                print("[INFO] Unloading first bloc")
-                unloaded = self._consecutive_gyro_trigger(
-                    operation_name="unload_from_2_to_1",
-                    detector_name="gyro_inwards_slow",
-                    predicate_from_dps=lambda dps: self._is_tilted_inwards_sample(dps, GyroTilt.SLOW_TILT),
-                    needed=1,
-                    timeout=5.0,
-                    extra={
-                        "bloc_count_before": self.bloc_count,
-                        "running_dps": self.running_dps,
-                        "direction": "outward",
-                    },
-                    stop_event=stop_event,
-                )
-
-                self.motor.set_dps(0)
-
-                if not unloaded:
-                    print("Timeout or cancellation unloading (no outward SLOW tilt detected).")
-                    return False
-
-                if stop_event is not None and stop_event.is_set():
-                    print("[INFO] Unloading cancelled after detection.")
-                    return False
-
-                with self.state_lock:
-                    self.bloc_positions[0] = BlocLocation.AT_GATE
-                    self.bloc_positions[1] = BlocLocation.UNLOADED
-                    self.bloc_count = max(0, self.bloc_count - 1)
-
-                print("Unloaded one bloc (2->1).")
-                return True
-
-            # only one bloc left
-            self.motor.set_dps(-self.running_dps)
-            print("Unloading last bloc: using motor velocity drop detection...")
-
-            ok = self._is_motor_drop_detected(
-                timeout=5.0,
-                warmup_delay=0.9, # add some delay
-                stop_event=stop_event,
-            )
-
-            if not ok:
-                print("Timed out or cancelled waiting for motor velocity drop while unloading last bloc.")
-                return False
-
-            if stop_event is not None and stop_event.is_set():
-                print("[INFO] Unloading cancelled after drop detection.")
-                return False
-
-            self.motor.set_dps(-self.running_dps)
-            time.sleep(0.1)
-            self.motor.set_dps(0)
-
-            with self.state_lock:
-                self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
-                self.bloc_count = 0
-
-            print("Unloaded last bloc (1->0).")
-            return True
-
-        finally:
-            self.motor.set_dps(0)
-
-    def _unload_bloc_worker(self):
-        try:
-            self._unload_result = self.unload_bloc(stop_event=self._unload_cancel_event)
-        finally:
-            self._unload_done_event.set()
-
-    def start_unloading(self) -> bool:
-        """
-        Start unload_bloc() in a background thread and return immediately.
-
-        Returns False if an unloading operation is already in progress, or if
-        a loading operation is currently running. True otherwise.
-        """
-        if self._unload_thread is not None and self._unload_thread.is_alive():
-            print("[INFO] Unloading already in progress.")
-            return False
-
-        if self._load_thread is not None and self._load_thread.is_alive():
-            print("[INFO] Cannot start unloading while loading is in progress.")
-            return False
-
-        self._unload_done_event.clear()
-        self._unload_cancel_event.clear()
-        self._unload_result = None
-
-        self._unload_thread = threading.Thread(target=self._unload_bloc_worker, daemon=True)
-        self._unload_thread.start()
-        return True
-
-    def is_unloading(self) -> bool:
-        return self._unload_thread is not None and self._unload_thread.is_alive()
-
-    def unloading_finished(self) -> bool:
-        return self._unload_done_event.is_set()
-
-    def get_unloading_result(self):
-        return self._unload_result
-
-    def cancel_unloading(self):
-        self._unload_cancel_event.set()
-
-    def get_unloading_status(self) -> str:
-        if self._unload_thread is not None and self._unload_thread.is_alive():
-            return "UNLOADING"
-
-        if self._unload_done_event.is_set():
-            if self._unload_result is True:
-                return "SUCCESS"
-            return "FAILED"
-
-        return "IDLE"
-
     def initialize_sensors(self):
         print("[Calibration] Initializing sensors... Don't move the Gyro sensor")
         self.gyro.wait_ready()
+        self.loading_button.wait_ready()
+        self.unloading_button.wait_ready()
+
         self.gyro.reset_measure()
-        self.motor.set_dps(0)
+        self.motor.set_power(0)
         print("Reset measures; motor stopped.")
 
-        self.calibrate_motor_drop_detection(calibration=self.calibration)
-        if self.calibration:
-            print("Calibrated motor inward speed-drop mu and sigma.")
-        else:
-            print("Skipped motor calibration")
+        self.calibrate_gyro_noise(seconds=15.0, sample_hz=self.sample_hz, warmup=0.5)
+        print("Calibrated gyro mu and sigma.")
 
-        self.calibrate_gyro_noise(
-            seconds=15.0,
-            sample_hz=self.sample_hz,
-            warmup=0.5,
-            calibration=self.calibration,
-        )
-        if self.calibration:
-            print("Calibrated gyroscope")
-        else:
-            print("Skipped gyro calibration")
+        self.calibrate_motor_drop_detection()
+        print("Calibrated motor inward speed-drop mu and sigma.")
 
-    def calibrate_gyro_noise(self, seconds=10.0, sample_hz=50, warmup=0.5, calibration=True):
+    def calibrate_gyro_noise(self, seconds=10.0, sample_hz=50, warmup=0.5):
         """
-        If calibration=True:
-            - Collect gyro samples
-            - Compute mu/sigma
-            - Save to gyro_calibrations/*.pkl
-
-        If calibration=False:
-            - Load most recent calibration
+        Estimate mu and sigma for idle gyro DPS.
         """
-        calibration_dir = getattr(self, "gyro_calibration_dir", "gyro_calibrations")
-        os.makedirs(calibration_dir, exist_ok=True)
+        print(f"[Calibration] Calibrating gyro noise... Don't move the sensor during this period ( {seconds} seconds)")
+        dt = 1.0 / float(sample_hz)
 
-        if calibration:
-            self.motor.set_dps(self.motor_calibration_dps)
-            print(f"[Gyro calibration] Calibrating... Don't move sensor ({seconds}s)")
-            dt = 1.0 / float(sample_hz)
+        t0 = time.time()
+        while time.time() - t0 < warmup:
+            _ = self.gyro.get_dps_measure()
+            time.sleep(dt)
 
-            t0 = time.time()
-            while time.time() - t0 < warmup:
-                _ = self.gyro.get_dps_measure()
-                time.sleep(dt)
+        samples = []
+        t1 = time.time()
 
-            samples = []
-            n_samples = int(seconds * sample_hz)
+        n_samples = int(seconds * sample_hz)
 
-            for _ in tqdm(range(n_samples), desc="[Gyro calibration]", unit="sample"):
-                v = self.gyro.get_dps_measure()
-                if v is not None:
-                    samples.append(float(v))
-                time.sleep(dt)
+        for _ in tqdm(range(n_samples), desc="[Calibration]", unit="sample"):
+            v = self.gyro.get_dps_measure()
+            if v is not None:
+                samples.append(float(v))
+            time.sleep(dt)
 
-            if len(samples) < 10:
-                raise RuntimeError(f"Not enough gyro samples collected: {len(samples)}")
+        if len(samples) < 10:
+            raise RuntimeError(f"Not enough gyro samples collected: {len(samples)}")
 
-            mu = sum(samples) / len(samples)
-            var = sum((x - mu) ** 2 for x in samples) / (len(samples) - 1)
-            sigma = math.sqrt(var)
-            sigma = max(sigma, 1e-6)
+        mu = sum(samples) / len(samples)
+        var = sum((x - mu) ** 2 for x in samples) / (len(samples) - 1)
+        sigma = math.sqrt(var)
+        sigma = max(sigma, 1e-6)
 
-            self.mu = mu
-            self.sigma = sigma
+        self.mu = mu
+        self.sigma = sigma
+        print(f"[Gyro calibration] n={len(samples)} mu={mu:.3f} dps, sigma={sigma:.3f} dps")
+        return mu, sigma
 
-            calibration_data = {
-                "date": datetime.now().isoformat(),
-                "mu": self.mu,
-                "sigma": self.sigma,
-                "seconds": seconds,
-                "sample_hz": sample_hz,
-                "samples": samples,  # <-- added samples
-            }
-
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            calibration_file = os.path.join(
-                calibration_dir, f"gyro_calibration_{timestamp}.pkl"
-            )
-            self.gyro_calibration_file = f"gyro_calibration_{timestamp}.pkl"
-
-            with open(calibration_file, "wb") as f:
-                pickle.dump(calibration_data, f)
-
-            if self.debug:
-                print(f"[Gyro calibration] Saved to {calibration_file}")
-
-            self.motor.set_dps(0)
-
-        else:
-            calibration_files = sorted(
-                glob.glob(os.path.join(calibration_dir, "gyro_calibration_*.pkl"))
-            )
-
-            if not calibration_files:
-                raise FileNotFoundError(
-                    f"No gyro calibration file found in '{calibration_dir}'."
-                )
-
-            latest_file = calibration_files[-1]
-            self.gyro_calibration_file = latest_file
-
-            with open(latest_file, "rb") as f:
-                calibration_data = pickle.load(f)
-
-            self.mu = calibration_data["mu"]
-            self.sigma = max(calibration_data["sigma"], 1e-6)
-
-            if self.debug:
-                print(f"[Gyro calibration] Loaded latest calibration from {latest_file}")
-                print(f"[Gyro calibration] Calibration date: {calibration_data['date']}")
-
-        print(f"[Gyro calibration] mu={self.mu:.3f}, sigma={self.sigma:.3f}")
-        return self.mu, self.sigma
-
-    def _sample_motor_speeds(self, dps, duration, sleep_time):
+    def _sample_motor_speeds(self, power, duration, sleep_time):
         """
-        Run motor at constant dps for duration seconds and collect raw signed speed samples.
+        Run motor at constant power for `duration` seconds and collect raw signed speed samples.
         """
         samples = []
-        self.motor.set_dps(dps)
+        self.motor.set_power(power)
         start = time.time()
 
         try:
@@ -467,398 +139,123 @@ class GrabberController:
                     samples.append(float(speed))
                 time.sleep(sleep_time)
         finally:
-            self.motor.set_dps(0)
+            self.motor.set_power(0)
 
         return samples
 
-    def calibrate_motor_drop_detection(self, calibration=True):
+    def calibrate_motor_drop_detection(self):
         """
-        If calibration=True:
-            1) Eject outward
-            2) Dry run both ways at power=45
-            3) Keep inward mu/sigma for drop detection
-            4) Save calibration data
-
-        If calibration=False:
-            - Load the latest saved calibration
+        1) Eject outward
+        2) Dry run both ways at power=45
+        3) Keep inward mu/sigma for drop detection while loading second bloc
         """
-        calibration_dir = getattr(self, "motor_calibration_dir", "motor_calibrations")
-        os.makedirs(calibration_dir, exist_ok=True)
+        print("[Motor calibration] Ejecting outward first...")
+        self.motor.set_power(-self.motor_calibration_power)
+        time.sleep(self.motor_eject_time)
+        self.motor.set_power(0)
+        time.sleep(0.5)
 
-        if calibration:
-            if not self.debug:
-                raise RuntimeError("Calibration requested but debug mode is disabled.")
+        print("[Motor calibration] Dry run outward...")
+        outward_samples = self._sample_motor_speeds(
+            power=-self.motor_calibration_power,
+            duration=self.motor_dry_run_time,
+            sleep_time=self.motor_sample_sleep,
+        )
+        if len(outward_samples) < 2:
+            raise RuntimeError("Not enough outward motor samples collected.")
 
-            print("[Motor calibration] Ejecting outward first...")
-            self.motor.set_dps(-self.motor_calibration_dps)
-            time.sleep(self.motor_eject_time)
-            self.motor.set_dps(0)
-            time.sleep(0.5)
+        mu_out = statistics.mean(outward_samples)
+        sigma_out = statistics.stdev(outward_samples)
+        print(
+            f"[Motor calibration] outward n={len(outward_samples)} "
+            f"mu={mu_out:.3f}, sigma={sigma_out:.3f}"
+        )
 
-            print("[Motor calibration] Dry run outward...")
-            outward_samples = self._sample_motor_speeds(
-                dps=-self.motor_calibration_dps,
-                duration=self.motor_dry_run_time,
-                sleep_time=self.motor_sample_sleep,
-            )
-            if len(outward_samples) < 2:
-                raise RuntimeError("Not enough outward motor samples collected.")
+        time.sleep(0.5)
 
-            mu_out = statistics.mean(outward_samples)
-            sigma_out = max(statistics.stdev(outward_samples), 1e-6)
+        print("[Motor calibration] Dry run inward...")
+        inward_samples = self._sample_motor_speeds(
+            power=self.motor_calibration_power,
+            duration=self.motor_dry_run_time,
+            sleep_time=self.motor_sample_sleep,
+        )
+        if len(inward_samples) < 2:
+            raise RuntimeError("Not enough inward motor samples collected.")
 
-            print(
-                f"[Motor calibration] outward n={len(outward_samples)} "
-                f"mu={mu_out:.3f}, sigma={sigma_out:.3f}"
-            )
-
-            time.sleep(0.5)
-
-            print("[Motor calibration] Dry run inward...")
-            inward_samples = self._sample_motor_speeds(
-                dps=self.motor_calibration_dps,
-                duration=self.motor_dry_run_time,
-                sleep_time=self.motor_sample_sleep,
-            )
-            if len(inward_samples) < 2:
-                raise RuntimeError("Not enough inward motor samples collected.")
-
-            self.motor_mu_in = statistics.mean(inward_samples)
-            self.motor_sigma_in = max(statistics.stdev(inward_samples), 1e-6)
-            inward_n = len(inward_samples)
-
-            calibration_data = {
-                "date": datetime.now().isoformat(),
-                "motor_mu_in": self.motor_mu_in,
-                "motor_sigma_in": self.motor_sigma_in,
-                "motor_calibration_dps": self.motor_calibration_dps,
-                "motor_dry_run_time": self.motor_dry_run_time,
-                "motor_sample_sleep": self.motor_sample_sleep,
-                "motor_drop_k": self.motor_drop_k,
-            }
-
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            calibration_file = os.path.join(
-                calibration_dir, f"motor_calibration_{timestamp}.pkl"
-            )
-
-            with open(calibration_file, "wb") as f:
-                pickle.dump(calibration_data, f)
-
-            if self.debug:
-                print(f"[Motor calibration] Saved calibration to {calibration_file}")
-
-        else:
-            calibration_files = sorted(
-                glob.glob(os.path.join(calibration_dir, "motor_calibration_*.pkl"))
-            )
-            if not calibration_files:
-                raise FileNotFoundError(
-                    f"No calibration file found in '{calibration_dir}'."
-                )
-
-            latest_file = calibration_files[-1]
-            with open(latest_file, "rb") as f:
-                calibration_data = pickle.load(f)
-
-            self.motor_mu_in = calibration_data["motor_mu_in"]
-            self.motor_sigma_in = max(calibration_data["motor_sigma_in"], 1e-6)
-            inward_n = "loaded"
-
-            if self.debug:
-                print(f"[Motor calibration] Loaded latest calibration from {latest_file}")
-                print(f"[Motor calibration] Calibration date: {calibration_data['date']}")
+        self.motor_mu_in = statistics.mean(inward_samples)
+        self.motor_sigma_in = statistics.stdev(inward_samples)
+        self.motor_sigma_in = max(self.motor_sigma_in, 1e-6)
 
         threshold = self.motor_mu_in - self.motor_drop_k * self.motor_sigma_in
         print(
-            f"[Motor calibration] inward n={inward_n} "
+            f"[Motor calibration] inward n={len(inward_samples)} "
             f"mu={self.motor_mu_in:.3f}, sigma={self.motor_sigma_in:.3f}, "
             f"threshold={threshold:.3f}"
         )
 
-        return threshold
-
     # ----------------------------
-    # Gyro thresholds / predicates
+    # Gyro event detection
     # ----------------------------
     def _k_for_tilt(self, tilt: GyroTilt) -> float:
-        if tilt == GyroTilt.SLOW_TILT:
-            return 10.0
-        elif tilt == GyroTilt.FAST_TILT_KILL :
-            return 25.0
-        else:
-            return 16.0
+        return 8.0 if tilt == GyroTilt.SLOW_TILT else 12.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
-        return -self.sigma*2 if tilt == GyroTilt.SLOW_TILT else -self.sigma*3
+        return -10.0 if tilt == GyroTilt.SLOW_TILT else -18.0
 
     def _floor_for_outwards(self, tilt: GyroTilt) -> float:
-        return self.sigma*2 if tilt == GyroTilt.SLOW_TILT else self.sigma*3
+        return 10.0 if tilt == GyroTilt.SLOW_TILT else 18.0
 
-    def _gyro_threshold_inwards(self, tilt: GyroTilt) -> float:
+    def is_tilted_inwards(self, tilt: GyroTilt) -> bool:
+        dps = self.gyro.get_dps_measure()
+        if dps is None:
+            return False
+        dps = float(dps)
         k = self._k_for_tilt(tilt)
         thr = self.mu - k * self.sigma
-        return min(thr, self._floor_for_inwards(tilt))
+        return dps < min(thr, self._floor_for_inwards(tilt))
 
-    def _gyro_threshold_outwards(self, tilt: GyroTilt) -> float:
+    def is_tilted_outwards(self, tilt: GyroTilt) -> bool:
+        dps = self.gyro.get_dps_measure()
+        if dps is None:
+            return False
+        dps = float(dps)
         k = self._k_for_tilt(tilt)
         thr = self.mu + k * self.sigma
-        return max(thr, self._floor_for_outwards(tilt))
+        return dps > max(thr, self._floor_for_outwards(tilt))
 
-    def _is_tilted_inwards_sample(self, dps: float, tilt: GyroTilt) -> bool:
-        return dps < self._gyro_threshold_inwards(tilt)
-
-    def _is_tilted_outwards_sample(self, dps: float, tilt: GyroTilt) -> bool:
-        return dps > self._gyro_threshold_outwards(tilt)
-
-    # ----------------------------
-    # Gyro recording helpers
-    # ----------------------------
-    def _begin_operation_recording(self, operation_name, timeout=None, extra=None):
-        if self._current_record is not None:
-            raise RuntimeError("A gyro operation record is already active.")
-
-        self._current_record = {
-            "operation": operation_name,
-            "start_datetime": datetime.now().isoformat(),
-            "end_datetime": None,
-            "mu": self.mu,
-            "sigma": self.sigma,
-            "sample_hz": self.sample_hz,
-            "timeout": timeout,
-            "extra": extra or {},
-            "samples": [],
-            "outcome": None,
-            "gyro_calibration": self.gyro_calibration_file,
-        }
-
-    def _append_gyro_sample_to_record(
-        self,
-        elapsed_s: float,
-        dps: float,
-        z: float,
-        detectors=None,
-    ):
-        if self._current_record is None:
-            return
-
-        sample = {
-            "t": elapsed_s,
-            "dps": dps,
-            "z": z,
-        }
-
-        if detectors is not None:
-            sample["detectors"] = detectors
-
-        with self._recording_lock:
-            self._current_record["samples"].append(sample)
-
-    def _end_operation_recording(self, outcome="completed"):
-        if self._current_record is None:
-            return
-
-        with self._recording_lock:
-            self._current_record["outcome"] = outcome
-            self._current_record["end_datetime"] = datetime.now().isoformat()
-
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            op = self._current_record["operation"]
-            filename = os.path.join(self.recordings_dir, f"{op}_{timestamp}.pkl")
-
-            with open(filename, "wb") as f:
-                pickle.dump(self._current_record, f)
-
-            if self.debug:
-                print(f"[Gyro recording] Saved operation trace to {filename}")
-
-            self._current_record = None
-
-    def _read_gyro_dps(self, last_seq=None, timeout=None):
+    def _consecutive_trigger(self, predicate, needed=None, sample_hz=None, timeout=None) -> bool:
         """
-        Wait for a fresh gyro sample from the gyro worker.
-
-        Returns:
-            (seq, timestamp, dps, z) on success
-            None on timeout
+        Returns True once `predicate()` is True for `needed` consecutive samples.
+        Optional timeout (seconds): return False if not triggered in time.
         """
-        with self._gyro_sample_cond:
-            if last_seq is None:
-                if self._gyro_sample is None:
-                    got = self._gyro_sample_cond.wait(timeout=timeout)
-                    if not got or self._gyro_sample is None:
-                        return None
-                ts, dps, z = self._gyro_sample
-                return self._gyro_sample_seq, ts, dps, z
-
-            end_time = None if timeout is None else (time.time() + timeout)
-
-            while self._gyro_sample_seq == last_seq:
-                remaining = None if end_time is None else (end_time - time.time())
-                if remaining is not None and remaining <= 0:
-                    return None
-                got = self._gyro_sample_cond.wait(timeout=remaining)
-                if not got and self._gyro_sample_seq == last_seq:
-                    return None
-
-            ts, dps, z = self._gyro_sample
-            return self._gyro_sample_seq, ts, dps, z
-    # ----------------------------
-    # Unified gyro stream:
-    # detector + recorder use same samples
-    # ----------------------------
-    def _consecutive_gyro_trigger(
-            self,
-            operation_name: str,
-            detector_name: str,
-            predicate_from_dps,
-            needed=None,
-            sample_hz=None,
-            timeout=None,
-            extra=None,
-            stop_event=None,
-    ) -> bool:
         needed = self.consecutive_needed if needed is None else int(needed)
-        record_enabled = bool(detector_name) and bool(operation_name)
-
-        detector_threshold = None
-        detector_direction = None
-        detector_floor = None
-
-        if detector_name == "gyro_outwards_fast":
-            detector_floor = self._floor_for_outwards(GyroTilt.FAST_TILT)
-            k = self._k_for_tilt(GyroTilt.FAST_TILT)
-            detector_threshold = self.mu + k * self.sigma
-            detector_direction = "outwards"
-        elif detector_name == "gyro_outward_slow":
-            detector_floor = self._floor_for_outwards(GyroTilt.SLOW_TILT)
-            k = self._k_for_tilt(GyroTilt.SLOW_TILT)
-            detector_threshold = self.mu + k * self.sigma
-            detector_direction = "outwards"
-        elif detector_name == "gyro_inwards_fast":
-            detector_floor = self._floor_for_inwards(GyroTilt.FAST_TILT)
-            k = self._k_for_tilt(GyroTilt.FAST_TILT)
-            detector_threshold = self.mu - k * self.sigma
-            detector_direction = "inwards"
-        elif detector_name == "gyro_inwards_slow":
-            detector_floor = self._floor_for_inwards(GyroTilt.SLOW_TILT)
-            k = self._k_for_tilt(GyroTilt.SLOW_TILT)
-            detector_threshold = self.mu - k * self.sigma
-            detector_direction = "inwards"
-
-        if record_enabled:
-            self._begin_operation_recording(
-                operation_name=operation_name,
-                timeout=timeout,
-                extra={
-                    **(extra or {}),
-                    "detector": detector_name,
-                    "needed": needed,
-                    "detector_threshold": detector_threshold,
-                    "detector_direction": detector_direction,
-                    "detector_floor": detector_floor,
-                },
-            )
+        sample_hz = self.sample_hz if sample_hz is None else float(sample_hz)
+        dt = 1.0 / sample_hz
 
         hits = 0
         start = time.time()
-        last_seq = None
+        while hits < needed:
+            if timeout is not None and (time.time() - start) >= timeout:
+                return False
 
-        try:
-            while hits < needed:
-                if self.kill_switch or self._kill_event.is_set():
-                    if record_enabled:
-                        self._end_operation_recording(outcome="killed")
-                    return False
+            if predicate():
+                hits += 1
+            else:
+                hits = 0
 
-                if stop_event is not None and stop_event.is_set():
-                    if record_enabled:
-                        self._end_operation_recording(outcome="cancelled")
-                    return False
+            time.sleep(dt)
 
-                elapsed = time.time() - start
-                if timeout is not None and elapsed >= timeout:
-                    if record_enabled:
-                        self._end_operation_recording(outcome="timeout")
-                    return False
+        return True
 
-                remaining = None if timeout is None else max(0.0, timeout - elapsed)
-                sample = self._read_gyro_dps(last_seq=last_seq, timeout=remaining)
-
-                if sample is None:
-                    if record_enabled:
-                        self._end_operation_recording(outcome="timeout")
-                    return False
-
-                last_seq, ts, dps, z = sample
-                elapsed = ts - start
-
-                detector_flags = {
-                    "slow_in": self._is_tilted_inwards_sample(dps, GyroTilt.SLOW_TILT),
-                    "fast_in": self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT),
-                    "slow_out": self._is_tilted_outwards_sample(dps, GyroTilt.SLOW_TILT),
-                    "fast_out": self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT),
-                }
-
-                cond = bool(predicate_from_dps(dps))
-                detector_flags["active_detector"] = cond
-
-                if record_enabled:
-                    self._append_gyro_sample_to_record(
-                        elapsed_s=elapsed,
-                        dps=dps,
-                        z=z,
-                        detectors=detector_flags,
-                    )
-
-                if cond:
-                    hits += 1
-                else:
-                    hits = 0
-
-            if record_enabled:
-                self._end_operation_recording(outcome="success")
-            return True
-
-        except Exception:
-            if record_enabled:
-                self._end_operation_recording(outcome="error")
-            raise
     # ----------------------------
     # Motor drop detection
     # ----------------------------
-    def increase_on_velocity_drop(self, duration=0.6):
-        start = time.time()
-        cooldown = time.time()
-        timeout = 1.0
-
-        while (time.time() - start) < timeout:
-            # stop thread if loading finished
-            if self.bloc_count != 0:
-                return
-
-            if (time.time() - cooldown) < duration:
-                time.sleep(0.01)
-                continue
-
-            if self.motor.get_dps() < self.running_dps * 2 / 3:
-                print(f"[Motor drop detected] Temporarily increasing velocity to prevent blocking. Speed set to {self.running_dps * 5}")
-
-                cooldown = time.time()
-
-                boosted_power = self.running_dps * 5 #min(1.2 * self.motor.get_power(), self.running_dps * 1.3)
-                self.motor.set_dps(boosted_power)
-
-                time.sleep(duration)
-
-                if self.get_loading_result() == "IDLE":
-                    self.motor.set_dps(0)
-                    print("Operation finished, terminating")
-
-
-
-    def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5, stop_event=None) -> bool:
-        #Looks at the derivative of the velocity (acceleration) because sometimes the drop might be too subtle to be observed by looking at constant velocity threshold
+    def _is_motor_drop_detected(self, timeout=5.0) -> bool:
+        """
+        While motor is already running inward, detect a sustained drop in motor speed:
+            speed < mu_in - k * sigma_in
+        for N consecutive samples.
+        """
         threshold = self.motor_mu_in - self.motor_drop_k * self.motor_sigma_in
         hits = 0
         start = time.time()
@@ -871,11 +268,7 @@ class GrabberController:
         )
 
         while True:
-            if stop_event is not None and stop_event.is_set():
-                return False
-
-            elapsed = time.time() - start
-            if timeout is not None and elapsed >= timeout:
+            if timeout is not None and (time.time() - start) >= timeout:
                 return False
 
             raw_speed = self.motor.get_speed()
@@ -884,10 +277,6 @@ class GrabberController:
                 continue
 
             raw_speed = float(raw_speed)
-
-            if elapsed < warmup_delay:
-                time.sleep(self.motor_sample_sleep)
-                continue
 
             if self.use_motor_moving_average and self.motor_moving_avg_window > 1:
                 ma_window.append(raw_speed)
@@ -908,8 +297,6 @@ class GrabberController:
                     f"filtered_speed={speed_for_detection:.3f}, "
                     f"threshold={threshold:.3f}"
                 )
-                print("Setting BLOCK CAUGHT flag")
-                self._block_caught_event.set()
                 return True
 
             time.sleep(self.motor_sample_sleep)
@@ -917,191 +304,181 @@ class GrabberController:
     # ----------------------------
     # High-level actions
     # ----------------------------
-    def load_bloc(self, stop_event=None) -> bool:
+    def load_bloc(self) -> bool:
         """
         Returns True on success, False on failure.
 
         Logic:
-        - First bloc: use gyro inward detection
-        - Second bloc: use motor-speed drop detection
+        - First bloc: use gyro inwards detection
+        - Second bloc: run inward until motor-speed drop is detected
         """
         if self.bloc_count >= 2:
             print("Already loaded 2 blocs, aborting.")
             return False
 
-        self.motor.set_dps(self.running_dps)
+        self.motor.set_power(self.running_power)
+        start = time.time()
 
         try:
-            if stop_event is not None and stop_event.is_set():
-                print("[INFO] Loading cancelled before start.")
-                return False
-
-            # First bloc: gyro-based detection with unified sample stream
             if self.bloc_count == 0:
-                print("[INFO] Started velocity drop detection thread")
-
-                ok = self._consecutive_gyro_trigger(
-                    operation_name="load_first_bloc",
-                    detector_name="gyro_outwards_fast", #TODO fix the inconsistency
-                    predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT),
-                    needed=1,
-                    timeout=5.0,
-                    extra={
-                        "bloc_count_before": self.bloc_count,
-                        "running_dps": self.running_dps,
-                        "direction": "outwards",
-                    },
-                    stop_event=stop_event,
+                dps = self.gyro.get_dps_measure()
+                print(
+                    f"dps={dps}, mu={self.mu}, sigma={self.sigma}, "
+                    f"threshold={self.mu - 3 * self.sigma}"
                 )
 
+                ok = self._consecutive_trigger(
+                    lambda: self.is_tilted_inwards(GyroTilt.SLOW_TILT),
+                    needed=5,
+                    timeout=5.0,
+                )
                 if not ok:
-                    print("Timeout or cancellation waiting for first bloc to arrive.")
+                    print("Timeout waiting for first bloc to arrive.")
                     return False
 
-                if stop_event is not None and stop_event.is_set():
-                    print("[INFO] Loading cancelled after detection.")
-                    return False
-
-                print("[INFO] First bloc gyro event triggered")
-                #time.sleep(2) # make sure bloc goes to back
-                time.sleep(0.5)
-                self.motor.set_dps(0)
-                with self.state_lock:
-                    self.bloc_positions[0] = BlocLocation.UNDER_GYRO
-                    self.bloc_count = 1
-
+                self.motor.set_power(0)
+                self.bloc_positions[0] = BlocLocation.UNDER_GYRO
+                self.bloc_count = 1
                 print("Successfully loaded first bloc.")
                 return True
 
-            # Second bloc: motor-drop detection
+            # bloc_count == 1
             if self.bloc_positions[0] == BlocLocation.UNLOADED:
-                print("Error: internal state inconsistency: bloc count is 1 but no bloc is loaded.")
-                return False
+                raise ValueError("First bloc not yet unloaded, aborting.")
 
-            self.motor.set_dps(self.running_dps)
+            self.motor.set_power(45) # use calibration power
             print("Loading second bloc: using motor velocity drop detection...")
-            #time.sleep(self.motor_drop_warm_up_delay)
-
-            if stop_event is not None and stop_event.is_set():
-                print("[INFO] Loading cancelled during second-bloc warm-up.")
-                return False
-
-            ok = self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.3,stop_event=stop_event)
-            #TODO : problem is that if the first block is only after the gyro sensor it might temporarily jam the grabber thus triggering the velocity drop event
+            time.sleep(0.5) # give a moment for the first bloc to reach the storage zone. NEEDS FINE TUNE
+            ok = self._is_motor_drop_detected(timeout=5.0)
             if not ok:
-                print("Timed out or cancelled waiting for motor velocity drop while loading second bloc.")
+                print("Timed out waiting for motor velocity drop while loading second bloc.")
                 return False
 
-            with self.state_lock:
-                self.bloc_positions[0] = BlocLocation.BACK_STORAGE
-                self.bloc_positions[1] = BlocLocation.AT_GATE
-                self.bloc_count = 2
-
+            self.motor.set_power(60)
+            time.sleep(0.1)
+            # to make sure it gets through
+            self.motor.set_power(0)
+            self.bloc_positions[0] = BlocLocation.BACK_STORAGE
+            self.bloc_positions[1] = BlocLocation.UNDER_GYRO
+            self.bloc_count = 2
             print("Successfully loaded second bloc.")
             return True
 
         finally:
-            self.motor.set_dps(0)
+            if time.time() - start > 0:
+                self.motor.set_power(0)
 
+    def unload_bloc(self) -> bool:
+        """
+        Unload logic:
+
+        If 2 blocs loaded:
+          1) Wait for SLOW outwards tilt
+          2) Run motor outwards until SLOW outwards tilt, then stop motor
+          3) Update internal state
+
+        If 1 bloc remaining:
+          - Run motor outwards for ~2 seconds, then stop
+          - Update internal state
+        """
+        if self.bloc_count <= 0:
+            print("No blocs to unload.")
+            return False
+
+        try:
+            if self.bloc_count == 2:
+                self.motor.set_power(-1.2 * self.running_power)
+
+                unloaded = self._consecutive_trigger(
+                    lambda: self.is_tilted_outwards(GyroTilt.SLOW_TILT),
+                    needed=3,
+                    timeout=5.0,
+                )
+                self.motor.set_power(0)
+
+                if not unloaded:
+                    print("Timeout unloading (no outwards SLOW tilt detected).")
+                    return False
+
+                if self.bloc_positions[0] != BlocLocation.UNLOADED:
+                    self.bloc_positions[0] = BlocLocation.UNLOADED
+                elif self.bloc_positions[1] != BlocLocation.UNLOADED:
+                    self.bloc_positions[1] = BlocLocation.UNLOADED
+
+                self.bloc_count = max(0, self.bloc_count - 1)
+                print("Unloaded one bloc (2->1).")
+                return True
+
+            # only one bloc left
+            self.motor.set_power(-45)  # use calibration power
+            print("Unloading first bloc: using motor velocity drop detection...")
+            time.sleep(0.3)
+            ok = self._is_motor_drop_detected(timeout=5.0)
+            if not ok:
+                print("Timed out waiting for motor velocity drop while unloading first bloc.")
+                return False
+
+            self.motor.set_power(-60)
+            time.sleep(0.1)
+            # to make sure it gets through
+            self.motor.set_power(0)
+
+            self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
+            self.bloc_count = 0
+            print("Unloaded last bloc (1->0).")
+            return True
+
+        finally:
+            self.motor.set_power(0)
 
     # ----------------------------
     # Main loop
     # ----------------------------
-
-    def monitor_kill(self):
-        self._kill_event.wait()
-        print("[INFO] KILL SWITCH ACTIVATED")
-        self.kill_switch = True
-        self.cancel_loading()
-        self.cancel_unloading()
-        self.motor.set_dps(0)
-
     def loop(self):
-        self.start_gyro_monitor()
-        threading.Thread(target=self.monitor_kill, daemon=True).start()
-        self.motor.set_dps(-self.running_dps)
+        """
+        Main loop of the grabber controller.
+        NEGATIVE DPS : inward tilt
+        POSITIVE DPS : outwards tilt
+        """
+        self.motor.set_power(-self.running_power)
         time.sleep(1)
-        self.motor.set_dps(0)
+        self.motor.set_power(0)
         print("Ejected all blocs")
 
         try:
             while True:
-                # -------------------------
-                # 1. Handle user commands
-                # -------------------------
-                if self.kill_switch:
-                    print("[INFO] KILL SWITCH ACTIVATED")
-                    raise KeyboardInterrupt
-                if self._command_queue:
-                    cmd = self._command_queue.popleft()
+                if self.loading_button.get_value():
+                    print("Loading Button pressed, attempting to load bloc...")
+                    success = self.load_bloc()
+                    if success:
+                        print(
+                            f"Successfully loaded bloc. Count={self.bloc_count}, "
+                            f"positions={self.bloc_positions}"
+                        )
+                    else:
+                        print("Failed to load bloc.")
+                    time.sleep(0.2)
 
-                    if cmd == "l":
-                        print("Starting non-blocking load...")
-                        self.start_loading()
+                elif self.unloading_button.get_value():
+                    print("Unloading Button pressed, attempting to unload bloc...")
+                    success = self.unload_bloc()
+                    if success:
+                        print(
+                            f"Successfully unloaded bloc. Count={self.bloc_count}, "
+                            f"positions={self.bloc_positions}"
+                        )
+                    else:
+                        print("Failed to unload bloc.")
+                    time.sleep(0.2)
 
-
-                    elif cmd == "u":
-                        print("Starting non-blocking unload...")
-                        self.start_unloading()
-
-                    elif cmd == "q":
-                        print("Exiting...")
-                        raise KeyboardInterrupt
-
-                # -------------------------
-                # 2. Periodic checks
-                # -------------------------
-                if self.is_loading():
-                    if self.loading_finished() and not self.is_loading():
-                        print(f"[INFO] Loading finished: {self.get_loading_result()}")
-
-                    if self.unloading_finished() and not self.is_unloading():
-                        print(f"[INFO] Unloading finished: {self.get_unloading_result()}")
-
-                # -------------------------
                 time.sleep(0.01)
 
         except KeyboardInterrupt:
             print("Stopping grabber controller loop.")
-            self.cancel_loading()
-            self.cancel_unloading()
-            self.motor.set_dps(0)
-            self._gyro_stop.set()
-
-    def kill(self):
-        raise NotImplementedError()
-
-    def isBlockCaught(self) -> bool:
-        return self._block_caught_event.is_set()
-
-    def clearBlockCaught(self):
-        self._block_caught_event.clear()
-
-    def _input_worker(self):
-        while True:
-            try:
-                cmd = input("Enter command (l=load, u=unload, q=quit): ").lower()
-                self._command_queue.append(cmd)
-            except EOFError:
-                break
-
-    def get_loading_status(self) -> str:
-        if self._load_thread is not None and self._load_thread.is_alive():
-            if self._block_caught_event.is_set():
-
-                return "BLOCK_CAUGHT"
-            return "LOADING"
-
-        if self._load_done_event.is_set():
-            if self._load_result is True:
-                return "SUCCESS"
-            return "FAILED"
-
-        return "IDLE"
+            self.motor.set_power(0)
 
 
 if __name__ == "__main__":
-    controller = GrabberController("D", 4, False , True)
+    controller = GrabberController()
     controller.initialize_sensors()
-
     controller.loop()
