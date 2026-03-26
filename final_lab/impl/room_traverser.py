@@ -30,7 +30,7 @@ class RoomTraverser:
     Kd = 1.2
 
     # Low-pass the *steering* command so motor DPS does not jump every loop
-    adjustment_smooth_alpha = 0.22
+    adjustment_smooth_alpha = 0.6
 
     def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int, color_sensor_controller: ColourSensorController):
         self.left_motor = left_motor
