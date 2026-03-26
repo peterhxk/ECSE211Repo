@@ -28,7 +28,7 @@ class RoomTraverser:
     MOTOR_POWER = 100
     
     # PID constants
-    Kp = 4
+    Kp = 8
     Ki = 0
     Kd = 0
 
