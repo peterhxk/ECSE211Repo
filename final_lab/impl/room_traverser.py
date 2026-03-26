@@ -6,6 +6,7 @@ import statistics
 import time
 from data.ports_brick import Ports
 from enum import Enum
+from controllers.grabber_controller import GrabberController
 
 class RoomType(Enum):
     CORNER_SINGLE = 1
@@ -27,7 +28,7 @@ class RoomTraverser:
     MOTOR_POWER = 80
     
     # PID constants
-    Kp = 4.5
+    Kp = 6
     Ki = 0
     Kd = 0
 
@@ -38,6 +39,7 @@ class RoomTraverser:
         self.motor_controller = motor_controller
         self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         self.color_sensor_controller = color_sensor_controller
+        self.grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value)
         wait_ready_sensors(True)
         print("Room Traverser ready.")
 
@@ -130,6 +132,7 @@ class RoomTraverser:
         self.motor_controller.stop_motors()
         if bed_detected:
             detected_color = color_sensor_sweep_result[0][1]
+            
             return (detected_color, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
         else:
             return (None, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
@@ -152,7 +155,14 @@ class RoomTraverser:
             if bed_found:
                 print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
                 print("DROPPING BLOCK!!!")
-                time.sleep(2)
+                self.grabber_controller.start_unloading()
+                while not self.grabber_controller.unloading_finished():
+                    time.sleep(0.01)
+                if self.grabber_controller.get_unloading_result():
+                    print("Unloading successful")
+                else:
+                    print("Unloading failed")
+
             else:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
             
