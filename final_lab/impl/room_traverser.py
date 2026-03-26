@@ -1,7 +1,5 @@
 from utils.brick import reset_brick, wait_ready_sensors, EV3UltrasonicSensor, Motor
 from controllers.color_sensor_controller import ColourSensorController
-from collections import deque
-import statistics
 import time
 from data.ports_brick import Ports
 from enum import Enum
@@ -64,11 +62,10 @@ class RoomTraverser:
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
 
-        # initiate filter window for the stupid ultrasonic sensor
-        median_window = deque(maxlen=5)
+        # reject spikes: ignore readings that jump more than this from the last accepted value
+        OUTLIER_THRESHOLD_CM = 8
 
-        # filter parameters
-        ema_estimate = None
+        last_distance_cm = None
 
         # PID state for wall following
         integral = 0.0
@@ -106,18 +103,11 @@ class RoomTraverser:
             dt = max(now - prev_time, 0.001)
             prev_time = now
 
-            # outlier filtering step
             raw = self.ultrasonic_sensor.get_cm()
-            median_window.append(raw)
-            denoised = statistics.median(median_window)
+            if last_distance_cm is None or abs(raw - last_distance_cm) <= OUTLIER_THRESHOLD_CM:
+                last_distance_cm = raw
 
-            # EMA smoothing
-            if ema_estimate is None:
-                ema_estimate = denoised
-            else:
-                ema_estimate = self.ema_alpha * denoised + (1 - self.ema_alpha) * ema_estimate
-
-            distance_cm = ema_estimate
+            distance_cm = last_distance_cm
             print(f"Distance: {distance_cm} cm")
 
             # P (optional I/D later)
