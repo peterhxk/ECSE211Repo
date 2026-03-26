@@ -30,6 +30,10 @@ class DrivingController:
         self.base_power = power
 
     def convert_sensor_angle_to_robot_angle(self, angle: float):
+        """
+        Given an angle read by colour sensor's arm. Return value that the robot needs
+        to turn in place.
+        """
         x = 180-abs(angle)
         c = math.sqrt(consts.l_rod_mm**2 + consts.l_axle_rod_mm**2 + 2 * consts.l_rod_mm * consts.l_axle_rod_mm * \
                             abs(math.cos(math.radians(x))))
