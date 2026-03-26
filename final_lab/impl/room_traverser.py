@@ -136,19 +136,16 @@ class RoomTraverser:
 
             adjustment = int(round(smoothed_adjustment))
 
-            # Straight reverse is -base on both wheels, but steering must NOT be
-            # folded inside that negation: -(base±adj) flips yaw vs forward for the
-            # same adj, so wall follow fights itself and powers look wildly asymmetric.
             # Sensor is LEFT-mounted.
-            # Positive error = too close to left wall → steer RIGHT → right motor must be the fast one.
-            # So right gets +adj, left gets -adj.
+            # Positive error = too close to left wall → steer RIGHT (away from wall).
+            # Left wheel faster = steer right, so left gets +adj, right gets -adj.
             base = self.motor_controller.base_power
             if straight_distance >= 0:
-                left_dps  = base - adjustment
-                right_dps = base + adjustment
+                left_dps  = base + adjustment
+                right_dps = base - adjustment
             else:
-                left_dps  = -base - adjustment
-                right_dps = -base + adjustment
+                left_dps  = -base + adjustment
+                right_dps = -base - adjustment
 
             self.motor_controller.set_left_motor(left_dps)
             self.motor_controller.set_right_motor(right_dps)
