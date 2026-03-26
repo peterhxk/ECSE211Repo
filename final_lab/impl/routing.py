@@ -1,4 +1,5 @@
 from sweep_line_follower import SweepLineFollower
+import data.measurements as consts
 
 class Routing(SweepLineFollower):
 
@@ -29,3 +30,10 @@ class Routing(SweepLineFollower):
         self.turn_logic("left", "back")
         self.turn_logic("right", "front")
         self.move_forward(50, "o") 
+
+    def pharmacy_grab_blocks(self):
+        self.pilot.move_distance(50)
+        self.turn_logic("right", "front")
+        self.turn_logic("right", "front", consts.dist_blocks_mm)
+
+    def 
