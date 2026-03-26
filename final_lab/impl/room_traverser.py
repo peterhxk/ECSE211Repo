@@ -27,8 +27,8 @@ class RoomTraverser:
     
     # PID constants
     Kp = 8
-    Ki = 2
-    Kd = 3
+    Ki = 3
+    Kd = 4
 
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.7
