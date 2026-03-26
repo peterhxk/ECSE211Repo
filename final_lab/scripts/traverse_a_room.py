@@ -21,7 +21,7 @@ wait_ready_sensors(True)
 if __name__ == "__main__":
     try:
         # Example usage: traverse a corner room while detecting for a bed
-        room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE)
+        room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE)
     except Exception as err:
         print(err)
     finally:
