@@ -124,8 +124,8 @@ class RoomTraverser:
             raw_adjustment = self.Kp * error + self.Ki * integral + self.Kd * derivative
 
             # Keep differential steering bounded so one wheel does not reverse / stall abruptly
-            base = abs(motor_base_power)
-            max_steer = max(12, min(int(base * 0.42), base - 15))
+            base_abs = abs(motor_base_power)
+            max_steer = max(12, min(int(base_abs * 0.42), base_abs - 15))
             raw_adjustment = max(-max_steer, min(max_steer, raw_adjustment))
 
             a = self.adjustment_smooth_alpha
@@ -136,14 +136,20 @@ class RoomTraverser:
 
             adjustment = int(round(smoothed_adjustment))
 
-            if straight_distance < 0:
-                const = -1
+            # Straight reverse is -base on both wheels, but steering must NOT be
+            # folded inside that negation: -(base±adj) flips yaw vs forward for the
+            # same adj, so wall follow fights itself and powers look wildly asymmetric.
+            base = self.motor_controller.base_power
+            if straight_distance >= 0:
+                left_dps = base + adjustment
+                right_dps = base - adjustment
             else:
-                const = 1
+                left_dps = -base + adjustment
+                right_dps = -base - adjustment
 
-            print("Motor powers: ", const * (self.motor_controller.base_power + adjustment), const * (self.motor_controller.base_power - adjustment))
-            self.motor_controller.set_left_motor(const * (self.motor_controller.base_power + adjustment))
-            self.motor_controller.set_right_motor(const * (self.motor_controller.base_power - adjustment))
+            print("Motor powers: ", left_dps, right_dps)
+            self.motor_controller.set_left_motor(left_dps)
+            self.motor_controller.set_right_motor(right_dps)
 
         self.motor_controller.stop_motors()
         if bed_detected:
