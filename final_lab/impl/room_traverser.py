@@ -143,7 +143,7 @@ class RoomTraverser:
 
             self.left_motor.set_dps(left_dps)
             self.right_motor.set_dps(right_dps)
-            time.sleep(0.03)
+            time.sleep(0.2)
             self.left_motor.set_dps(self.base_power)
             self.right_motor.set_dps(self.base_power)
 
