@@ -18,9 +18,6 @@ class SweepLineFollower:
         self.sensor = sensor 
         self.pilot = pilot
         self.last_theta = 0
-
-    def begin(self):
-        self.pilot.move_forward()
     
     def move_forward(self, max_distance, stop_on_colour = None):
         """Moves the robot forward as long as the colour sensor detects the black line.
