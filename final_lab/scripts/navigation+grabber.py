@@ -36,15 +36,21 @@ def slow_decrease():
         time.sleep(1)
 try:
     color_sensor_controller.set_arm_at_angle(85)
-    line_follower.move_forward(100,force=True)
-    init_power = 15
-    driving_controller.move_forward_by_power(init_power)
+    driving_controller.set_speed(30)
+    driving_controller.move_distance(100) # move 100 mm before the first block
     grabber_controller.start_loading()
     print("moved past start loading")
     #threading.Thread(target=slow_decrease).start()
     starter = time.time()
     driving_controller.stop_motors()
-    while not grabber_controller.isBlockCaught() and grabber_controller.get_loading_status() == "LOADING":
+    while not grabber_controller.isBlockCaught():
+        if time.time() - starter > 1.0:
+            print("[DEBUG] Still waiting for block detection at Gate")
+            starter = time.time()
+    print("[DEBUG] Block caught at gate, slowing down motor drive")
+    driving_controller.set_speed(10)
+    driving_controller.move_distance(30)
+    while not grabber_controller.loading_finished():
         if time.time() - starter > 1.0:
             print("Still loading")
             print(grabber_controller.get_loading_status())
@@ -54,7 +60,8 @@ try:
     print(f"[DEBUG] Status of loader is {grabber_controller.get_loading_status()}")
     if grabber_controller.isBlockCaught():
         print("[DEBUG] Block Caught ! Stopping drive")
-    driving_controller.stop_motors()
+    print("WAITING")
+    time.sleep(100)
     grabber_controller.clearBlockCaught()
     start = time.time()
     watchdog = time.time()
