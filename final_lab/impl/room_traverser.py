@@ -178,6 +178,8 @@ class RoomTraverser:
                 print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
                 if bed_color_found == "green":
                     print("DROPPING BLOCK!!!")
+                else:
+                    self.color_sensor_controller.set_arm_at_angle(0)
                 time.sleep(2)
                 # self.grabber_controller.start_unloading()
                 # while not self.grabber_controller.unloading_finished():
@@ -191,7 +193,7 @@ class RoomTraverser:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
             
             print("Going back.")
-            self.run(room_type, -1.2 * distance_travelled, detect_bed=False)
+            self.run(room_type, -1.15 * distance_travelled, detect_bed=False)
 
         except KeyboardInterrupt:
             print("Interrupted via keyboard...")
