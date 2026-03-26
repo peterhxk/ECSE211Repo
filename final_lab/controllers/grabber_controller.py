@@ -93,8 +93,6 @@ class GrabberController:
         self._unload_result = None
         self.kill_switch = False
 
-        self.start_gyro_monitor() # THIS IS KEY
-
         if self.running_dps > 400:
             print("Warning: running power too high. Pick a lower value")
 
@@ -344,6 +342,8 @@ class GrabberController:
         self.gyro.reset_measure()
         self.motor.set_dps(0)
         print("Reset measures; motor stopped.")
+        self.start_gyro_monitor()  # THIS IS KEY
+        print("started gyro monitor")
 
         self.calibrate_motor_drop_detection(calibration=self.calibration)
         if self.calibration:
