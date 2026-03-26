@@ -69,6 +69,7 @@ class DrivingController:
         """ 
         self.left_motor.set_limits(0, self.base_power)
         self.right_motor.set_limits(0, self.base_power)
+        time.sleep(1)
         self.left_motor.set_position_relative(dist*360/consts.dia_wheel_mm/math.pi)
         self.right_motor.set_position_relative(dist*360/consts.dia_wheel_mm/math.pi)
         print(f"turning {dist*360/consts.dia_wheel_mm/math.pi} degrees on wheels")
