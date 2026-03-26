@@ -1,5 +1,4 @@
-from utils.brick import reset_brick, wait_ready_sensors, EV3UltrasonicSensor
-from controllers.driving_controller import DrivingController
+from utils.brick import reset_brick, wait_ready_sensors, EV3UltrasonicSensor, Motor
 from controllers.color_sensor_controller import ColourSensorController
 from collections import deque
 import statistics
@@ -38,8 +37,10 @@ class RoomTraverser:
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.22
 
-    def __init__(self, motor_controller: DrivingController, color_sensor_controller: ColourSensorController):
-        self.motor_controller = motor_controller
+    def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int, color_sensor_controller: ColourSensorController):
+        self.left_motor = left_motor
+        self.right_motor = right_motor
+        self.base_power = base_power
         self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         self.color_sensor_controller = color_sensor_controller
         # self.grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value)
@@ -60,7 +61,8 @@ class RoomTraverser:
     """
     def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False):
         # reset motor encoders
-        self.motor_controller.reset_encoders()
+        self.left_motor.reset_encoder()
+        self.right_motor.reset_encoder()
 
         # initiate filter window for the stupid ultrasonic sensor
         median_window = deque(maxlen=5)
@@ -78,8 +80,10 @@ class RoomTraverser:
 
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
 
-        motor_base_power = self.motor_controller.get_base_power()
-        self.motor_controller.move_forward(motor_base_power if straight_distance > 0 else -motor_base_power)
+        motor_base_power = self.base_power
+        start_dps = motor_base_power if straight_distance > 0 else -motor_base_power
+        self.left_motor.set_dps(start_dps)
+        self.right_motor.set_dps(start_dps)
 
         while True:
             color_sensor_sweep_result = None
@@ -91,7 +95,7 @@ class RoomTraverser:
                 break
 
             # check travelled distance
-            travelled_deg = self.motor_controller.get_avg_encoder_value()
+            travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
 
             if target_degrees > 0 and travelled_deg >= target_degrees:
                 break
@@ -140,18 +144,18 @@ class RoomTraverser:
             # Sensor is LEFT-mounted.
             # Positive error = too close to left wall → steer RIGHT (away from wall).
             # Left wheel faster = steer right, so left gets +adj, right gets -adj.
-            base = self.motor_controller.base_power
             if straight_distance >= 0:
-                left_dps  = base + adjustment
-                right_dps = base - adjustment
+                left_dps  = self.base_power + adjustment
+                right_dps = self.base_power - adjustment
             else:
-                left_dps  = -base + adjustment
-                right_dps = -base - adjustment
+                left_dps  = -self.base_power + adjustment
+                right_dps = -self.base_power - adjustment
 
-            self.motor_controller.set_left_motor(left_dps)
-            self.motor_controller.set_right_motor(right_dps)
+            self.left_motor.set_dps(left_dps)
+            self.right_motor.set_dps(right_dps)
 
-        self.motor_controller.stop_motors()
+        self.left_motor.set_dps(0)
+        self.right_motor.set_dps(0)
         if bed_detected:
             detected_color = color_sensor_sweep_result[0][1]
             
