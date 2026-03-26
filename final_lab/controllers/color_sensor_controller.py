@@ -223,3 +223,9 @@ class ColourSensorController (EV3ColorSensor):
     def read_colour_print(self):
         print(self.get_rgb())
 
+    def read_ambient(self):
+        return self.get_ambient()
+    
+    def read_rgb(self):
+        return self.get_rgb()
+
