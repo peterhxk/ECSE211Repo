@@ -141,7 +141,7 @@ class GrabberController:
 
                 dps = float(raw)
                 if self._is_fast_kill_sample(dps):
-                    self._kill_event.set()  
+                    self._kill_event.set()
 
                 z = (dps - self.mu) / max(self.sigma, 1e-6)
 
