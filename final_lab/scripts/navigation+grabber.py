@@ -38,10 +38,10 @@ def slow_decrease():
 try:
     color_sensor_controller.set_arm_at_angle(85)
     driving_controller.set_speed(100)
-    driving_controller.move_distance(100) # move 100 mm before the first block
-    left_motor.wait_is_stopped(0.1)
-    grabber_controller.start_loading()
+    #driving_controller.move_distance(100) # move 100 mm before the first block
+    #left_motor.wait_is_stopped(0.1)
     print("moved past start loading")
+    grabber_controller.start_loading()
     #threading.Thread(target=slow_decrease).start()
     starter = time.time()
     driving_controller.stop_motors()
