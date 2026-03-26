@@ -36,7 +36,7 @@ def slow_decrease():
         time.sleep(1)
 try:
     color_sensor_controller.set_arm_at_angle(85)
-    driving_controller.set_speed(4)
+    driving_controller.set_speed(100)
     driving_controller.move_distance(100) # move 100 mm before the first block
     time.sleep(100)
     grabber_controller.start_loading()
