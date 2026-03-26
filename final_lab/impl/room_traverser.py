@@ -107,7 +107,6 @@ class RoomTraverser:
                 last_distance_cm = raw
 
             distance_cm = last_distance_cm
-            print(f"Distance: {distance_cm} cm")
 
             # P (optional I/D later)
             error = room_type_to_wall_distance_map[room_type] - distance_cm
