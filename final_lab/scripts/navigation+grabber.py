@@ -44,13 +44,11 @@ try:
     #threading.Thread(target=slow_decrease).start()
     starter = time.time()
     driving_controller.stop_motors()
-    while not grabber_controller.isBlockCaught():
-        if time.time() - starter > 1.0:
-            print("[DEBUG] Still waiting for block detection at Gate")
-            starter = time.time()
+    #while not grabber_controller.isBlockCaught():
+    #    if time.time() - starter > 1.0:
+    #        print("[DEBUG] Still waiting for block detection at Gate")
+    #        starter = time.time()
     print("[DEBUG] Block caught at gate, slowing down motor drive")
-    driving_controller.set_speed(10)
-    driving_controller.move_distance(30)
     while not grabber_controller.loading_finished():
         if time.time() - starter > 1.0:
             print("Still loading")
