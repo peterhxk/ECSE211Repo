@@ -39,7 +39,7 @@ class RoomTraverser:
         self.motor_controller = motor_controller
         self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         self.color_sensor_controller = color_sensor_controller
-        self.grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value)
+        # self.grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value)
         wait_ready_sensors(True)
         print("Room Traverser ready.")
 
@@ -155,13 +155,13 @@ class RoomTraverser:
             if bed_found:
                 print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
                 print("DROPPING BLOCK!!!")
-                self.grabber_controller.start_unloading()
-                while not self.grabber_controller.unloading_finished():
-                    time.sleep(0.01)
-                if self.grabber_controller.get_unloading_result():
-                    print("Unloading successful")
-                else:
-                    print("Unloading failed")
+                # self.grabber_controller.start_unloading()
+                # while not self.grabber_controller.unloading_finished():
+                #     time.sleep(0.01)
+                # if self.grabber_controller.get_unloading_result():
+                #     print("Unloading successful")
+                # else:
+                #     print("Unloading failed")
 
             else:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
