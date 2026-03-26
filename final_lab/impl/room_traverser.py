@@ -25,10 +25,10 @@ room_type_to_wall_distance_map = {
 class RoomTraverser:
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_BASE_MM = 159
-    MOTOR_POWER = 80
+    MOTOR_POWER = 100
     
     # PID constants
-    Kp = 6
+    Kp = 4
     Ki = 0
     Kd = 0
 
