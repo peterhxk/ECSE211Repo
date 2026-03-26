@@ -150,7 +150,6 @@ class RoomTraverser:
                 left_dps  = -base - adjustment
                 right_dps = -base + adjustment
 
-            print("Motor powers: ", left_dps, right_dps)
             self.motor_controller.set_left_motor(left_dps)
             self.motor_controller.set_right_motor(right_dps)
 
