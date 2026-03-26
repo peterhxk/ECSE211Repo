@@ -84,7 +84,7 @@ class RoomTraverser:
         while True:
             color_sensor_sweep_result = None
             if detect_bed:
-                color_sensor_sweep_result = self.color_sensor_controller.sweep(colour="red", range="full", stop_on_match=True)
+                color_sensor_sweep_result = self.color_sensor_controller.sweep(colours=["red", "green"], range="full", stop_on_match=True)
             if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
                 # if color detected, stop moving.
                 bed_detected = True
@@ -139,13 +139,16 @@ class RoomTraverser:
             # Straight reverse is -base on both wheels, but steering must NOT be
             # folded inside that negation: -(base±adj) flips yaw vs forward for the
             # same adj, so wall follow fights itself and powers look wildly asymmetric.
+            # Sensor is LEFT-mounted.
+            # Positive error = too close to left wall → steer RIGHT → right motor must be the fast one.
+            # So right gets +adj, left gets -adj.
             base = self.motor_controller.base_power
             if straight_distance >= 0:
-                left_dps = base + adjustment
-                right_dps = base - adjustment
+                left_dps  = base - adjustment
+                right_dps = base + adjustment
             else:
-                left_dps = -base + adjustment
-                right_dps = -base - adjustment
+                left_dps  = -base - adjustment
+                right_dps = -base + adjustment
 
             print("Motor powers: ", left_dps, right_dps)
             self.motor_controller.set_left_motor(left_dps)
