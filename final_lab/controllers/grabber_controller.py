@@ -122,31 +122,31 @@ class GrabberController:
     def _gyro_worker(self):
         dt = 1.0 / float(self.sample_hz)
         kill_hits = 0
+        print("[GYRO] worker started")
 
-        while not self._gyro_stop.is_set():
-            raw = self.gyro.get_dps_measure()
-            now = time.time()
+        try:
+            while not self._gyro_stop.is_set():
+                raw = self.gyro.get_dps_measure()
+                now = time.time()
 
-            if raw is None:
+                if raw is None:
+                    print("[GYRO] raw is None")
+                    time.sleep(dt)
+                    continue
+
+                dps = float(raw)
+                z = (dps - self.mu) / max(self.sigma, 1e-6)
+
+                with self._gyro_sample_cond:
+                    self._gyro_sample = (now, dps, z)
+                    self._gyro_sample_seq += 1
+                    self._gyro_sample_cond.notify_all()
+
                 time.sleep(dt)
-                continue
+        except Exception as e:
+            print(f"[GYRO] worker crashed: {e}")
+            raise
 
-            dps = float(raw)
-            z = (dps - self.mu) / max(self.sigma, 1e-6)
-
-            with self._gyro_sample_cond:
-                self._gyro_sample = (now, dps, z)
-                self._gyro_sample_seq += 1
-                self._gyro_sample_cond.notify_all()
-
-            if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
-                kill_hits += 1
-                if kill_hits >= 3:
-                    self._kill_event.set()
-            else:
-                kill_hits = 0
-
-            time.sleep(dt)
     def start_gyro_monitor(self):
         if self._gyro_thread and self._gyro_thread.is_alive():
             return
@@ -662,6 +662,11 @@ class GrabberController:
             self._current_record["outcome"] = outcome
             self._current_record["end_datetime"] = datetime.now().isoformat()
 
+            if not self._current_record["samples"]:
+                print("[Gyro recording] WARNING: no samples collected, not saving empty recording")
+                self._current_record = None
+                return
+
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             op = self._current_record["operation"]
             filename = os.path.join(self.recordings_dir, f"{op}_{timestamp}.pkl")
@@ -669,9 +674,7 @@ class GrabberController:
             with open(filename, "wb") as f:
                 pickle.dump(self._current_record, f)
 
-            if self.debug:
-                print(f"[Gyro recording] Saved operation trace to {filename}")
-
+            print(f"[Gyro recording] Saved operation trace to {filename}")
             self._current_record = None
 
     def _read_gyro_dps(self, last_seq=None, timeout=None):
@@ -682,10 +685,14 @@ class GrabberController:
             (seq, timestamp, dps, z) on success
             None on timeout
         """
+
         with self._gyro_sample_cond:
             if last_seq is None:
                 if self._gyro_sample is None:
                     got = self._gyro_sample_cond.wait(timeout=timeout)
+                    if not got and self._gyro_sample_seq == last_seq:
+                        print("[GYRO] timed out waiting for fresh sample")
+                        return None
                     if not got or self._gyro_sample is None:
                         return None
                 ts, dps, z = self._gyro_sample
