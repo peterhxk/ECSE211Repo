@@ -156,6 +156,14 @@ class GrabberController:
     # ----------------------------
     # Setup / calibration
     # ----------------------------
+    def stop_gyro_monitor(self):
+        self._gyro_stop.set()
+
+        if self._gyro_thread is not None:
+            self._gyro_thread.join(timeout=1.0)
+
+        self._gyro_thread = None
+
     def _load_bloc_worker(self):
         try:
             self._load_result = self.load_bloc(stop_event=self._load_cancel_event)

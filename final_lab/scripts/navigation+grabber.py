@@ -187,5 +187,6 @@ except Exception as err:
     traceback.print_exc()
 
 finally:
+    grabber_controller.stop_gyro_monitor() # stop gyro before reseting brickpi
     reset_brick()
     exit()
