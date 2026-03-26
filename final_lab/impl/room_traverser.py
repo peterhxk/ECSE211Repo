@@ -18,8 +18,6 @@ room_type_to_wall_distance_map = {
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4
 }
 
-MAX_UPDATE_COUNT = 100
-
 class RoomTraverser:
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_BASE_MM = 159
@@ -56,7 +54,6 @@ class RoomTraverser:
     - Tuple of (bed color detected or None, distance travelled in CM)
     """
     def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False):
-        update_count = 0
         # reset motor encoders
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
@@ -131,22 +128,20 @@ class RoomTraverser:
 
             # Sensor is LEFT-mounted.
             # Positive error = too close to left wall → steer RIGHT (away from wall).
-            # Left wheel faster = steer right, so left gets +adj, right gets -adj.
+            # Forward:  left wheel faster = steer right → left gets +adj, right gets -adj.
+            # Backward: robot travels in reverse, so the turn direction is mirrored.
+            #           To steer right (away from left wall) while reversing, we need a
+            #           counterclockwise yaw (ω = (v_R − v_L)/L > 0), which requires
+            #           v_right > v_left → left gets −adj (more backward), right gets +adj.
             if straight_distance >= 0:
                 left_dps  = self.base_power + adjustment * 1.3
                 right_dps = self.base_power - adjustment * 1.3
             else:
-                left_dps  = -self.base_power + adjustment * 1.3
-                right_dps = -self.base_power - adjustment * 1.3
+                left_dps  = -self.base_power - adjustment * 1.3
+                right_dps = -self.base_power + adjustment * 1.3
 
-            if update_count < MAX_UPDATE_COUNT:
-                self.left_motor.set_dps(left_dps)
-                self.right_motor.set_dps(right_dps)
-                update_count += 1
-            else:
-                # After a certain number of updates, stop adjusting and just go straight to avoid jitter.
-                self.left_motor.set_dps(start_dps)
-                self.right_motor.set_dps(start_dps)
+            self.left_motor.set_dps(left_dps)
+            self.right_motor.set_dps(right_dps)
 
             time.sleep(0.02)
 
@@ -193,7 +188,7 @@ class RoomTraverser:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
             
             print("Going back.")
-            self.run(room_type, -1.15 * distance_travelled, detect_bed=False)
+            self.run(room_type, -distance_travelled, detect_bed=False)
 
         except KeyboardInterrupt:
             print("Interrupted via keyboard...")
