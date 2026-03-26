@@ -136,10 +136,10 @@ class RoomTraverser:
             # Left wheel faster = steer right, so left gets +adj, right gets -adj.
             if straight_distance >= 0:
                 left_dps  = self.base_power + adjustment
-                right_dps = self.base_power - adjustment
+                right_dps = self.base_power - adjustment * 1.1
             else:
                 left_dps  = -self.base_power + adjustment
-                right_dps = -self.base_power - adjustment
+                right_dps = -self.base_power - adjustment * 1.1
 
             self.left_motor.set_dps(left_dps)
             self.right_motor.set_dps(right_dps)
@@ -163,7 +163,7 @@ class RoomTraverser:
     def traverse_a_room(self, room_type: RoomType) -> None:
         try:
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
-            traverse_results = self.run(room_type, 35, detect_bed=True)
+            traverse_results = self.run(room_type, 30, detect_bed=True)
             bed_found = traverse_results[0] is not None
             bed_color_found = traverse_results[0]
             distance_travelled = traverse_results[1]
@@ -171,6 +171,7 @@ class RoomTraverser:
             if bed_found:
                 print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
                 print("DROPPING BLOCK!!!")
+                time.sleep(2)
                 # self.grabber_controller.start_unloading()
                 # while not self.grabber_controller.unloading_finished():
                 #     time.sleep(0.01)
