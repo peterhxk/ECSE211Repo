@@ -114,6 +114,7 @@ class RoomTraverser:
                 ema_estimate = self.ema_alpha * denoised + (1 - self.ema_alpha) * ema_estimate
 
             distance_cm = ema_estimate
+            print(f"Distance: {distance_cm} cm")
 
             # P (optional I/D later)
             error = room_type_to_wall_distance_map[room_type] - distance_cm
