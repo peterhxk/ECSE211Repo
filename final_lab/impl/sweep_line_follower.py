@@ -115,7 +115,7 @@ class SweepLineFollower:
         return t
 
 
-    def turn_logic(self, direction: Literal["left", "right"], heading: Literal["front", "back"] = "front"):
+    def turn_logic(self, direction: Literal["left", "right"], heading: Literal["front", "back"] = "front", additional_dist=0):
         """
         Detects the intersecting line, and performs robot turning logic to be aligned with the next line.
 
@@ -153,7 +153,7 @@ class SweepLineFollower:
         self.pilot.stop_motors()
 
         print("move straight to align")
-        self.pilot.move_distance(consts.dist_move_mm)
+        self.pilot.move_distance(consts.dist_move_mm+additional_dist)
         self.pilot.left_motor.wait_is_stopped()
         
         print(f"pivoting {direction}")
