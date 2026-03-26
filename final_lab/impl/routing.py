@@ -1,4 +1,4 @@
-from sweep_line_follower import SweepLineFollower
+from impl.sweep_line_follower import SweepLineFollower
 import data.measurements as consts
 
 class Routing(SweepLineFollower):
@@ -6,11 +6,21 @@ class Routing(SweepLineFollower):
     """Class defines fixed routing commands to move the robot between rooms."""
 
     def pharmacy_to_room1(self):
+        print("Reversing 50mm")
         self.pilot.move_distance(-50)
         self.pilot.right_motor.wait_is_stopped()
+        print("Motors stopped")
+        
+        print("Turning right")
         self.turn_logic("right", "back")
+        
+        print("Turning right")
         self.turn_logic("right", "front")
+        
+        print("Moving forward, searching for orange line")
         self.move_forward(200, "o")
+        
+        print("Found orange line.")
     
     def room1_to_pharmacy(self):
         self.pilot.move_backward(430)
