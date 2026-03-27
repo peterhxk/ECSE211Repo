@@ -87,7 +87,8 @@ class RoomTraverser:
         bed_detected = False
         start_detected = False
         orange_count = 0
-        ORANGE_CONFIRM_THRESHOLD = 5
+        orange_iter = 0
+        ORANGE_CONFIRM_THRESHOLD = 10
 
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
 
@@ -107,15 +108,17 @@ class RoomTraverser:
                 break
 
             if detect_start:
-                if self.color_sensor_controller.read_colour() == "orange":
-                    orange_count += 1
-                    print(f"Orange reading {orange_count}/{ORANGE_CONFIRM_THRESHOLD}")
-                    if orange_count >= ORANGE_CONFIRM_THRESHOLD:
-                        print("Orange confirmed — arrived back at starting point.")
-                        start_detected = True
-                        break
-                else:
-                    orange_count = 0
+                orange_iter += 1
+                if orange_iter % 2 == 0:
+                    if self.color_sensor_controller.read_colour() == "orange":
+                        orange_count += 1
+                        print(f"Orange reading {orange_count}/{ORANGE_CONFIRM_THRESHOLD}")
+                        if orange_count >= ORANGE_CONFIRM_THRESHOLD:
+                            print("Orange confirmed — arrived back at starting point.")
+                            start_detected = True
+                            break
+                    else:
+                        orange_count = 0
 
             # check travelled distance
             travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
