@@ -1,7 +1,8 @@
 import sys
-#sys.path.append("../")
+sys.path.append("../")
 
 import traceback
+from data.ports_brick import Ports
 from utils.brick import wait_ready_sensors, reset_brick, Motor
 from controllers.color_sensor_controller import ColourSensorController
 from controllers.driving_controller import DrivingController
@@ -10,20 +11,19 @@ import time
 
 # Sensor declaration
 
-left_motor = Motor("C")
-right_motor = Motor("B")
-color_sensor_motor = Motor("A")
+left_motor = Motor(Ports.LEFT_MOTOR.value)
+right_motor = Motor(Ports.RIGHT_MOTOR.value)
+color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 driving_controller = DrivingController(left_motor, right_motor, 150)
-color_sensor_controller = ColourSensorController(2, color_sensor_motor)
+color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
 
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 
 wait_ready_sensors(True)
 
 try:
-    line_follower.run()
-
+    print("No implementation")
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 
