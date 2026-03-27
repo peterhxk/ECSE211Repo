@@ -64,12 +64,13 @@ class RoomTraverser:
     - Tuple of (bed color detected or None, distance travelled in CM)
     """
     def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False, detect_start: bool = False):
-        # float motors before encoder reset to prevent the BrickPi3 position
-        # controller from briefly locking the wheels during the transition
-        self.left_motor.float_motor()
-        self.right_motor.float_motor()
+        # Reset encoders first, then immediately float so the BrickPi3 position
+        # controller (briefly engaged by reset_encoder) cannot lock the wheels
+        # before set_dps takes over.
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
+        self.left_motor.float_motor()
+        self.right_motor.float_motor()
 
         # reject spikes: ignore readings that jump more than this from the last accepted value
         OUTLIER_THRESHOLD_CM = 8
