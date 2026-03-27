@@ -169,15 +169,17 @@ class ColourSensorController (EV3ColorSensor):
 
     def read_black_white(self):
         """
-        Reads the current normalized RGB, accumulates it into a rolling average,
-        then classifies as "b" or "w" by Euclidean distance to calibrated values
-        in black_white.json. Returns None if the file is missing or lacks both entries.
+        Reads the current raw RGB, accumulates it into a rolling average,
+        then classifies as "b" or "w" by Euclidean distance to calibrated raw RGB
+        values in black_white.json. Raw values preserve brightness, which is the
+        key distinguishing feature between black and white.
+        Returns None if the file is missing or lacks both entries.
         """
         raw = self.get_rgb()
-        r_n, g_n, b_n = normalize_colours(raw[0], raw[1], raw[2])
-        print(f"RGB normalized: ({r_n:.3f}, {g_n:.3f}, {b_n:.3f})")
+        r, g, b = float(raw[0]), float(raw[1]), float(raw[2])
+        print(f"RGB raw: ({r:.1f}, {g:.1f}, {b:.1f})  magnitude={math.sqrt(r**2+g**2+b**2):.1f}")
 
-        self._bw_history.append((r_n, g_n, b_n))
+        self._bw_history.append((r, g, b))
         n = len(self._bw_history)
         avg = (
             sum(s[0] for s in self._bw_history) / n,
@@ -203,8 +205,9 @@ class ColourSensorController (EV3ColorSensor):
 
     def ingest_bw(self, label: str):
         """
-        Reads the current normalized RGB and updates the running average for
+        Reads the current raw RGB and updates the running average for
         label ("b" or "w") in data/black_white.json.
+        Raw values preserve brightness — the key signal for black vs white.
         Call this while the sensor is positioned over the target surface to calibrate.
         """
         if label not in ("b", "w"):
@@ -217,18 +220,18 @@ class ColourSensorController (EV3ColorSensor):
             bw = {}
 
         raw = self.get_rgb()
-        r_n, g_n, b_n = normalize_colours(raw[0], raw[1], raw[2])
+        r, g, b = float(raw[0]), float(raw[1]), float(raw[2])
 
         old = bw.get(label)
         if isinstance(old, list) and len(old) == 3:
-            bw[label] = [(old[0] + r_n) / 2, (old[1] + g_n) / 2, (old[2] + b_n) / 2]
+            bw[label] = [(old[0] + r) / 2, (old[1] + g) / 2, (old[2] + b) / 2]
         else:
-            bw[label] = [r_n, g_n, b_n]
+            bw[label] = [r, g, b]
 
         with open("data/black_white.json", "w") as f:
             json.dump(bw, f, indent=2)
 
-        print(f"Updated '{label}': {bw[label]}  (raw RGB={raw})")
+        print(f"Updated '{label}': {bw[label]}  magnitude={math.sqrt(r**2+g**2+b**2):.1f}")
 
     def ingest_colours(self, colour_name: str):
         """
