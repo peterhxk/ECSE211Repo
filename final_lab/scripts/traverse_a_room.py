@@ -1,4 +1,4 @@
-from time import time
+import time
 from utils.brick import wait_ready_sensors, reset_brick, Motor
 from controllers.color_sensor_controller import ColourSensorController
 from impl.room_traverser import RoomTraverser, RoomType
