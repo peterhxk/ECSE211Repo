@@ -1,6 +1,6 @@
 from utils.sound import Sound
 from concurrent import futures
-
+import time
 
 NOTES = ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]
 TEMPO = 0.5
@@ -41,29 +41,26 @@ class SoundController(Sound):
         self._executor.submit(_play)
 
     def play_mission_complete(self):
-        """Star Wars main theme opening phrase (John Williams).
+        """Triumphant victory fanfare: ascending major arpeggio with a held top note.
 
-        G4 G4 G4 Eb4 Bb4 | G4 Eb4 Bb4 G4
-        At ~104 BPM: quarter=0.5s, eighth=0.25s, half=1.0s, dotted-half=1.5s
+        G4 C5 E5 G5 C6 | G5 C6 (held)
         Played asynchronously; returns immediately.
         """
         sequence = [
-            Sound(duration=0.50, pitch="G4",  volume=100),  # G  (quarter)
-            Sound(duration=0.50, pitch="G4",  volume=100),  # G  (quarter)
-            Sound(duration=0.50, pitch="G4",  volume=100),  # G  (quarter)
-            Sound(duration=0.25, pitch="Eb4", volume=100),  # Eb (eighth)
-            Sound(duration=0.25, pitch="Bb4", volume=100),  # Bb (eighth)
-            Sound(duration=1.00, pitch="G4",  volume=100),  # G  (half)
-            Sound(duration=0.25, pitch="Eb4", volume=100),  # Eb (eighth)
-            Sound(duration=0.25, pitch="Bb4", volume=100),  # Bb (eighth)
-            Sound(duration=1.50, pitch="G4",  volume=100),  # G  (dotted half)
+            Sound(duration=0.15, pitch="G4", volume=100),  # pickup
+            Sound(duration=0.15, pitch="C5", volume=100),  # rise
+            Sound(duration=0.15, pitch="E5", volume=100),  # rise
+            Sound(duration=0.15, pitch="G5", volume=100),  # rise
+            Sound(duration=0.50, pitch="C6", volume=100),  # triumphant peak
+            Sound(duration=0.15, pitch="G5", volume=100),  # step down
+            Sound(duration=0.90, pitch="C6", volume=100),  # final hold
         ]
 
         def _play():
             self.note_playing = True
             for note in sequence:
                 note.play()
-                note.wait_done()
+                time.sleep(0.1)
             self.note_playing = False
 
         self._executor.submit(_play)
@@ -83,7 +80,7 @@ class SoundController(Sound):
             self.note_playing = True
             for note in sequence:
                 note.play()
-                note.wait_done()
+                time.sleep(0.1)
             self.note_playing = False
 
         self._executor.submit(_play)

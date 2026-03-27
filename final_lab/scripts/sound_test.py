@@ -9,7 +9,7 @@ sc = SoundController()
 
 print("Playing mission complete...")
 sc.play_mission_complete()
-sleep(7.0)  # wait for sequence to finish (~6.0s total)
+sleep(3.5)  # wait for sequence to finish (~2.0s total)
 
 print("Playing success...")
 sc.play_success()
