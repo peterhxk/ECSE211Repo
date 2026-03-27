@@ -163,8 +163,7 @@ class RoomTraverser:
             self.grabber_controller.initialize_sensors()
             print("Initialized grabber sensors")
             self.grabber_controller.load_bloc()
-            while not self.grabber_controller.get_loading_status() == "SUCCESS":
-                time.sleep(0.01)
+            
 
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
             traverse_results = self.run(room_type, 35, detect_bed=True)
