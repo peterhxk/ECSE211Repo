@@ -175,9 +175,10 @@ class RoomTraverser:
         try:
             grabber_controller.start_loading()
             timer = time.time()
+            print("Started inward belt movement")
             while not grabber_controller.loading_finished():
                 if time.time() - timer > 1:
-                    print("still loadingt")
+                    print("still loading")
                     timer = time.time()
                 time.sleep(0.01)
             
@@ -203,11 +204,14 @@ class RoomTraverser:
 
                         # Unload first carried block
                         grabber_controller.unload_bloc()
-
+                        timer = time.time()
                         while not grabber_controller.unloading_finished():
+                            if time.time() - timer > 1:
+                                print("still loading")
+                                timer = time.time()
                             time.sleep(0.01)
 
-                        if grabber_controller.get_unloading_result() == "SUCCESS":
+                        if grabber_controller.get_unloading_result():
                             print("Unloading successful")
                         else:
                             print("Unloading failed")
