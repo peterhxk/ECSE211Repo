@@ -23,7 +23,7 @@ class Routing(SweepLineFollower):
         print("Found orange line.")
     
     def room1_to_pharmacy(self):
-        self.pilot.move_backward(430)
+        self.pilot.move_distance(-430)
     
     def room1_to_room2(self):
         self.turn_logic("right", "back")
