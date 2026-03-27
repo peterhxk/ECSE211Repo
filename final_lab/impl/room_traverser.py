@@ -21,7 +21,7 @@ room_type_to_wall_distance_map = {
 class RoomTraverser:
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_BASE_MM = 159
-    MOTOR_POWER = 160
+    MOTOR_POWER = 180
     
     # PID constants
     Kp = 15
@@ -156,13 +156,21 @@ class RoomTraverser:
     Input:
     - room_type: The type of the room to traverse. This determines the path taken by the robot.
     """
-    def traverse_a_room(self, room_type: RoomType) -> None:
+    def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
         try:
-            # self.grabber_controller.initialize_sensors()
-            # print("Initialized grabber sensors")
-            # self.grabber_controller.load_bloc()
+            grabber_controller.start_loading()
+            timer = time.time()
+            while not grabber_controller.loading_finished():
+                if time.time() - timer > 1:
+                    print("still loadingt")
+                    timer = time.time()
+                time.sleep(0.01)
             
-
+            if grabber_controller.get_loading_result():
+                print("Loading successful")
+            else:
+                print("Loading failed")
+            
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
             traverse_results = self.run(room_type, 45, detect_bed=True)
             bed_found = traverse_results[0] is not None
@@ -173,27 +181,27 @@ class RoomTraverser:
                 print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
                 if bed_color_found == "green":
                     print("DROPPING BLOCK!!!")
-                    # try:
-                    #     # Prepare for unloading
-                    #     self.color_sensor_controller.set_arm_at_angle(0)
-                    #     time.sleep(2)
+                    try:
+                        # Prepare for unloading
+                        self.color_sensor_controller.set_arm_at_angle(0)
+                        time.sleep(2)
 
-                    #     # Unload first carried block
-                    #     self.grabber_controller.unload_bloc()
+                        # Unload first carried block
+                        grabber_controller.unload_bloc()
 
-                    #     while not self.grabber_controller.unloading_finished():
-                    #         time.sleep(0.01)
+                        while not grabber_controller.unloading_finished():
+                            time.sleep(0.01)
 
-                    #     if self.grabber_controller.get_unloading_result():
-                    #         print("Unloading successful")
-                    #     else:
-                    #         print("Unloading failed")
+                        if grabber_controller.get_unloading_result() == "SUCCESS":
+                            print("Unloading successful")
+                        else:
+                            print("Unloading failed")
 
-                    # except Exception as err:
-                    #     print(err)
+                    except Exception as err:
+                        print(err)
 
-                    # finally:
-                    #     time.sleep(2)
+                    finally:
+                        time.sleep(2)
 
                 else:
                     print("Red bed detected, skipping unloading")
