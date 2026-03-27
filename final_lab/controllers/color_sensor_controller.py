@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Literal, List, Tuple, Union, NamedTuple, Optional
 import math
 import data.measurements as consts
+from collections import deque
 
 
 def normalize_colours(r, g, b):
@@ -46,6 +47,7 @@ class ColourSensorController (EV3ColorSensor):
         self.motor = motor
         self.sweep_dir = None
         self.colours_found = []
+        self._bw_history = deque(maxlen=5)
 
         # Reset the value of the motor encoder.
         self.motor.reset_encoder()
@@ -166,13 +168,18 @@ class ColourSensorController (EV3ColorSensor):
     def read_black_white(self):
         """
         Uses ambient light to classify surface as black or white.
-        Returns "b" if ambient == 1, "w" if ambient >= 2, None otherwise.
+        Returns "b" or "w" only if the last 5 readings all agree, None otherwise.
         """
         ambient = self.read_ambient()
-        if ambient == 1:
-            return "b"
-        elif ambient >= 2:
-            return "w"
+        if ambient <= 2:
+            reading = "b"
+        else:
+            reading = "w"
+
+        self._bw_history.append(reading)
+
+        if len(self._bw_history) == 5 and len(set(self._bw_history)) == 1:
+            return reading
         return None
 
     def ingest_colours(self, colour_name: str):
