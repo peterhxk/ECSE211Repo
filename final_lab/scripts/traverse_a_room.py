@@ -6,7 +6,7 @@ from data.ports_brick import Ports
 from controllers.grabber_controller import GrabberController
 from controllers.driving_controller import DrivingController
 
-MOTOR_POWER = 80
+MOTOR_POWER = 120
 
 # sensor declaration
 left_motor = Motor(Ports.LEFT_MOTOR.value)
