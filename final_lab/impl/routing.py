@@ -1,5 +1,6 @@
 from impl.sweep_line_follower import SweepLineFollower
 import data.measurements as consts
+import time
 
 class Routing(SweepLineFollower):
 
@@ -24,6 +25,7 @@ class Routing(SweepLineFollower):
     
     def room1_to_pharmacy(self):
         self.pilot.move_distance(-430)
+        time.sleep(0.1)
         self.pilot.right_motor.wait_is_stopped()
     
     def room1_to_room2(self):
