@@ -100,6 +100,7 @@ class RoomTraverser:
             prev_time = now
 
             raw = self.ultrasonic_sensor.get_cm()
+            print(f"Distance: {raw} cm")
             if last_distance_cm is None or abs(raw - last_distance_cm) <= OUTLIER_THRESHOLD_CM:
                 last_distance_cm = raw
 
