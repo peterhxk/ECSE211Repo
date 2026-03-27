@@ -18,8 +18,6 @@ room_type_to_wall_distance_map = {
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4
 }
 
-MAX_UPDATE_COUNT = 100
-
 class RoomTraverser:
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_BASE_MM = 159
@@ -39,7 +37,7 @@ class RoomTraverser:
         self.base_power = base_power
         self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         self.color_sensor_controller = color_sensor_controller
-        # self.grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value)
+        self.grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value)
         wait_ready_sensors(True)
         print("Room Traverser ready.")
 
@@ -56,7 +54,6 @@ class RoomTraverser:
     - Tuple of (bed color detected or None, distance travelled in CM)
     """
     def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False):
-        update_count = 0
         # reset motor encoders
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
@@ -136,17 +133,12 @@ class RoomTraverser:
                 left_dps  = self.base_power + adjustment * 1.3
                 right_dps = self.base_power - adjustment * 1.3
             else:
-                left_dps  = -self.base_power + adjustment * 1.3
-                right_dps = -self.base_power - adjustment * 1.3
+                left_dps  = -self.base_power - adjustment * 1.3
+                right_dps = -self.base_power + adjustment * 1.3
 
-            if update_count < MAX_UPDATE_COUNT:
-                self.left_motor.set_dps(left_dps)
-                self.right_motor.set_dps(right_dps)
-                update_count += 1
-            else:
-                # After a certain number of updates, stop adjusting and just go straight to avoid jitter.
-                self.left_motor.set_dps(start_dps)
-                self.right_motor.set_dps(start_dps)
+
+            self.left_motor.set_dps(left_dps)
+            self.right_motor.set_dps(right_dps)
 
             time.sleep(0.02)
 
@@ -178,17 +170,34 @@ class RoomTraverser:
                 print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
                 if bed_color_found == "green":
                     print("DROPPING BLOCK!!!")
-                else:
-                    self.color_sensor_controller.set_arm_at_angle(0)
-                time.sleep(2)
-                # self.grabber_controller.start_unloading()
-                # while not self.grabber_controller.unloading_finished():
-                #     time.sleep(0.01)
-                # if self.grabber_controller.get_unloading_result():
-                #     print("Unloading successful")
-                # else:
-                #     print("Unloading failed")
+                    try:
+                        # Prepare for unloading
+                        self.color_sensor_controller.set_arm_at_angle(0)
+                        time.sleep(2)
 
+                        # Unload first carried block
+                        self.grabber_controller.unload_bloc(
+                            move_distance_mm=20,
+                            expected_bloc_count=1,
+                            label="first unload",
+                        )
+
+                        while not self.grabber_controller.unloading_finished():
+                            time.sleep(0.01)
+
+                        if self.grabber_controller.get_unloading_result():
+                            print("Unloading successful")
+                        else:
+                            print("Unloading failed")
+
+                    except Exception as err:
+                        print(err)
+
+                    finally:
+                        time.sleep(2)
+                else:
+                    print("No red bed detected, skipping unloading")
+                time.sleep(2)
             else:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
             
