@@ -5,6 +5,7 @@ from data.ports_brick import Ports
 from enum import Enum
 from controllers.grabber_controller import GrabberController
 from controllers.driving_controller import DrivingController
+from controllers.sound_controller import SoundController
 
 class RoomType(Enum):
     CORNER_SINGLE = 1
@@ -26,12 +27,12 @@ class RoomTraverser:
     # PID constants
     pid_constants = {
         "forward": {
-            "Kp": 15,
+            "Kp": 11,
             "Ki": 0,
             "Kd": 0
         },
         "backward": {
-            "Kp": 1.5,
+            "Kp": 1,
             "Ki": 0,
             "Kd": 0
         }
@@ -47,6 +48,7 @@ class RoomTraverser:
         self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         self.color_sensor_controller = color_sensor_controller
         self.driving_controller = DrivingController(left_motor, right_motor, base_power)
+        self.sound_controller = SoundController()
         wait_ready_sensors(True)
         print("Room Traverser ready.")
 
@@ -243,6 +245,7 @@ class RoomTraverser:
 
                     # Drop block
                     print("Dropping block")
+                    self.sound_controller.play_success()
                     time.sleep(2)
 
                     # Drive back to where the bed was detected
@@ -272,7 +275,8 @@ class RoomTraverser:
                 print(f"Returned to starting point (orange detected) after {back_result[1]:.2f} cm.")
             else:
                 print(f"Back run completed without detecting orange after {back_result[1]:.2f} cm.")
-
+            
+            self.sound_controller.play_mission_complete()
         except KeyboardInterrupt:
             print("Interrupted via keyboard...")
         except Exception as err:
