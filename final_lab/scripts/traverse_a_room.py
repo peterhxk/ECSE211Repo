@@ -33,7 +33,7 @@ wait_ready_sensors(True)
 
 if __name__ == "__main__":
     try:
-        routing.pharmacy_to_room1()
+        # routing.pharmacy_to_room1()
         # Example usage: traverse a corner room while detecting for a bed
         room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE)
     except Exception as err:
