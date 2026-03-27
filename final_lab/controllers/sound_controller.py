@@ -47,13 +47,13 @@ class SoundController(Sound):
         Played asynchronously; returns immediately.
         """
         sequence = [
-            Sound(duration=0.25, pitch="G4", volume=100),  # pickup
-            Sound(duration=0.25, pitch="C5", volume=100),  # rise
-            Sound(duration=0.25, pitch="E5", volume=100),  # rise
-            Sound(duration=0.25, pitch="G5", volume=100),  # rise
-            Sound(duration=0.25, pitch="C6", volume=100),  # triumphant peak
-            Sound(duration=0.25, pitch="G5", volume=100),  # step down
-            Sound(duration=0.25, pitch="C6", volume=100),  # final hold
+            Sound(duration=0.25, pitch="G4", volume=80),  # pickup
+            Sound(duration=0.25, pitch="C5", volume=80),  # rise
+            Sound(duration=0.25, pitch="E5", volume=80),  # rise
+            Sound(duration=0.25, pitch="G5", volume=80),  # rise
+            Sound(duration=0.25, pitch="C6", volume=80),  # triumphant peak
+            Sound(duration=0.25, pitch="G5", volume=80),  # step down
+            Sound(duration=0.25, pitch="C6", volume=80),  # final hold
         ]
 
         def _play():
@@ -72,8 +72,8 @@ class SoundController(Sound):
         Played asynchronously; returns immediately.
         """
         sequence = [
-            Sound(duration=0.25, pitch="E5", volume=100),
-            Sound(duration=0.25, pitch="G5", volume=100),
+            Sound(duration=0.25, pitch="E5", volume=80),
+            Sound(duration=0.25, pitch="G5", volume=80),
         ]
 
         def _play():
