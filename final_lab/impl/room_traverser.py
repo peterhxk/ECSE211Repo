@@ -85,6 +85,7 @@ class RoomTraverser:
 
         motor_base_power = self.base_power
         start_dps = motor_base_power if straight_distance > 0 else -motor_base_power
+        print(f"Starting with {start_dps} dps")
         self.left_motor.set_dps(start_dps)
         self.right_motor.set_dps(start_dps)
 
@@ -151,6 +152,7 @@ class RoomTraverser:
                 right_dps = -self.base_power + adjustment * 1.3
 
 
+            print(f"Adjustment: {adjustment}, Left DPS: {left_dps}, Right DPS: {right_dps}")
             self.left_motor.set_dps(left_dps)
             self.right_motor.set_dps(right_dps)
 
