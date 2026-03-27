@@ -32,9 +32,9 @@ class RoomTraverser:
             "Kd": 0
         },
         "backward": {
-            "Kp": 6,
+            "Kp": 3,
             "Ki": 0,
-            "Kd": 0
+            "Kd": 7
         }
     }
 
@@ -63,8 +63,11 @@ class RoomTraverser:
     Returns:
     - Tuple of (bed color detected or None, distance travelled in CM)
     """
-    def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False):
-        # reset motor encoders
+    def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False, detect_start: bool = False):
+        # float motors before encoder reset to prevent the BrickPi3 position
+        # controller from briefly locking the wheels during the transition
+        self.left_motor.float_motor()
+        self.right_motor.float_motor()
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
 
@@ -80,6 +83,7 @@ class RoomTraverser:
         smoothed_adjustment = None
 
         bed_detected = False
+        start_detected = False
 
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
 
@@ -97,6 +101,13 @@ class RoomTraverser:
                 # if color detected, stop moving.
                 bed_detected = True
                 break
+
+            if detect_start:
+                start_sweep_result = self.color_sensor_controller.sweep(colours=["orange"], range="full", stop_on_match=True)
+                if start_sweep_result and start_sweep_result[0][1] == "orange":
+                    print("Orange detected — arrived back at starting point.")
+                    start_detected = True
+                    break
 
             # check travelled distance
             travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
@@ -158,18 +169,20 @@ class RoomTraverser:
 
             # Pace the loop so the ultrasonic sensor has time to produce a fresh
             # sample and the motor controller is not overwhelmed with commands.
-            # The forward pass is naturally throttled by sweep(); this keeps the
-            # backward pass at a similar update rate (~25 Hz).
-            if not detect_bed:
+            # When a sweep is active it naturally throttles the loop; only sleep
+            # when running with no sweep at all (~25 Hz target).
+            if not detect_bed and not detect_start:
                 time.sleep(0.04)
 
         self.driving_controller.stop_motors()
+        dist_cm = (abs(travelled_deg) / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10
         if bed_detected:
             detected_color = color_sensor_sweep_result[0][1]
-            
-            return (detected_color, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
+            return (detected_color, dist_cm)
+        elif start_detected:
+            return ("orange", dist_cm)
         else:
-            return (None, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
+            return (None, dist_cm)
         
     """
     The main function to traverse a room depending on the room type. Everything is self contained here.
@@ -235,7 +248,11 @@ class RoomTraverser:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
             
             print("Going back.")
-            self.run(room_type, -1.15 * distance_travelled, detect_bed=False)
+            back_result = self.run(room_type, -1.15 * distance_travelled, detect_bed=False, detect_start=True)
+            if back_result[0] == "orange":
+                print(f"Returned to starting point (orange detected) after {back_result[1]:.2f} cm.")
+            else:
+                print(f"Back run completed without detecting orange after {back_result[1]:.2f} cm.")
 
         except KeyboardInterrupt:
             print("Interrupted via keyboard...")
