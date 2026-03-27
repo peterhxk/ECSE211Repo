@@ -7,8 +7,8 @@ class Routing(SweepLineFollower):
     """Class defines fixed routing commands to move the robot between rooms."""
 
     def pharmacy_to_room1(self):
-        print("Reversing 100mm")
-        self.pilot.move_distance(-100)
+        print("Reversing 50mm")
+        self.pilot.move_distance(-50)
         self.pilot.right_motor.wait_is_stopped()
         print("Motors stopped")
         
