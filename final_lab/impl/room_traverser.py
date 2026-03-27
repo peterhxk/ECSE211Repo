@@ -178,11 +178,12 @@ class RoomTraverser:
         dist_cm = (abs(travelled_deg) / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10
         if bed_detected:
             detected_color = color_sensor_sweep_result[0][1]
-            return (detected_color, dist_cm)
+            detected_angle = color_sensor_sweep_result[0][0]
+            return (detected_color, dist_cm, detected_angle)
         elif start_detected:
-            return ("orange", dist_cm)
+            return ("orange", dist_cm, None)
         else:
-            return (None, dist_cm)
+            return (None, dist_cm, None)
         
     """
     The main function to traverse a room depending on the room type. Everything is self contained here.
@@ -212,35 +213,54 @@ class RoomTraverser:
             bed_found = traverse_results[0] is not None
             bed_color_found = traverse_results[0]
             distance_travelled = traverse_results[1]
+            bed_angle = traverse_results[2]
             
             if bed_found:
-                print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
+                print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm, Angle: {bed_angle}")
                 if bed_color_found == "green":
-                    print("DROPPING BLOCK!!!")
-                    # try:
-                    #     # Prepare for unloading
-                    #     self.color_sensor_controller.set_arm_at_angle(0)
+                    APPROACH_MM = 80
 
-                    #     # Unload first carried block
-                    #     grabber_controller.unload_bloc()
-                    #     timer = time.time()
-                    #     while not grabber_controller.unloading_finished():
-                    #         if time.time() - timer > 1:
-                    #             print("still loading")
-                    #             timer = time.time()
-                    #         time.sleep(0.01)
+                    robot_turn_mag = self.driving_controller.convert_sensor_angle_to_robot_angle(bed_angle)
+                    if bed_angle > 0:
+                        turn_angle = -robot_turn_mag
+                    elif bed_angle < 0:
+                        turn_angle = robot_turn_mag
+                    else:
+                        turn_angle = 0
 
-                    #     if grabber_controller.get_unloading_result():
-                    #         print("Unloading successful")
-                    #     else:
-                    #         print("Unloading failed")
+                    # Turn towards green bed
+                    print(f"Turning {turn_angle:.1f}° towards green bed (sensor arm was at {bed_angle:.1f}°)")
+                    self.driving_controller.turn_in_place(turn_angle)
+                    self.left_motor.wait_is_stopped()
+                    self.right_motor.wait_is_stopped()
+                    time.sleep(0.5)
 
-                    # except Exception as err:
-                    #     print(err)
+                    # Drive towards bed
+                    print(f"Driving {APPROACH_MM}mm towards green bed")
+                    self.driving_controller.move_distance(APPROACH_MM)
+                    self.left_motor.wait_is_stopped()
+                    self.right_motor.wait_is_stopped()
+                    time.sleep(0.5)
 
-                    # finally:
-                    #     time.sleep(2)
+                    # Drop block
+                    print("Dropping block")
+                    time.sleep(2)
 
+                    # Drive back to where the bed was detected
+                    print(f"Reversing {APPROACH_MM}mm from green bed")
+                    self.driving_controller.move_distance(-APPROACH_MM)
+                    self.left_motor.wait_is_stopped()
+                    self.right_motor.wait_is_stopped()
+                    time.sleep(0.5)
+
+                    # Turn back to original heading
+                    print(f"Turning back {-turn_angle:.1f}° to restore heading")
+                    self.driving_controller.turn_in_place(-turn_angle)
+                    self.left_motor.wait_is_stopped()
+                    self.right_motor.wait_is_stopped()
+                    time.sleep(0.5)
+
+                    print("Back at original position, ready for backwards pass")
                 else:
                     print("Red bed detected, skipping unloading")
                 time.sleep(2)
