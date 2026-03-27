@@ -171,21 +171,21 @@ class RoomTraverser:
     Input:
     - room_type: The type of the room to traverse. This determines the path taken by the robot.
     """
-    def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
+    def traverse_a_room(self, room_type: RoomType) -> None:
         try:
-            grabber_controller.start_loading()
-            timer = time.time()
-            print("Started inward belt movement")
-            while not grabber_controller.loading_finished():
-                if time.time() - timer > 1:
-                    print("still loading")
-                    timer = time.time()
-                time.sleep(0.01)
+            # grabber_controller.start_loading()
+            # timer = time.time()
+            # print("Started inward belt movement")
+            # while not grabber_controller.loading_finished():
+            #     if time.time() - timer > 1:
+            #         print("still loading")
+            #         timer = time.time()
+            #     time.sleep(0.01)
             
-            if grabber_controller.get_loading_result():
-                print("Loading successful")
-            else:
-                print("Loading failed")
+            # if grabber_controller.get_loading_result():
+            #     print("Loading successful")
+            # else:
+            #     print("Loading failed")
             
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
             traverse_results = self.run(room_type, 45, detect_bed=True)
@@ -200,21 +200,20 @@ class RoomTraverser:
                     try:
                         # Prepare for unloading
                         self.color_sensor_controller.set_arm_at_angle(0)
-                        time.sleep(2)
 
                         # Unload first carried block
-                        grabber_controller.unload_bloc()
-                        timer = time.time()
-                        while not grabber_controller.unloading_finished():
-                            if time.time() - timer > 1:
-                                print("still loading")
-                                timer = time.time()
-                            time.sleep(0.01)
+                        # grabber_controller.unload_bloc()
+                        # timer = time.time()
+                        # while not grabber_controller.unloading_finished():
+                        #     if time.time() - timer > 1:
+                        #         print("still loading")
+                        #         timer = time.time()
+                        #     time.sleep(0.01)
 
-                        if grabber_controller.get_unloading_result():
-                            print("Unloading successful")
-                        else:
-                            print("Unloading failed")
+                        # if grabber_controller.get_unloading_result():
+                        #     print("Unloading successful")
+                        # else:
+                        #     print("Unloading failed")
 
                     except Exception as err:
                         print(err)
