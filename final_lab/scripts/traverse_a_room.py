@@ -4,6 +4,7 @@ from controllers.color_sensor_controller import ColourSensorController
 from impl.room_traverser import RoomTraverser, RoomType
 from data.ports_brick import Ports
 from controllers.grabber_controller import GrabberController
+from controllers.driving_controller import DrivingController
 
 MOTOR_POWER = 80
 
