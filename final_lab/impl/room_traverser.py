@@ -160,9 +160,9 @@ class RoomTraverser:
     """
     def traverse_a_room(self, room_type: RoomType) -> None:
         try:
-            self.grabber_controller.initialize_sensors()
-            print("Initialized grabber sensors")
-            self.grabber_controller.load_bloc()
+            # self.grabber_controller.initialize_sensors()
+            # print("Initialized grabber sensors")
+            # self.grabber_controller.load_bloc()
             
 
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
@@ -175,29 +175,30 @@ class RoomTraverser:
                 print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
                 if bed_color_found == "green":
                     print("DROPPING BLOCK!!!")
-                    try:
-                        # Prepare for unloading
-                        self.color_sensor_controller.set_arm_at_angle(0)
-                        time.sleep(2)
+                    # try:
+                    #     # Prepare for unloading
+                    #     self.color_sensor_controller.set_arm_at_angle(0)
+                    #     time.sleep(2)
 
-                        # Unload first carried block
-                        self.grabber_controller.unload_bloc()
+                    #     # Unload first carried block
+                    #     self.grabber_controller.unload_bloc()
 
-                        while not self.grabber_controller.unloading_finished():
-                            time.sleep(0.01)
+                    #     while not self.grabber_controller.unloading_finished():
+                    #         time.sleep(0.01)
 
-                        if self.grabber_controller.get_unloading_result():
-                            print("Unloading successful")
-                        else:
-                            print("Unloading failed")
+                    #     if self.grabber_controller.get_unloading_result():
+                    #         print("Unloading successful")
+                    #     else:
+                    #         print("Unloading failed")
 
-                    except Exception as err:
-                        print(err)
+                    # except Exception as err:
+                    #     print(err)
 
-                    finally:
-                        time.sleep(2)
+                    # finally:
+                    #     time.sleep(2)
+
                 else:
-                    print("No red bed detected, skipping unloading")
+                    print("Red bed detected, skipping unloading")
                 time.sleep(2)
             else:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
