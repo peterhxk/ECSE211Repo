@@ -219,8 +219,8 @@ class ColourSensorController (EV3ColorSensor):
         raw = self.get_rgb()
         r_n, g_n, b_n = normalize_colours(raw[0], raw[1], raw[2])
 
-        if label in bw:
-            old = bw[label]
+        old = bw.get(label)
+        if isinstance(old, list) and len(old) == 3:
             bw[label] = [(old[0] + r_n) / 2, (old[1] + g_n) / 2, (old[2] + b_n) / 2]
         else:
             bw[label] = [r_n, g_n, b_n]
