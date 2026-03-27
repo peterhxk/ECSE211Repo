@@ -172,7 +172,7 @@ class ColourSensorController (EV3ColorSensor):
         """
         ambient = self.read_ambient()
         print(ambient)
-        if ambient <= 1:
+        if ambient <= 5:
             reading = "b"
         else:
             reading = "w"
