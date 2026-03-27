@@ -15,18 +15,16 @@ color_motor = Motor(Ports.COLOR_MOTOR.value)
 
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_motor)
 room_traverser = RoomTraverser(left_motor, right_motor, MOTOR_POWER, color_sensor_controller)
-grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False)
+grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value)
 
 print("Waiting for sensors to be ready...")
 
 wait_ready_sensors(True)
 
-# grabber_controller.initialize_sensors()
-# print("Initialized grabber sensors")
-# time.sleep(2)
+grabber_controller.initialize_sensors()
+print("Initialized grabber sensors")
+time.sleep(2)
 
-grabber_controller.initialize_sensors_with_prev_data()
-print("Initialized grabber sensors from saved calibration")
 
 if __name__ == "__main__":
     try:
