@@ -29,12 +29,12 @@ class RoomTraverser:
         "forward": {
             "Kp": 30,
             "Ki": 0,
-            "Kd": 30
+            "Kd": 0
         },
         "backward": {
             "Kp": 15,
             "Ki": 0,
-            "Kd": 30
+            "Kd": 0
         }
     }
 
