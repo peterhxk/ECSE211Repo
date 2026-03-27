@@ -169,15 +169,21 @@ class ColourSensorController (EV3ColorSensor):
 
     def read_black_white(self):
         """
-        Reads the current ambient value, accumulates it into a rolling average,
-        then classifies as "b" or "w" by comparing against calibrated values in
-        black_white.json. Returns None if the file is missing or lacks both entries.
+        Reads the current normalized RGB, accumulates it into a rolling average,
+        then classifies as "b" or "w" by Euclidean distance to calibrated values
+        in black_white.json. Returns None if the file is missing or lacks both entries.
         """
-        ambient = float(self.read_ambient())
-        print(ambient)
+        raw = self.get_rgb()
+        r_n, g_n, b_n = normalize_colours(raw[0], raw[1], raw[2])
+        print(f"RGB normalized: ({r_n:.3f}, {g_n:.3f}, {b_n:.3f})")
 
-        self._bw_history.append(ambient)
-        current = sum(self._bw_history) / len(self._bw_history)
+        self._bw_history.append((r_n, g_n, b_n))
+        n = len(self._bw_history)
+        avg = (
+            sum(s[0] for s in self._bw_history) / n,
+            sum(s[1] for s in self._bw_history) / n,
+            sum(s[2] for s in self._bw_history) / n,
+        )
 
         try:
             with open("data/black_white.json", "r") as f:
@@ -188,13 +194,16 @@ class ColourSensorController (EV3ColorSensor):
         if "b" not in bw or "w" not in bw:
             return None
 
-        dist_b = abs(current - bw["b"])
-        dist_w = abs(current - bw["w"])
+        def euclid(a, b):
+            return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+
+        dist_b = euclid(avg, bw["b"])
+        dist_w = euclid(avg, bw["w"])
         return "b" if dist_b < dist_w else "w"
 
     def ingest_bw(self, label: str):
         """
-        Reads the current ambient light and updates the running average for
+        Reads the current normalized RGB and updates the running average for
         label ("b" or "w") in data/black_white.json.
         Call this while the sensor is positioned over the target surface to calibrate.
         """
@@ -207,17 +216,19 @@ class ColourSensorController (EV3ColorSensor):
         except (FileNotFoundError, json.JSONDecodeError):
             bw = {}
 
-        ambient = float(self.read_ambient())
+        raw = self.get_rgb()
+        r_n, g_n, b_n = normalize_colours(raw[0], raw[1], raw[2])
 
         if label in bw:
-            bw[label] = (bw[label] + ambient) / 2
+            old = bw[label]
+            bw[label] = [(old[0] + r_n) / 2, (old[1] + g_n) / 2, (old[2] + b_n) / 2]
         else:
-            bw[label] = ambient
+            bw[label] = [r_n, g_n, b_n]
 
         with open("data/black_white.json", "w") as f:
             json.dump(bw, f, indent=2)
 
-        print(f"Updated '{label}': {bw[label]:.3f}  (raw ambient={ambient})")
+        print(f"Updated '{label}': {bw[label]}  (raw RGB={raw})")
 
     def ingest_colours(self, colour_name: str):
         """
