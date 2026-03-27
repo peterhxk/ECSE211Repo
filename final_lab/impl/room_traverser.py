@@ -156,6 +156,13 @@ class RoomTraverser:
             self.left_motor.set_dps(left_dps)
             self.right_motor.set_dps(right_dps)
 
+            # Pace the loop so the ultrasonic sensor has time to produce a fresh
+            # sample and the motor controller is not overwhelmed with commands.
+            # The forward pass is naturally throttled by sweep(); this keeps the
+            # backward pass at a similar update rate (~25 Hz).
+            if not detect_bed:
+                time.sleep(0.04)
+
         self.driving_controller.stop_motors()
         if bed_detected:
             detected_color = color_sensor_sweep_result[0][1]
