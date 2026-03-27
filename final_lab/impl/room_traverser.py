@@ -86,7 +86,6 @@ class RoomTraverser:
 
         motor_base_power = self.base_power
         start_dps = motor_base_power if straight_distance > 0 else -motor_base_power
-        self.driving_controller.set_speed(start_dps)
         self.driving_controller.move_forward()
 
         while True:
