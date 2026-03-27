@@ -12,7 +12,7 @@ class RoomType(Enum):
     CORNER_DOUBLE_SECOND_HALF = 4
 
 room_type_to_wall_distance_map = {
-    RoomType.CORNER_SINGLE: 4.6,
+    RoomType.CORNER_SINGLE: 4.8,
     RoomType.WALL_SINGLE: 53.4,
     RoomType.CORNER_DOUBLE_FIRST_HALF: 30,
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4
@@ -100,7 +100,6 @@ class RoomTraverser:
             prev_time = now
 
             raw = self.ultrasonic_sensor.get_cm()
-            print(f"Distance: {raw} cm")
             if last_distance_cm is None or abs(raw - last_distance_cm) <= OUTLIER_THRESHOLD_CM:
                 last_distance_cm = raw
 
