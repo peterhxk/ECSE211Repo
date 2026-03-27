@@ -41,26 +41,26 @@ class SoundController(Sound):
         self._executor.submit(_play)
 
     def play_mission_complete(self):
-        """Triumphant victory fanfare: ascending major arpeggio with a held top note.
+        """Super Mario Bros. 1-UP jingle.
 
-        G4 C5 E5 G5 C6 | G5 C6 (held)
+        E5 G5 E6 C6 D6 G6
         Played asynchronously; returns immediately.
         """
+        # Super Mario Bros. 1-UP jingle
         sequence = [
-            Sound(duration=1, pitch="G4", volume=80),  # pickup
-            Sound(duration=1, pitch="C5", volume=80),  # rise
-            Sound(duration=1, pitch="E5", volume=80),  # rise
-            Sound(duration=1, pitch="G5", volume=80),  # rise
-            Sound(duration=1, pitch="C6", volume=80),  # triumphant peak
-            Sound(duration=1, pitch="G5", volume=80),  # step down
-            Sound(duration=1, pitch="C6", volume=80),  # final hold
+            Sound(duration=0.12, pitch="E5", volume=80),
+            Sound(duration=0.12, pitch="G5", volume=80),
+            Sound(duration=0.12, pitch="E6", volume=80),
+            Sound(duration=0.12, pitch="C6", volume=80),
+            Sound(duration=0.12, pitch="D6", volume=80),
+            Sound(duration=0.25, pitch="G6", volume=80),
         ]
 
         def _play():
             self.note_playing = True
             for note in sequence:
                 note.play()
-                time.sleep(1)
+                time.sleep(note._duration)
             self.note_playing = False
 
         self._executor.submit(_play)
@@ -80,7 +80,7 @@ class SoundController(Sound):
             self.note_playing = True
             for note in sequence:
                 note.play()
-                time.sleep(1)
+                time.sleep(note._duration)
             self.note_playing = False
 
         self._executor.submit(_play)
