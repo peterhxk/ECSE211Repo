@@ -48,15 +48,15 @@ class SoundController(Sound):
         Played asynchronously; returns immediately.
         """
         sequence = [
-            Sound(duration=0.50, pitch="G4",  volume=80),  # G  (quarter)
-            Sound(duration=0.50, pitch="G4",  volume=80),  # G  (quarter)
-            Sound(duration=0.50, pitch="G4",  volume=80),  # G  (quarter)
-            Sound(duration=0.25, pitch="Eb4", volume=80),  # Eb (eighth)
-            Sound(duration=0.25, pitch="Bb4", volume=80),  # Bb (eighth)
-            Sound(duration=1.00, pitch="G4",  volume=80),  # G  (half)
-            Sound(duration=0.25, pitch="Eb4", volume=80),  # Eb (eighth)
-            Sound(duration=0.25, pitch="Bb4", volume=80),  # Bb (eighth)
-            Sound(duration=1.50, pitch="G4",  volume=80),  # G  (dotted half)
+            Sound(duration=0.50, pitch="G4",  volume=100),  # G  (quarter)
+            Sound(duration=0.50, pitch="G4",  volume=100),  # G  (quarter)
+            Sound(duration=0.50, pitch="G4",  volume=100),  # G  (quarter)
+            Sound(duration=0.25, pitch="Eb4", volume=100),  # Eb (eighth)
+            Sound(duration=0.25, pitch="Bb4", volume=100),  # Bb (eighth)
+            Sound(duration=1.00, pitch="G4",  volume=100),  # G  (half)
+            Sound(duration=0.25, pitch="Eb4", volume=100),  # Eb (eighth)
+            Sound(duration=0.25, pitch="Bb4", volume=100),  # Bb (eighth)
+            Sound(duration=1.50, pitch="G4",  volume=100),  # G  (dotted half)
         ]
 
         def _play():
@@ -75,8 +75,8 @@ class SoundController(Sound):
         Played asynchronously; returns immediately.
         """
         sequence = [
-            Sound(duration=0.12, pitch="E5", volume=75),
-            Sound(duration=0.25, pitch="G5", volume=75),
+            Sound(duration=0.12, pitch="E5", volume=100),
+            Sound(duration=0.25, pitch="G5", volume=100),
         ]
 
         def _play():
