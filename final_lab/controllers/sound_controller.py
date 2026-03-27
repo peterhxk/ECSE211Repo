@@ -47,20 +47,20 @@ class SoundController(Sound):
         Played asynchronously; returns immediately.
         """
         sequence = [
-            Sound(duration=0.25, pitch="G4", volume=80),  # pickup
-            Sound(duration=0.25, pitch="C5", volume=80),  # rise
-            Sound(duration=0.25, pitch="E5", volume=80),  # rise
-            Sound(duration=0.25, pitch="G5", volume=80),  # rise
-            Sound(duration=0.25, pitch="C6", volume=80),  # triumphant peak
-            Sound(duration=0.25, pitch="G5", volume=80),  # step down
-            Sound(duration=0.25, pitch="C6", volume=80),  # final hold
+            Sound(duration=1, pitch="G4", volume=80),  # pickup
+            Sound(duration=1, pitch="C5", volume=80),  # rise
+            Sound(duration=1, pitch="E5", volume=80),  # rise
+            Sound(duration=1, pitch="G5", volume=80),  # rise
+            Sound(duration=1, pitch="C6", volume=80),  # triumphant peak
+            Sound(duration=1, pitch="G5", volume=80),  # step down
+            Sound(duration=1, pitch="C6", volume=80),  # final hold
         ]
 
         def _play():
             self.note_playing = True
             for note in sequence:
                 note.play()
-                time.sleep(0.25)
+                time.sleep(1)
             self.note_playing = False
 
         self._executor.submit(_play)
@@ -72,15 +72,15 @@ class SoundController(Sound):
         Played asynchronously; returns immediately.
         """
         sequence = [
-            Sound(duration=0.25, pitch="E5", volume=80),
-            Sound(duration=0.25, pitch="G5", volume=80),
+            Sound(duration=1, pitch="E5", volume=80),
+            Sound(duration=1, pitch="G5", volume=80),
         ]
 
         def _play():
             self.note_playing = True
             for note in sequence:
                 note.play()
-                time.sleep(0.25)
+                time.sleep(1)
             self.note_playing = False
 
         self._executor.submit(_play)
