@@ -32,7 +32,7 @@ class RoomTraverser:
             "Kd": 0
         },
         "backward": {
-            "Kp": 1,
+            "Kp": 3,
             "Ki": 0,
             "Kd": 0
         }
