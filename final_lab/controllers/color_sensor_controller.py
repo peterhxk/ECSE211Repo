@@ -169,26 +169,55 @@ class ColourSensorController (EV3ColorSensor):
 
     def read_black_white(self):
         """
-        Compares the new ambient reading against the rolling baseline of previous readings.
-        Returns "b" if the reading drops by BW_DROP_THRESHOLD, "w" if it rises by
-        BW_RISE_THRESHOLD, None if the history is too short or change is within threshold.
+        Reads the current ambient value, accumulates it into a rolling average,
+        then classifies as "b" or "w" by comparing against calibrated values in
+        black_white.json. Returns None if the file is missing or lacks both entries.
         """
         ambient = float(self.read_ambient())
         print(ambient)
 
-        if len(self._bw_history) < 3:
-            self._bw_history.append(ambient)
+        self._bw_history.append(ambient)
+        current = sum(self._bw_history) / len(self._bw_history)
+
+        try:
+            with open("data/black_white.json", "r") as f:
+                bw = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
             return None
 
-        baseline = sum(self._bw_history) / len(self._bw_history)
-        self._bw_history.append(ambient)
+        if "b" not in bw or "w" not in bw:
+            return None
 
-        delta = ambient - baseline
-        if delta <= -self.BW_DROP_THRESHOLD:
-            return "b"
-        if delta >= self.BW_RISE_THRESHOLD:
-            return "w"
-        return None
+        dist_b = abs(current - bw["b"])
+        dist_w = abs(current - bw["w"])
+        return "b" if dist_b < dist_w else "w"
+
+    def ingest_bw(self, label: str):
+        """
+        Reads the current ambient light and updates the running average for
+        label ("b" or "w") in data/black_white.json.
+        Call this while the sensor is positioned over the target surface to calibrate.
+        """
+        if label not in ("b", "w"):
+            raise ValueError(f"label must be 'b' or 'w', got '{label}'")
+
+        try:
+            with open("data/black_white.json", "r") as f:
+                bw = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            bw = {}
+
+        ambient = float(self.read_ambient())
+
+        if label in bw:
+            bw[label] = (bw[label] + ambient) / 2
+        else:
+            bw[label] = ambient
+
+        with open("data/black_white.json", "w") as f:
+            json.dump(bw, f, indent=2)
+
+        print(f"Updated '{label}': {bw[label]:.3f}  (raw ambient={ambient})")
 
     def ingest_colours(self, colour_name: str):
         """
