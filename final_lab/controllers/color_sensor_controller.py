@@ -94,7 +94,7 @@ class ColourSensorController (EV3ColorSensor):
 
         #initial colour sensor position (should be straight)
         init_position = 0 #self.motor.get_position()
-        # self.motor.set_position(0)
+        self.motor.set_position(0)
         
         print("------------")
         print(init_position)
