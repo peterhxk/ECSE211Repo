@@ -69,7 +69,7 @@ class ColourSensorController (EV3ColorSensor):
         """
         self.motor.set_limits(0, self.MOTOR_POWER_DPS)
         self.motor.set_position(angle)
-        self.motor.wait_is_moving(0.01)
+        self.motor.wait_is_stopped(0.01)
 
     def read_current_angle(self):
         pass
