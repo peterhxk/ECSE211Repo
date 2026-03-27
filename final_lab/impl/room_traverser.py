@@ -24,7 +24,7 @@ class RoomTraverser:
     MOTOR_POWER = 160
     
     # PID constants
-    Kp = 8
+    Kp = 3
     Ki = 3
     Kd = 4
 
@@ -139,7 +139,7 @@ class RoomTraverser:
 
             self.left_motor.set_dps(left_dps)
             self.right_motor.set_dps(right_dps)
-            
+
         self.left_motor.set_dps(0)
         self.right_motor.set_dps(0)
         if bed_detected:
