@@ -68,6 +68,7 @@ class ColourSensorController (EV3ColorSensor):
         angle < 0 -> left?
         """
         self.motor.set_limits(0, self.MOTOR_POWER_DPS)
+        time.sleep(1)
         self.motor.set_position(angle)
         self.motor.wait_is_moving()
 
