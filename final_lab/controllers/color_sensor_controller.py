@@ -47,7 +47,9 @@ class ColourSensorController (EV3ColorSensor):
         self.motor = motor
         self.sweep_dir = None
         self.colours_found = []
-        self._bw_history = deque(maxlen=5)
+        self._bw_history = deque(maxlen=8)
+        self.BW_DROP_THRESHOLD = 1.5   # drop from baseline → black
+        self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
 
         # Reset the value of the motor encoder.
         self.motor.reset_encoder()
@@ -167,18 +169,26 @@ class ColourSensorController (EV3ColorSensor):
 
     def read_black_white(self):
         """
-        Uses ambient light to classify surface as black or white.
-        Returns "b" or "w" only if the last 5 readings all agree, None otherwise.
+        Compares the new ambient reading against the rolling baseline of previous readings.
+        Returns "b" if the reading drops by BW_DROP_THRESHOLD, "w" if it rises by
+        BW_RISE_THRESHOLD, None if the history is too short or change is within threshold.
         """
-        ambient = self.read_ambient()
-        self.read_colour()
+        ambient = float(self.read_ambient())
         print(ambient)
-        if ambient <= 1:
-            reading = "b"
-        else:
-            reading = "w"
 
-        return reading
+        if len(self._bw_history) < 3:
+            self._bw_history.append(ambient)
+            return None
+
+        baseline = sum(self._bw_history) / len(self._bw_history)
+        self._bw_history.append(ambient)
+
+        delta = ambient - baseline
+        if delta <= -self.BW_DROP_THRESHOLD:
+            return "b"
+        if delta >= self.BW_RISE_THRESHOLD:
+            return "w"
+        return None
 
     def ingest_colours(self, colour_name: str):
         """
