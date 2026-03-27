@@ -32,9 +32,9 @@ class RoomTraverser:
             "Kd": 0
         },
         "backward": {
-            "Kp": 3,
+            "Kp": 1.5,
             "Ki": 0,
-            "Kd": 7
+            "Kd": 0
         }
     }
 
@@ -159,8 +159,8 @@ class RoomTraverser:
                 left_dps  = self.base_power + adjustment * 1.3
                 right_dps = self.base_power - adjustment * 1.3
             else:
-                left_dps  = -self.base_power - adjustment * 1.3
-                right_dps = -self.base_power + adjustment * 1.3
+                left_dps  = -self.base_power - adjustment * 0.8
+                right_dps = -self.base_power + adjustment * 0.8
 
 
             print(f"Adjustment: {adjustment}, Left DPS: {left_dps}, Right DPS: {right_dps}")
