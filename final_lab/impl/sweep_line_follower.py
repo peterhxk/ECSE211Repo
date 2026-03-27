@@ -157,17 +157,14 @@ class SweepLineFollower:
         
         print(f"pivoting {direction}")
 
-        self.pilot.pivot(direction)
-        while (self.sensor.read_black_white() != "b"):
-            print(self.sensor.read_black_white())
-            time.sleep(0.1)
-            pass
+        self.pilot.pivot_90(direction)
 
         print("black found")
         self.pilot.stop_motors()
 
         # Set colour arm back to the normal position
         self.sensor.set_arm_at_angle(0)
+        self.sensor.motor.wait_is_stopped()
         # Wait for pivot to complete before proceeding
         #time.sleep(0.1)
         #getattr(self.pilot, f"{'right' if direction == 'left' else 'left'}_motor").wait_is_stopped()
