@@ -75,13 +75,15 @@ class ColourSensorController (EV3ColorSensor):
         pass
 
 
-    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True, colours=[]) -> List[Tuple[int, str, int]]:
+    def sweep(self, colours=[], range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True, black_white = False) -> List[Tuple[int, str, int]]:
         """Sweeps the colour sensor arm and checks the colour.
 
         Args:
-            colour (str): The colour to search for (e.g., "b" for black).
+            colours (List[str]): A list of the colours to search for (e.g., "b" for black, "w" for white, and "colour" for all other colours).
             range (str): "left", "right" or "full". Determines the sweep arc.
             stop_on_match (bool): If True, exits early on the first detection.
+            starting_on_right (bool): If True, colour arm starts sweeping towards the right
+            black_white (bool): If True, the reading will be grayscale (only black or white). If False, reads all other colours other than black/white.
 
         Returns:
             List[Tuple]: A list of detections where each 
@@ -111,14 +113,17 @@ class ColourSensorController (EV3ColorSensor):
                 # Reverse the direction of the motor
                 self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
 
-            detected_colour = self.read_colour()
+            if black_white:
+                detected_colour = self.read_black_white()
+            else:   
+                detected_colour = self.read_colour()
             # Check if a black line is found
-            if detected_colour == colour or detected_colour in colours:
+            if detected_colour in colours:
                 consecutive_count += 1
                 consecutive_positions.append(self.motor.get_position())
                 if consecutive_count >= 5:
                     avg_pos = sum(consecutive_positions) / len(consecutive_positions)
-                    self.colours_found.append((avg_pos, colour, duration))
+                    self.colours_found.append((avg_pos, detected_colour, duration))
                     print(self.colours_found)
                     consecutive_count = 0
                     consecutive_positions = []
@@ -197,6 +202,9 @@ class ColourSensorController (EV3ColorSensor):
         print(f"Updated '{colour_name}': {colours[colour_name]}")
 
     def read_colour(self):
+        '''
+        Reads the current colour of the colour sensor (not black and white).
+        '''
         cur_rgb = self.get_rgb()
         cur_r, cur_g, cur_b = normalize_colours(cur_rgb[0], cur_rgb[1], cur_rgb[2])
 
@@ -274,4 +282,3 @@ class ColourSensorController (EV3ColorSensor):
     
     def read_rgb(self):
         return self.get_rgb()
-

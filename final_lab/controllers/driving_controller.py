@@ -40,14 +40,15 @@ class DrivingController:
         phi = math.degrees(math.asin(consts.l_rod_mm*math.sin(math.radians(x))/c))
         return phi
 
-    def move_forward(self):
+    def move_forward(self, power: int = None):
         """
         Sets the left and right motors to move the robot forward at a rate of `self.base_power`.
         """
         # print(f"moving forward with {self.base_power}")
 
-        self.right_motor.set_dps(self.base_power)
-        self.left_motor.set_dps(self.base_power)
+        print(f"moving forward with {'base power' if power is None else power}")
+        self.right_motor.set_dps(self.base_power if power is None else power)
+        self.left_motor.set_dps(self.base_power if power is None else power)
 
     def move_backward(self):
         """
@@ -184,3 +185,14 @@ class DrivingController:
         else:
             self.turn_in_place(-90)
         
+    def set_left_motor(self, power: int):
+        """Sets the left motor to a specific power."""
+        self.left_motor.set_dps(power)
+    
+    def set_right_motor(self, power: int):
+        """Sets the right motor to a specific power."""
+        self.right_motor.set_dps(power)
+
+    def get_base_power(self):
+        """Returns the base power of the motors."""
+        return self.base_power
