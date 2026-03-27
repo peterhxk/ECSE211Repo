@@ -104,8 +104,7 @@ class RoomTraverser:
                 break
 
             if detect_start:
-                start_sweep_result = self.color_sensor_controller.sweep(colours=["orange"], range="full", stop_on_match=True)
-                if start_sweep_result and start_sweep_result[0][1] == "orange":
+                if self.color_sensor_controller.read_colour() == "orange":
                     print("Orange detected — arrived back at starting point.")
                     start_detected = True
                     break
@@ -223,9 +222,9 @@ class RoomTraverser:
 
                     robot_turn_mag = self.driving_controller.convert_sensor_angle_to_robot_angle(bed_angle)
                     if bed_angle > 0:
-                        turn_angle = -robot_turn_mag
-                    elif bed_angle < 0:
                         turn_angle = robot_turn_mag
+                    elif bed_angle < 0:
+                        turn_angle = -robot_turn_mag
                     else:
                         turn_angle = 0
 
