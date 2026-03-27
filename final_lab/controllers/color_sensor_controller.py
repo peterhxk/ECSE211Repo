@@ -202,6 +202,9 @@ class ColourSensorController (EV3ColorSensor):
         print(f"Updated '{colour_name}': {colours[colour_name]}")
 
     def read_colour(self):
+        '''
+        Reads the current colour of the colour sensor (not black and white).
+        '''
         cur_rgb = self.get_rgb()
         cur_r, cur_g, cur_b = normalize_colours(cur_rgb[0], cur_rgb[1], cur_rgb[2])
 
