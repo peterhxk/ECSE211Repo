@@ -132,10 +132,6 @@ class SweepLineFollower:
         else:
             raise Exception("Wrong direction input")
         
-        print("Moving arm")
-        time.sleep(0.1)
-        # Wait for sensor arm to be stopped before proceeding
-        self.sensor.motor.wait_is_stopped()
 
         # Moves 30 mm forward to find intersection
         if heading == "front":
