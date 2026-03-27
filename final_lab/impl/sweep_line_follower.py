@@ -52,7 +52,7 @@ class SweepLineFollower:
             last_encoder_value = self.pilot.get_avg_encoder_value()
 
             # If the colour sensor has detected white, apply corrective feedback
-            if self.sensor.read_black_white() == "white":
+            if self.sensor.read_black_white() == "w":
                 if moving_forward:
                     moving_forward = False
                     self.pilot.stop_motors()
@@ -146,7 +146,7 @@ class SweepLineFollower:
             raise Exception(f"Invalid parameter heading for method SweepLineFollower.turn_logic: {heading}. Valid options are front, back")
         print(f"The colors detected are : {self.sensor.get_rgb()}")
 
-        while (self.sensor.read_black_white() == "white"):
+        while (self.sensor.read_black_white() == "w"):
             print("reading white")
 
         print("stopping motors")
