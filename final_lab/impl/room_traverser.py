@@ -27,7 +27,7 @@ class RoomTraverser:
     # PID constants
     pid_constants = {
         "forward": {
-            "Kp": 15,
+            "Kp": 12,
             "Ki": 0,
             "Kd": 10
         },
