@@ -12,7 +12,7 @@ class RoomType(Enum):
     CORNER_DOUBLE_SECOND_HALF = 4
 
 room_type_to_wall_distance_map = {
-    RoomType.CORNER_SINGLE: 5.3,
+    RoomType.CORNER_SINGLE: 4.5,
     RoomType.WALL_SINGLE: 53.4,
     RoomType.CORNER_DOUBLE_FIRST_HALF: 30,
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4
