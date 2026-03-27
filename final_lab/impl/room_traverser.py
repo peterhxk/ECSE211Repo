@@ -139,9 +139,7 @@ class RoomTraverser:
 
             self.left_motor.set_dps(left_dps)
             self.right_motor.set_dps(right_dps)
-
-            time.sleep(0.02)
-
+            
         self.left_motor.set_dps(0)
         self.right_motor.set_dps(0)
         if bed_detected:
