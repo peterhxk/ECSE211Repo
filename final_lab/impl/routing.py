@@ -19,7 +19,7 @@ class Routing(SweepLineFollower):
         self.turn_logic("right", "front")
         
         print("Moving forward, searching for orange line")
-        self.move_forward(200, "o")
+        self.move_forward(200, "orange")
         
         print("Found orange line.")
     
@@ -31,17 +31,17 @@ class Routing(SweepLineFollower):
         self.turn_logic("right", "back")
         self.move_forward(200)
         self.turn_logic("left", "front")
-        self.move_forward(50, "o")
+        self.move_forward(50, "orange")
     
     def room2_to_room3A(self):
         self.turn_logic("right", "back")
         self.turn_logic("right", "front")
-        self.move_forward(50, "o")
+        self.move_forward(50, "orange")
 
     def room3A_to_room3B(self):
         self.turn_logic("left", "back")
         self.turn_logic("right", "front")
-        self.move_forward(50, "o") 
+        self.move_forward(50, "orange") 
 
     def pharmacy_grab_blocks(self):
         self.pilot.move_distance(50)

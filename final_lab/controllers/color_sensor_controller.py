@@ -177,8 +177,6 @@ class ColourSensorController (EV3ColorSensor):
         """
         raw = self.get_rgb()
         r, g, b = float(raw[0]), float(raw[1]), float(raw[2])
-        print(f"RGB raw: ({r:.1f}, {g:.1f}, {b:.1f})  magnitude={math.sqrt(r**2+g**2+b**2):.1f}")
-
         self._bw_history.append((r, g, b))
         n = len(self._bw_history)
         avg = (
