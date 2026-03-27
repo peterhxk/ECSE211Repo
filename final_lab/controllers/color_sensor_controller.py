@@ -171,6 +171,7 @@ class ColourSensorController (EV3ColorSensor):
         Returns "b" or "w" only if the last 5 readings all agree, None otherwise.
         """
         ambient = self.read_ambient()
+        print(ambient)
         if ambient <= 1:
             reading = "b"
         else:
