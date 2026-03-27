@@ -161,6 +161,7 @@ class RoomTraverser:
     def traverse_a_room(self, room_type: RoomType) -> None:
         try:
             self.grabber_controller.initialize_sensors()
+            print("Initialized grabber sensors")
             self.grabber_controller.load_bloc()
             while not self.grabber_controller.loading_finished():
                 time.sleep(0.01)
