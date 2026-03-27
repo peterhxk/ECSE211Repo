@@ -4,6 +4,8 @@ import json
 from enum import Enum
 from typing import Literal, List, Tuple, Union, NamedTuple, Optional
 import math
+import data.measurements as consts
+
 
 def normalize_colours(r, g, b):
     total = r+g+b
@@ -21,15 +23,15 @@ class ColourSensorController (EV3ColorSensor):
     MAX_SWEEP_ANGLE = {
         "left": {
             SweepDirection.RIGHT: 0,
-            SweepDirection.LEFT: -45
+            SweepDirection.LEFT: -60
         },
         "right": {
-            SweepDirection.RIGHT: 45,
+            SweepDirection.RIGHT: 60,
             SweepDirection.LEFT: 0
         },
         "full": {
-            SweepDirection.RIGHT: 45,
-            SweepDirection.LEFT: -45
+            SweepDirection.RIGHT: 60,
+            SweepDirection.LEFT: -60
         }
     }
 
@@ -47,6 +49,8 @@ class ColourSensorController (EV3ColorSensor):
 
         # Reset the value of the motor encoder.
         self.motor.reset_encoder()
+        # Sets maximum speed of motor.
+        motor.set_limits(0, self.MOTOR_POWER_DPS)
 
     def _is_at_boundary(self, range: Literal["left", "right", "full"]) -> bool:
         """
@@ -71,13 +75,15 @@ class ColourSensorController (EV3ColorSensor):
         pass
 
 
-    def sweep(self, colour="b", range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True, colours=[]) -> List[Tuple[int, str, int]]:
+    def sweep(self, colours=[], range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True, black_white = False) -> List[Tuple[int, str, int]]:
         """Sweeps the colour sensor arm and checks the colour.
 
         Args:
-            colour (str): The colour to search for (e.g., "b" for black) OR list of colours to search for. e.g. ["b", "red", "green"]
+            colours (List[str]): A list of the colours to search for (e.g., "b" for black, "w" for white, and "colour" for all other colours).
             range (str): "left", "right" or "full". Determines the sweep arc.
             stop_on_match (bool): If True, exits early on the first detection.
+            starting_on_right (bool): If True, colour arm starts sweeping towards the right
+            black_white (bool): If True, the reading will be grayscale (only black or white). If False, reads all other colours other than black/white.
 
         Returns:
             List[Tuple]: A list of detections where each 
@@ -107,9 +113,12 @@ class ColourSensorController (EV3ColorSensor):
                 # Reverse the direction of the motor
                 self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
 
-            detected_colour = self.read_colour()
+            if black_white:
+                detected_colour = self.read_black_white()
+            else:   
+                detected_colour = self.read_colour()
             # Check if a black line is found
-            if detected_colour == colour or detected_colour in colours:
+            if detected_colour in colours:
                 consecutive_count += 1
                 consecutive_positions.append(self.motor.get_position())
                 if consecutive_count >= 5:
@@ -122,7 +131,7 @@ class ColourSensorController (EV3ColorSensor):
                         results = self.colours_found
                         self.colours_found = []
                         self.motor.set_dps(0)
-                        self.motor.set_position(self.MAX_SWEEP_ANGLE[range][SweepDirection.LEFT])
+                        self.motor.set_position(init_position)
                         self.motor.wait_is_moving()
                         return results
             else:
@@ -152,14 +161,94 @@ class ColourSensorController (EV3ColorSensor):
             time.sleep(0.01)
             duration += 0.1
 
+
+    def read_black_white(self):
+        """
+        Uses ambient light to classify surface as black or white.
+        Returns "b" if ambient == 1, "w" if ambient >= 2, None otherwise.
+        """
+        ambient = self.read_ambient()
+        if ambient == 1:
+            return "b"
+        elif ambient >= 2:
+            return "w"
+        return None
+
+    def ingest_colours(self, colour_name: str):
+        """
+        Reads the current sensor RGB, normalizes it, and updates the running
+        average for colour_name in colours.json.
+        Call this while the sensor is positioned over the target colour to calibrate.
+        """
+        with open("data/colours.json", "r") as f:
+            colours = json.load(f)
+
+        raw = self.get_rgb()
+        r_n, g_n, b_n = normalize_colours(raw[0], raw[1], raw[2])
+
+        if colour_name in colours:
+            old = colours[colour_name]
+            colours[colour_name] = [
+                (old[0] + r_n) / 2,
+                (old[1] + g_n) / 2,
+                (old[2] + b_n) / 2,
+            ]
+        else:
+            colours[colour_name] = [r_n, g_n, b_n]
+
+        with open("data/colours.json", "w") as f:
+            json.dump(colours, f, indent=2)
+
+        print(f"Updated '{colour_name}': {colours[colour_name]}")
+
     def read_colour(self):
+        '''
+        Reads the current colour of the colour sensor (not black and white).
+        '''
+        cur_rgb = self.get_rgb()
+        cur_r, cur_g, cur_b = normalize_colours(cur_rgb[0], cur_rgb[1], cur_rgb[2])
+
+        with open("data/colours.json", "r") as f:
+            colours = json.load(f)
+
+        colour_to_distance = {}
+        for colour, rgb in colours.items():
+            r, g, b = float(rgb[0]), float(rgb[1]), float(rgb[2])
+            distance = ((cur_r - r)**2 + (cur_g - g)**2 + (cur_b - b)**2) ** 0.5
+            colour_to_distance[colour] = distance
+
+        return min(colour_to_distance, key=colour_to_distance.get)
+    
+    def read_colour_continuous(self, time_interval=0.1, amount=1000, rgb=False):
+        """
+        Reads the color every time interval, until amount. 
+        rbg flag returns rbg value instead of color.
+        """
+        if (rgb == False):
+            for _ in range(amount):
+                print(self.read_colour())
+                time.sleep(time_interval)
+        else:
+            for _ in range(amount):
+                print(self.get_rgb())
+                time.sleep(time_interval)
+
+
+
+    def read_colour_pivot(self):
+        """
+        This function is no longer useful due to updated hardware. 
+
+        Reads colour, but intended to be used when sensor is tilted at 81 degrees (angle to pivot on intersection).
+        Uses pivot_colours.json instead
+        """
         cur_rgb = self.get_rgb()
         cur_r = cur_rgb[0]
         cur_g = cur_rgb[1]
         cur_b = cur_rgb[2]
         # Uncomment for rgb data adjustment
         # print(cur_rgb)
-        with open("data/colours.json", "r") as f:
+        with open("data/pivot_colours.json", "r") as f:
             colours = json.load(f)
         colour_to_distance = {}
         for colour, rgb in colours.items():
@@ -188,3 +277,8 @@ class ColourSensorController (EV3ColorSensor):
     def read_colour_print(self):
         print(self.get_rgb())
 
+    def read_ambient(self):
+        return self.get_ambient()
+    
+    def read_rgb(self):
+        return self.get_rgb()
