@@ -4,6 +4,7 @@ import time
 from data.ports_brick import Ports
 from enum import Enum
 from controllers.grabber_controller import GrabberController
+from controllers.driving_controller import DrivingController
 
 class RoomType(Enum):
     CORNER_SINGLE = 1
@@ -24,9 +25,18 @@ class RoomTraverser:
     MOTOR_POWER = 180
     
     # PID constants
-    Kp = 15
-    Ki = 0
-    Kd = 0
+    pid_constants = {
+        "forward": {
+            "Kp": 15,
+            "Ki": 0,
+            "Kd": 0
+        },
+        "backward": {
+            "Kp": 6,
+            "Ki": 0,
+            "Kd": 0
+        }
+    }
 
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.7
@@ -37,7 +47,8 @@ class RoomTraverser:
         self.base_power = base_power
         self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         self.color_sensor_controller = color_sensor_controller
-        self.grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value)
+        self.grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value,False,True)
+        self.driving_controller = DrivingController(left_motor, right_motor, base_power)
         wait_ready_sensors(True)
         print("Room Traverser ready.")
 
@@ -75,8 +86,8 @@ class RoomTraverser:
 
         motor_base_power = self.base_power
         start_dps = motor_base_power if straight_distance > 0 else -motor_base_power
-        self.left_motor.set_dps(start_dps)
-        self.right_motor.set_dps(start_dps)
+        self.driving_controller.set_speed(start_dps)
+        self.driving_controller.move_forward()
 
         while True:
             color_sensor_sweep_result = None
@@ -111,7 +122,11 @@ class RoomTraverser:
             derivative = (error - prev_error) / dt
             prev_error = error
 
-            raw_adjustment = self.Kp * error + self.Ki * integral + self.Kd * derivative
+            if straight_distance >= 0:
+                pid_constants = self.pid_constants["forward"]
+            else:
+                pid_constants = self.pid_constants["backward"]
+            raw_adjustment = pid_constants["Kp"] * error + pid_constants["Ki"] * integral + pid_constants["Kd"] * derivative
 
             # Keep differential steering bounded so one wheel does not reverse / stall abruptly
             base_abs = abs(motor_base_power)
@@ -140,8 +155,7 @@ class RoomTraverser:
             self.left_motor.set_dps(left_dps)
             self.right_motor.set_dps(right_dps)
 
-        self.left_motor.set_dps(0)
-        self.right_motor.set_dps(0)
+        self.driving_controller.stop_motors()
         if bed_detected:
             detected_color = color_sensor_sweep_result[0][1]
             

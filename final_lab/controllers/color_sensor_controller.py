@@ -94,7 +94,7 @@ class ColourSensorController (EV3ColorSensor):
 
         #initial colour sensor position (should be straight)
         init_position = 0 #self.motor.get_position()
-        self.motor.set_position(0)
+        self.set_arm_at_angle(init_position)
         
         print("------------")
         print(init_position)
@@ -131,8 +131,7 @@ class ColourSensorController (EV3ColorSensor):
                         results = self.colours_found
                         self.colours_found = []
                         self.motor.set_dps(0)
-                        self.motor.set_position(init_position)
-                        self.motor.wait_is_moving()
+                        self.set_arm_at_angle(init_position)
                         return results
             else:
                 consecutive_count = 0
@@ -148,8 +147,7 @@ class ColourSensorController (EV3ColorSensor):
                     results = self.colours_found
                     self.colours_found = []
                     self.motor.set_dps(0)
-                    self.motor.set_position(init_position)
-                    self.motor.wait_is_moving()
+                    self.set_arm_at_angle(init_position)
                     print(f"force return angle result")
                     return results
                 prev_reversed = True
