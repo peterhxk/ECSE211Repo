@@ -280,7 +280,7 @@ class RoomTraverser:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
             
             print("Going back.")
-            back_result = self.run(room_type, -1.15 * distance_travelled, detect_bed=False, detect_start=True)
+            back_result = self.run(room_type, -1.2 * distance_travelled, detect_bed=False, detect_start=True)
             if back_result[0] == "orange":
                 print(f"Returned to starting point (orange detected) after {back_result[1]:.2f} cm.")
             else:
