@@ -25,7 +25,6 @@ class Routing(SweepLineFollower):
     
     def room1_to_pharmacy(self):
         self.pilot.move_distance(-430)
-        time.sleep(0.1)
         self.pilot.right_motor.wait_is_stopped()
     
     def room1_to_room2(self):
