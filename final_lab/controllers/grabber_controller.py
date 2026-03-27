@@ -1117,6 +1117,31 @@ class GrabberController:
         return "IDLE"
 
 
+    def initialize_sensors_with_prev_data(self):
+        """Same hardware setup as initialize_sensors() but loads calibration
+        from the most recently saved files instead of running live calibration.
+
+        Raises FileNotFoundError if no calibration files exist yet.
+        """
+        print("[Calibration] Initializing sensors with previous calibration data...")
+        self.gyro.wait_ready()
+        self.gyro.reset_measure()
+        self.motor.set_dps(0)
+        print("Reset measures; motor stopped.")
+        self.start_gyro_monitor()
+        print("Started gyro monitor.")
+
+        self.calibrate_motor_drop_detection(calibration=False)
+        print("Loaded motor calibration from file.")
+
+        self.calibrate_gyro_noise(
+            seconds=15.0,
+            sample_hz=self.sample_hz,
+            warmup=0.5,
+            calibration=False,
+        )
+        print("Loaded gyro calibration from file.")
+
 if __name__ == "__main__":
     #controller = GrabberController("D", 4, False , True)
     #controller.initialize_sensors()
