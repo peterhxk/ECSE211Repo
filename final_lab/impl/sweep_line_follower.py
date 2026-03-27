@@ -136,7 +136,7 @@ class SweepLineFollower:
         # Moves 30 mm forward to find intersection
         if heading == "front":
             self.pilot.move_forward()
-            additional_dist = 10
+            additional_dist = 15
         elif heading == "back":
             self.pilot.move_backward()
         else:
@@ -156,22 +156,16 @@ class SweepLineFollower:
         self.pilot.left_motor.wait_is_stopped()
         
         print(f"pivoting {direction}")
-
         self.pilot.pivot_90(direction)
 
-        print("black found")
-        self.pilot.stop_motors()
+        # Wait for pivot to complete before proceeding
+        time.sleep(0.1)
+        getattr(self.pilot, f"{'right' if direction == 'left' else 'left'}_motor").wait_is_stopped()
 
         # Set colour arm back to the normal position
         self.sensor.set_arm_at_angle(0)
+        time.sleep(0.1)
         self.sensor.motor.wait_is_stopped()
-        # Wait for pivot to complete before proceeding
-        #time.sleep(0.1)
-        #getattr(self.pilot, f"{'right' if direction == 'left' else 'left'}_motor").wait_is_stopped()
-
-        
-        #time.sleep(0.1)
-        #self.sensor.motor.wait_is_stopped()
-        #time.sleep(0.1)
+        time.sleep(0.1)
 
     
