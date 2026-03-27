@@ -353,7 +353,7 @@ class GrabberController:
         self.start_gyro_monitor()  # THIS IS KEY
         print("started gyro monitor")
 
-        self.calibrate_motor_drop_detection(calibration=self.calibration)
+        self.calibrate_motor_drop_detection(self.calibration)
         if self.calibration:
             print("Calibrated motor inward speed-drop mu and sigma.")
         else:

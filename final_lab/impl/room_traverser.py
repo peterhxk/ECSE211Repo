@@ -47,7 +47,6 @@ class RoomTraverser:
         self.base_power = base_power
         self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         self.color_sensor_controller = color_sensor_controller
-        self.grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value,False,True)
         self.driving_controller = DrivingController(left_motor, right_motor, base_power)
         wait_ready_sensors(True)
         print("Room Traverser ready.")
