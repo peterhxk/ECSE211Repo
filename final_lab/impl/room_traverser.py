@@ -12,7 +12,7 @@ class RoomType(Enum):
     CORNER_DOUBLE_SECOND_HALF = 4
 
 room_type_to_wall_distance_map = {
-    RoomType.CORNER_SINGLE: 4.5,
+    RoomType.CORNER_SINGLE: 4.6,
     RoomType.WALL_SINGLE: 53.4,
     RoomType.CORNER_DOUBLE_FIRST_HALF: 30,
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4
@@ -24,9 +24,9 @@ class RoomTraverser:
     MOTOR_POWER = 160
     
     # PID constants
-    Kp = 3
-    Ki = 3
-    Kd = 8
+    Kp = 15
+    Ki = 0
+    Kd = 0
 
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.7
@@ -164,7 +164,7 @@ class RoomTraverser:
             
 
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
-            traverse_results = self.run(room_type, 35, detect_bed=True)
+            traverse_results = self.run(room_type, 45, detect_bed=True)
             bed_found = traverse_results[0] is not None
             bed_color_found = traverse_results[0]
             distance_travelled = traverse_results[1]
