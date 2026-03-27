@@ -176,11 +176,7 @@ class RoomTraverser:
                         time.sleep(2)
 
                         # Unload first carried block
-                        self.grabber_controller.unload_bloc(
-                            move_distance_mm=20,
-                            expected_bloc_count=1,
-                            label="first unload",
-                        )
+                        self.grabber_controller.unload_bloc()
 
                         while not self.grabber_controller.unloading_finished():
                             time.sleep(0.01)
