@@ -136,7 +136,6 @@ class SweepLineFollower:
         # Moves 30 mm forward to find intersection
         if heading == "front":
             self.pilot.move_forward()
-            additional_dist += 10
         elif heading == "back":
             self.pilot.move_backward()
         else:

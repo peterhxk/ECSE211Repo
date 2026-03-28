@@ -1,6 +1,8 @@
 from impl.sweep_line_follower import SweepLineFollower
 import data.measurements as consts
+from controllers.grabber_controller import GrabberController
 import time
+from scripts.navigation_grabber import wait_for_loading
 
 class Routing(SweepLineFollower):
 
@@ -47,7 +49,11 @@ class Routing(SweepLineFollower):
         self.pilot.move_distance(50)
         self.pilot.right_motor.wait_is_stopped()
         self.turn_logic("right", "front")
-        self.turn_logic("right", "front", consts.dist_blocks_mm-10, arm_avoid_block=True)
+        self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)
 
-    def grab_block(self):
+    def grab_block(self,grabberInstance:GrabberController):
+        self.pilot.move_distance(100)
+        grabberInstance.start_loading()
+        wait_for_loading(1) #loading first block 
+        #reset arm angle at the end
         self.reset_arm()
