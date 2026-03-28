@@ -55,11 +55,11 @@ class Routing(SweepLineFollower):
         self.pilot.move_distance(100)
         grabberInstance.start_loading()
         time.sleep(0.5)
-        wait_for_loading(1,timeout=15.0,label="block 1") #loading first block 
+        wait_for_loading(0,timeout=15.0,label="block 1") #loading first block 
         self.pilot.move_distance(80)
         grabberInstance.start_loading()
         time.sleep(0.5)
-        wait_for_loading(2,timeout=15.0,label="block 2") #loading second block
+        wait_for_loading(1,timeout=15.0,label="block 2") #loading second block
         self.pilot.move_distance(-150)
         #reset arm angle at the end
         self.reset_arm()
