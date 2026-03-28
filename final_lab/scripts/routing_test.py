@@ -34,7 +34,7 @@ try:
     routing.grab_block(grabber_controller)
     routing.pharmacy_to_room1()
     room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
-    routing.room1_to_pharmacy()
+    routing.room1_to_room2()
     sound_controller.play_mission_complete()
 
 except KeyboardInterrupt:
