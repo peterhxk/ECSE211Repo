@@ -30,12 +30,16 @@ class RoomTraverser:
         "forward": {
             "Kp": 100,
             "Ki": 0,
-            "Kd": 140
+            "Kd": 140,
+            "steer_scale": 1.3,
+            "ramp": 0.0,
         },
         "backward": {
             "Kp": 1,
             "Ki": 0,
-            "Kd": 180
+            "Kd": 180,
+            "steer_scale": 0.7,
+            "ramp": 0.0,
         }
     }
 
@@ -91,10 +95,12 @@ class RoomTraverser:
         orange_iter = 0
         ORANGE_CONFIRM_THRESHOLD = 3
 
-        target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
+        target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * math.pi)) * 360
 
         motor_base_power = self.base_power
+        pid_cfg = self.pid_constants["forward"] if straight_distance >= 0 else self.pid_constants["backward"]
         start_dps = motor_base_power if straight_distance > 0 else -motor_base_power
+        t0 = time.time()
         self.left_motor.set_dps(start_dps)
         self.right_motor.set_dps(start_dps)
 
@@ -136,19 +142,17 @@ class RoomTraverser:
 
             distance_cm = last_distance_cm
 
-            # P (optional I/D later)
             error = room_type_to_wall_distance_map[room_type] - distance_cm
             integral = max(-50.0, min(50.0, integral + error * dt))
             derivative = (error - prev_error) / dt
             prev_error = error
 
-            if straight_distance >= 0:
-                pid_constants = self.pid_constants["forward"]
-            else:
-                pid_constants = self.pid_constants["backward"]
-            raw_adjustment = pid_constants["Kp"] * error + pid_constants["Ki"] * integral + pid_constants["Kd"] * derivative
+            raw_adjustment = pid_cfg["Kp"] * error + pid_cfg["Ki"] * integral + pid_cfg["Kd"] * derivative
 
-            # Keep differential steering bounded so one wheel does not reverse / stall abruptly
+            if pid_cfg["ramp"] > 0:
+                ramp_factor = min(1.0, (now - t0) / pid_cfg["ramp"])
+                raw_adjustment *= ramp_factor
+
             base_abs = abs(motor_base_power)
             max_steer = max(12, min(int(base_abs * 0.42), base_abs - 15))
             raw_adjustment = max(-max_steer, min(max_steer, raw_adjustment))
@@ -160,31 +164,23 @@ class RoomTraverser:
                 smoothed_adjustment = a * raw_adjustment + (1.0 - a) * smoothed_adjustment
 
             adjustment = int(round(smoothed_adjustment))
+            s = pid_cfg["steer_scale"]
 
-            # Sensor is LEFT-mounted.
-            # Positive error = too close to left wall → steer RIGHT (away from wall).
-            # Left wheel faster = steer right, so left gets +adj, right gets -adj.
             if straight_distance >= 0:
-                left_dps  = self.base_power + adjustment * 1.3
-                right_dps = self.base_power - adjustment * 1.3
+                left_dps  = self.base_power + adjustment * s
+                right_dps = self.base_power - adjustment * s
             else:
-                left_dps  = -self.base_power - adjustment * 0.7
-                right_dps = -self.base_power + adjustment * 0.7
-
+                left_dps  = -self.base_power - adjustment * s
+                right_dps = -self.base_power + adjustment * s
 
             print(f"Adjustment: {adjustment}, Left DPS: {left_dps}, Right DPS: {right_dps}")
             self.left_motor.set_dps(left_dps)
             self.right_motor.set_dps(right_dps)
 
-            # Pace the loop so the ultrasonic sensor has time to produce a fresh
-            # sample and the motor controller is not overwhelmed with commands.
-            # When a sweep is active it naturally throttles the loop; only sleep
-            # when running with no sweep at all (~25 Hz target).
-            if not detect_bed and not detect_start:
-                time.sleep(0.04)
+            time.sleep(0.04)
 
         self.driving_controller.stop_motors()
-        dist_cm = (abs(travelled_deg) / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10
+        dist_cm = (abs(travelled_deg) / 360) * (self.WHEEL_DIAMETER_MM * math.pi) / 10
         if bed_detected:
             detected_color = color_sensor_sweep_result[0][1]
             detected_angle = color_sensor_sweep_result[0][0]
