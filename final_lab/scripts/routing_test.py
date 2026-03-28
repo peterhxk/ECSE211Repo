@@ -35,6 +35,7 @@ try:
     routing.pharmacy_to_room1()
     room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
     routing.room1_to_pharmacy()
+    sound_controller.play_mission_complete()
 
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
