@@ -268,6 +268,7 @@ class RoomTraverser:
 
                     # Drop block
                     print("Dropping block")
+                    self.color_sensor_controller.set_arm_at_angle(90)
                     grabber_controller.start_unloading()
                     while True:
                         status = grabber_controller.get_unloading_status()
@@ -290,7 +291,7 @@ class RoomTraverser:
 
                     final_status = grabber_controller.get_unloading_status()
                     print(f"[DEBUG] Unloading finished with status={final_status}")
-                    
+
                     self.sound_controller.play_success()
                     time.sleep(2)
 
@@ -309,6 +310,7 @@ class RoomTraverser:
                     time.sleep(0.5)
 
                     print("Back at original position, ready for backwards pass")
+                    self.color_sensor_controller.set_arm_at_angle(0)
                 else:
                     print("Red bed detected, skipping unloading")
                 time.sleep(2)
