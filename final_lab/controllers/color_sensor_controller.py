@@ -61,6 +61,8 @@ class ColourSensorController (EV3ColorSensor):
         timer = time.time()
         while abs(self.motor.get_speed() - RESET_DPS) < TOLERANCE and time.time() - timer < 5:
             pass
+        print("Resetting encoder")
+        self.motor.set_dps(0)
         self.motor.reset_encoder()
         self.motor.offset_encoder(90)
 
