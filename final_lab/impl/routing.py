@@ -59,6 +59,8 @@ class Routing(SweepLineFollower):
         wait_for_loading(0,timeout=15.0,label="block 1") #loading first block 
         self.pilot.move_distance(80)
         self.pilot.right_motor.wait_is_stopped(0.1)
+        self.pilot.stop_motors()
+        print("Waiting for 2 seconds before loading second block...")
         time.sleep(2)
         grabberInstance.start_loading()
         time.sleep(0.5)
