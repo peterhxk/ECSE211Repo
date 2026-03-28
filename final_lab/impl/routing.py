@@ -52,19 +52,18 @@ class Routing(SweepLineFollower):
         self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)
 
     def grab_block(self,grabberInstance:GrabberController):
-        self.pilot.move_distance(100)
+        self.pilot.move_distance(110)
         self.pilot.right_motor.wait_is_stopped(0.1)
         grabberInstance.start_loading()
         time.sleep(0.5)
         wait_for_loading(0,timeout=15.0,label="block 1") #loading first block 
-        self.pilot.move_distance(90)
+        self.pilot.move_distance(80)
         self.pilot.right_motor.wait_is_stopped(0.1)
-
         time.sleep(2)
         grabberInstance.start_loading()
         time.sleep(0.5)
         wait_for_loading(1,timeout=15.0,label="block 2") #loading second block
-        self.pilot.move_distance(-150)
+        self.pilot.move_distance(-190)
         self.pilot.right_motor.wait_is_stopped(0.1)
 
         #reset arm angle at the end
