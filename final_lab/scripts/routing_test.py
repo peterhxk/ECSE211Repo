@@ -23,7 +23,7 @@ color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color
 grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
 room_traverser = RoomTraverser(left_motor, right_motor, 160, color_sensor_controller)
-sound_controller = SoundController(Ports.SOUND.value)
+sound_controller = SoundController()
 
 wait_ready_sensors(True)
 grabber_controller.initialize_sensors()
@@ -33,7 +33,7 @@ try:
     routing.pharmacy_to_grab_block_position()
     routing.grab_block(grabber_controller)
     routing.pharmacy_to_room1()
-    room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
+    room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller, sound_controller=sound_controller)
     routing.room1_to_pharmacy()
     sound_controller.play_mission_complete()
 
