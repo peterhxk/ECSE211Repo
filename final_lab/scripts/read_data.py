@@ -4,7 +4,7 @@ import glob
 import pickle
 import matplotlib.pyplot as plt
 
-RECORDINGS_DIR = "gyro_operation_recordings/working demo"
+RECORDINGS_DIR = "gyro_operation_recordings/working demo 2"
 PLOTS_DIR = "plots"
 
 
