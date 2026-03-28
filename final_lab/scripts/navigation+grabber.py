@@ -145,7 +145,7 @@ try:
 
     # Load block 1
     load_one_block(
-        move_distance_mm=120,
+        move_distance_mm=128,
         expected_bloc_count=1,
         label="block 1",
     )
