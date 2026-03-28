@@ -176,14 +176,6 @@ class ColourSensorController (EV3ColorSensor):
         Returns None if the file is missing or lacks both entries.
         """
         raw = self.get_rgb()
-        r, g, b = float(raw[0]), float(raw[1]), float(raw[2])
-        self._bw_history.append((r, g, b))
-        n = len(self._bw_history)
-        avg = (
-            sum(s[0] for s in self._bw_history) / n,
-            sum(s[1] for s in self._bw_history) / n,
-            sum(s[2] for s in self._bw_history) / n,
-        )
 
         try:
             with open("data/black_white.json", "r") as f:
@@ -197,8 +189,8 @@ class ColourSensorController (EV3ColorSensor):
         def euclid(a, b):
             return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
 
-        dist_b = euclid(avg, bw["b"])
-        dist_w = euclid(avg, bw["w"])
+        dist_b = euclid(raw, bw["b"])
+        dist_w = euclid(raw, bw["w"])
         return "b" if dist_b < dist_w else "w"
 
     def ingest_bw(self, label: str):

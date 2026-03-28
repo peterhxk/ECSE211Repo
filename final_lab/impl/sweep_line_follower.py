@@ -151,7 +151,7 @@ class SweepLineFollower:
                 consecutive_black += 1
             else:
                 consecutive_black = 0
-            time.sleep(0.1)
+            time.sleep(0.01)
 
         print("stopping motors")
         self.pilot.stop_motors()
