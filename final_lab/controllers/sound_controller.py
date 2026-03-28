@@ -48,9 +48,9 @@ class SoundController(Sound):
         """
         # Super Mario Bros. 1-UP jingle
         sequence = [
-            Sound(duration=1, pitch="E5", volume=90),
+            Sound(duration=1, pitch="E4", volume=90),
             Sound(duration=1, pitch="G5", volume=90),
-            Sound(duration=1, pitch="E6", volume=90),
+            Sound(duration=1, pitch="E5", volume=90),
             Sound(duration=1, pitch="C6", volume=90),
             Sound(duration=1, pitch="D6", volume=90),
             Sound(duration=1, pitch="G6", volume=90),
@@ -60,7 +60,7 @@ class SoundController(Sound):
             self.note_playing = True
             for note in sequence:
                 note.play()
-                time.sleep(note._duration)
+                time.sleep(note._duration-0.05)
             self.note_playing = False
 
         self._executor.submit(_play)
@@ -80,7 +80,7 @@ class SoundController(Sound):
             self.note_playing = True
             for note in sequence:
                 note.play()
-                time.sleep(note._duration)
+                time.sleep(note._duration-0.05)
             self.note_playing = False
 
         self._executor.submit(_play)
