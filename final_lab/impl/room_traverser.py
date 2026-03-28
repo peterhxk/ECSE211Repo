@@ -122,7 +122,7 @@ class RoomTraverser:
             # check travelled distance
             travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
 
-            if target_degrees < 0 and travelled_deg >= target_degrees / 2:
+            if target_degrees < 0 and travelled_deg < target_degrees / 2:
                 # set color arm back halfway to prevent the cube from being dragged
                 self.color_sensor_controller.set_arm_at_angle(0)
             if target_degrees > 0 and travelled_deg >= target_degrees:
