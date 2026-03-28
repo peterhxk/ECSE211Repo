@@ -28,7 +28,7 @@ grabber_controller = GrabberController(
     Ports.GRABBER_MOTOR.value,
     Ports.GYRO_SENSOR.value,
     False,
-    True,
+    False,
 )
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 
@@ -136,16 +136,16 @@ try:
     wait_ready_sensors(True)
     grabber_controller.initialize_sensors()
 
-    color_sensor_controller.set_arm_at_angle(90)
+    color_sensor_controller.set_arm_at_angle(85)
     time.sleep(0.2)
     color_sensor_controller.set_arm_at_angle(0)
     time.sleep(0.2)
-    color_sensor_controller.set_arm_at_angle(90)
+    color_sensor_controller.set_arm_at_angle(85)
     driving_controller.set_speed(100)
 
     # Load block 1
     load_one_block(
-        move_distance_mm=180,
+        move_distance_mm=110,
         expected_bloc_count=1,
         label="block 1",
     )
@@ -154,13 +154,13 @@ try:
 
     # Load block 2
     load_one_block(
-        move_distance_mm=75,
+        move_distance_mm=60,
         expected_bloc_count=2,
         label="block 2",
     )
 
     # Prepare for unloading
-    color_sensor_controller.set_arm_at_angle(0)
+    color_sensor_controller.set_arm_at_angle(85)
     time.sleep(1)
 
     # Unload first carried block
