@@ -108,7 +108,8 @@ class RoomTraverser:
                 break
 
             if detect_start:
-                if self.color_sensor_controller.read_colour() == "orange":
+                detected = self.color_sensor_controller.read_colour()
+                if detected == "orange":
                     orange_count += 1
                     print(f"Orange reading {orange_count}/{ORANGE_CONFIRM_THRESHOLD}")
                     if orange_count >= ORANGE_CONFIRM_THRESHOLD:
@@ -116,7 +117,10 @@ class RoomTraverser:
                         start_detected = True
                         break
                 else:
-                    orange_count = 0
+                    orange_count = max(0, orange_count - 1)
+                    if orange_iter % 20 == 0:
+                        print(f"[COLOR] reading={detected}, orange_count={orange_count}")
+                orange_iter += 1
                 time.sleep(0.02)
 
             # check travelled distance
