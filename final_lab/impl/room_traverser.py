@@ -270,6 +270,8 @@ class RoomTraverser:
                     print("Dropping block")
                     self.color_sensor_controller.set_arm_at_angle(math.copysign(90, bed_angle))
                     grabber_controller.start_unloading()
+                    start = time.time()
+                    last_log = start
                     while True:
                         status = grabber_controller.get_unloading_status()
 
