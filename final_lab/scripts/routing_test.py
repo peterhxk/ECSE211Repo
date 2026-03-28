@@ -22,7 +22,7 @@ routing = Routing(color_sensor_controller, driving_controller)
 wait_ready_sensors(True)
 
 try:
-    routing.pharmacy_grab_blocks()
+    routing.pharmacy_to_grab_block_position()
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 

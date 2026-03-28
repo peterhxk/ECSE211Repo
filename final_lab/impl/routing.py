@@ -43,7 +43,7 @@ class Routing(SweepLineFollower):
         self.turn_logic("right", "front")
         self.move_forward(50, "orange") 
 
-    def pharmacy_grab_blocks(self):
+    def pharmacy_to_grab_block_position(self):
         self.pilot.move_distance(50)
         self.pilot.right_motor.wait_is_stopped()
         self.turn_logic("right", "front")
