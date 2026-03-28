@@ -1,6 +1,7 @@
 from utils.brick import EV3ColorSensor, Motor
 import time
 import json
+import threading
 from enum import Enum
 from typing import Literal, List, Tuple, Union, NamedTuple, Optional
 import math
@@ -79,74 +80,39 @@ class ColourSensorController (EV3ColorSensor):
         pass
 
 
-    def sweep_start(self, colours: List[str] = [], range: Literal["left", "right", "full"] = "full", starting_on_right: bool = True, black_white: bool = False):
-        """Begin a non-blocking sweep. Call sweep_step() each loop iteration."""
-        self._sweep_colours = colours
-        self._sweep_range = range
-        self._sweep_black_white = black_white
-        self._sweep_consecutive_count = 0
-        self._sweep_consecutive_positions = []
-        self._sweep_prev_reversed = False
-        self._sweep_active = True
-        self.colours_found = []
+    def sweep_start(self, colours: List[str] = [], range: Literal["left", "right", "full"] = "full",
+                    starting_on_right: bool = True, black_white: bool = False):
+        """Launch a background thread that sweeps continuously until a match
+        is found or sweep_stop() is called. Poll sweep_get_result() from the
+        main loop to check for detections."""
+        self._sweep_result: Optional[List[Tuple[int, str, int]]] = None
+        self._sweep_stop_event = threading.Event()
 
-        if starting_on_right:
-            self.sweep_dir = SweepDirection.RIGHT
-        else:
-            self.sweep_dir = SweepDirection.LEFT
+        def _sweep_loop():
+            while not self._sweep_stop_event.is_set():
+                result = self.sweep(
+                    colours=colours, range=range,
+                    stop_on_match=True, starting_on_right=starting_on_right,
+                    black_white=black_white,
+                )
+                if result:
+                    self._sweep_result = result
+                    return
 
-        self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
+        self._sweep_thread = threading.Thread(target=_sweep_loop, daemon=True)
+        self._sweep_thread.start()
 
-    def sweep_step(self) -> Optional[List[Tuple[int, str, int]]]:
-        """One iteration of the sweep. Returns None if still sweeping,
-        or a list of detections if a match is found or the sweep completes."""
-        if not getattr(self, '_sweep_active', False):
-            return None
-
-        if self.motor.get_speed() * self.sweep_dir.value <= 0:
-            self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
-
-        if self._sweep_black_white:
-            detected_colour = self.read_black_white()
-        else:
-            detected_colour = self.read_colour()
-
-        if detected_colour in self._sweep_colours:
-            self._sweep_consecutive_count += 1
-            self._sweep_consecutive_positions.append(self.motor.get_position())
-            if self._sweep_consecutive_count >= 5:
-                avg_pos = sum(self._sweep_consecutive_positions) / len(self._sweep_consecutive_positions)
-                self.colours_found.append((avg_pos, detected_colour, 0))
-                print(self.colours_found)
-                self._sweep_consecutive_count = 0
-                self._sweep_consecutive_positions = []
-                self._sweep_active = False
-                results = self.colours_found
-                self.colours_found = []
-                self.motor.set_dps(0)
-                self.set_arm_at_angle(0)
-                return results
-        else:
-            self._sweep_consecutive_count = 0
-            self._sweep_consecutive_positions = []
-
-        if self._is_at_boundary(self._sweep_range):
-            self.sweep_dir = SweepDirection.LEFT if self.sweep_dir == SweepDirection.RIGHT else SweepDirection.RIGHT
-            if self._sweep_prev_reversed:
-                self._sweep_active = False
-                results = self.colours_found
-                self.colours_found = []
-                self.motor.set_dps(0)
-                self.set_arm_at_angle(0)
-                print("force return angle result")
-                return results
-            self._sweep_prev_reversed = True
-
-        return None
+    def sweep_get_result(self) -> Optional[List[Tuple[int, str, int]]]:
+        """Non-blocking check for a sweep detection. Returns None if still
+        sweeping, or the detection list if a match was found."""
+        return self._sweep_result
 
     def sweep_stop(self):
-        """Cancel an in-progress non-blocking sweep."""
-        self._sweep_active = False
+        """Stop the background sweep thread."""
+        if hasattr(self, '_sweep_stop_event'):
+            self._sweep_stop_event.set()
+        if hasattr(self, '_sweep_thread') and self._sweep_thread.is_alive():
+            self._sweep_thread.join(timeout=2.0)
         self.motor.set_dps(0)
 
     def sweep(self, colours=[], range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True, black_white = False) -> List[Tuple[int, str, int]]:

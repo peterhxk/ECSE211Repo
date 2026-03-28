@@ -109,7 +109,7 @@ class RoomTraverser:
 
         while True:
             if detect_bed:
-                color_sensor_sweep_result = self.color_sensor_controller.sweep_step()
+                color_sensor_sweep_result = self.color_sensor_controller.sweep_get_result()
                 if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
                     bed_detected = True
                     break
@@ -180,6 +180,8 @@ class RoomTraverser:
             time.sleep(0.04)
 
         self.driving_controller.stop_motors()
+        if detect_bed:
+            self.color_sensor_controller.sweep_stop()
         dist_cm = (abs(travelled_deg) / 360) * (self.WHEEL_DIAMETER_MM * math.pi) / 10
         if bed_detected:
             detected_color = color_sensor_sweep_result[0][1]
