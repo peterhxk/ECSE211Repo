@@ -24,7 +24,7 @@ wait_ready_sensors(True)
 
 try:
     while True:
-        color_sensor_controller.ingest_bw("w")
+        color_sensor_controller.ingest_bw("b")
         print(color_sensor_controller.read_black_white())
         time.sleep(0.1)
 
