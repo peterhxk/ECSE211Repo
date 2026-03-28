@@ -17,11 +17,11 @@ left_motor = Motor(Ports.LEFT_MOTOR.value)
 right_motor = Motor(Ports.RIGHT_MOTOR.value)
 color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
-driving_controller = DrivingController(left_motor, right_motor, 150)
+driving_controller = DrivingController(left_motor, right_motor, 250)
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
 grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
-room_traverser = RoomTraverser(left_motor, right_motor, 250, color_sensor_controller)
+room_traverser = RoomTraverser(left_motor, right_motor, 160, color_sensor_controller)
 
 wait_ready_sensors(True)
 grabber_controller.initialize_sensors()
