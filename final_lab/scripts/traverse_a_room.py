@@ -19,23 +19,25 @@ driving_controller = DrivingController(left_motor, right_motor, 150)
 
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_motor)
 room_traverser = RoomTraverser(left_motor, right_motor, MOTOR_POWER, color_sensor_controller)
-# grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value)
+grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, False, False)
 routing = Routing(color_sensor_controller, driving_controller)
 
 print("Waiting for sensors to be ready...")
 
 wait_ready_sensors(True)
 
-# grabber_controller.initialize_sensors()
-# print("Initialized grabber sensors")
-# time.sleep(2)
-
+try:
+    grabber_controller.initialize_sensors()
+    print("Initialized grabber sensors")
+    time.sleep(2)
+except Exception as err:
+    print(err)
+    
 
 if __name__ == "__main__":
     try:
-        routing.pharmacy_to_room1()
         # Example usage: traverse a corner room while detecting for a bed
-        room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE)
+        room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
     except Exception as err:
         print(err)
     finally:

@@ -202,21 +202,35 @@ class RoomTraverser:
     Input:
     - room_type: The type of the room to traverse. This determines the path taken by the robot.
     """
-    def traverse_a_room(self, room_type: RoomType) -> None:
+    def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
         try:
-            # grabber_controller.start_loading()
-            # timer = time.time()
-            # print("Started inward belt movement")
-            # while not grabber_controller.loading_finished():
-            #     if time.time() - timer > 1:
-            #         print("still loading")
-            #         timer = time.time()
-            #     time.sleep(0.01)
-            
-            # if grabber_controller.get_loading_result():
-            #     print("Loading successful")
-            # else:
-            #     print("Loading failed")
+            grabber_controller.start_loading()
+            start = time.time()
+            last_log = start
+
+            while True:
+                status = grabber_controller.get_loading_status()
+
+                if status == "FAILED":
+                    raise RuntimeError(f"Failed while loading")
+
+                if grabber_controller.loading_finished():
+                    break
+
+                now = time.time()
+                if now - last_log > 1.0:
+                    print(f"[DEBUG] Waiting for loading... status={status}")
+                    last_log = now
+
+                if now - start > 15:
+                    raise TimeoutError(f"Timeout while loading")
+
+                time.sleep(0.05)
+
+            final_status = grabber_controller.get_loading_status()
+            print(f"[DEBUG] Loading finished with status={final_status}")
+
+            time.sleep(2)
             
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
             traverse_results = self.run(room_type, 45, detect_bed=True)
@@ -254,6 +268,29 @@ class RoomTraverser:
 
                     # Drop block
                     print("Dropping block")
+                    grabber_controller.start_unloading()
+                    while True:
+                        status = grabber_controller.get_unloading_status()
+
+                        if status == "FAILED":
+                            raise RuntimeError(f"Failed while unloading")
+
+                        if status != "UNLOADING":
+                            break
+
+                        now = time.time()
+                        if now - last_log > 1.0:
+                            print(f"[DEBUG] Waiting for unloading... status={status}")
+                            last_log = now
+
+                        if now - start > 15:
+                            raise TimeoutError(f"Timeout while unloading")
+
+                        time.sleep(0.05)
+
+                    final_status = grabber_controller.get_unloading_status()
+                    print(f"[DEBUG] Unloading finished with status={final_status}")
+                    
                     self.sound_controller.play_success()
                     time.sleep(2)
 
