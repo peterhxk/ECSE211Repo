@@ -28,7 +28,7 @@ def parse_args():
     p = argparse.ArgumentParser(description="PID wall-follow tuning")
     p.add_argument("--kp", type=float, default=12.0)
     p.add_argument("--ki", type=float, default=0.0)
-    p.add_argument("--kd", type=float, default=10.0)
+    p.add_argument("--kd", type=float, default=0.0)
     p.add_argument("--target", type=float, default=4.8,
                     help="Target wall distance in cm")
     p.add_argument("--distance", type=float, default=40.0,
