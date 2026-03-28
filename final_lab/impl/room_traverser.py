@@ -104,14 +104,15 @@ class RoomTraverser:
         self.left_motor.set_dps(start_dps)
         self.right_motor.set_dps(start_dps)
 
+        if detect_bed:
+            self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
+
         while True:
-            color_sensor_sweep_result = None
             if detect_bed:
-                color_sensor_sweep_result = self.color_sensor_controller.sweep(colours=["red", "green"], range="full", stop_on_match=True)
-            if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
-                # if color detected, stop moving.
-                bed_detected = True
-                break
+                color_sensor_sweep_result = self.color_sensor_controller.sweep_step()
+                if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
+                    bed_detected = True
+                    break
 
             if detect_start:
                 detected = self.color_sensor_controller.read_colour()
@@ -119,7 +120,6 @@ class RoomTraverser:
                     print("Orange detected — arrived back at starting point.")
                     start_detected = True
                     break
-                time.sleep(0.02)
 
             # check travelled distance
             travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
