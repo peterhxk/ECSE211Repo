@@ -10,6 +10,7 @@ from controllers.driving_controller import DrivingController
 from impl.routing import Routing
 from data.ports_brick import Ports
 from controllers.grabber_controller import GrabberController
+from controllers.sound_controller import SoundController
 
 # Sensor declaration
 
@@ -22,7 +23,7 @@ color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color
 grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
 room_traverser = RoomTraverser(left_motor, right_motor, 160, color_sensor_controller)
-sound_controller = SoundController()
+sound_controller = SoundController(Ports.SOUND.value)
 
 wait_ready_sensors(True)
 grabber_controller.initialize_sensors()
