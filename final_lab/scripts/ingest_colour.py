@@ -26,6 +26,7 @@ try:
     while True:
         #color_sensor_controller.ingest_bw("b")
         print(color_sensor_controller.read_black_white())
+        print(color_sensor_controller.read_rgb())
         time.sleep(0.1)
 
 except KeyboardInterrupt:
