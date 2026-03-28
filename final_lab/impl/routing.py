@@ -47,7 +47,7 @@ class Routing(SweepLineFollower):
         self.pilot.move_distance(50)
         self.pilot.right_motor.wait_is_stopped()
         self.turn_logic("right", "front")
-        self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)
+        self.turn_logic("right", "front", consts.dist_blocks_mm-10, arm_avoid_block=True)
 
     def grab_block(self):
         self.reset_arm()
