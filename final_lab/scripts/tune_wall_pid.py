@@ -41,6 +41,8 @@ def parse_args():
                     help="Low-pass smoothing alpha for steering")
     p.add_argument("--steer-scale", type=float, default=0.7,
                     help="Multiplier on adjustment applied to DPS")
+    p.add_argument("--ramp", type=float, default=0.0,
+                    help="Seconds over which PID output ramps from 0%% to 100%% (0 = no ramp)")
     return p.parse_args()
 
 
@@ -95,7 +97,7 @@ def run(args):
     print(f"--- PID tuning run ---")
     print(f"  Kp={args.kp}  Ki={args.ki}  Kd={args.kd}")
     print(f"  target={args.target}cm  distance={args.distance}cm  power={args.power}")
-    print(f"  direction={args.direction}  alpha={args.alpha}  steer_scale={args.steer_scale}")
+    print(f"  direction={args.direction}  alpha={args.alpha}  steer_scale={args.steer_scale}  ramp={args.ramp}s")
     print(f"  logging to {csv_path}")
     print()
 
@@ -122,6 +124,11 @@ def run(args):
             prev_error = error
 
             raw_adj = args.kp * error + args.ki * integral + args.kd * derivative
+
+            if args.ramp > 0:
+                elapsed = now - t0
+                ramp_factor = min(1.0, elapsed / args.ramp)
+                raw_adj *= ramp_factor
 
             base_abs = args.power
             max_steer = max(12, min(int(base_abs * 0.42), base_abs - 15))
