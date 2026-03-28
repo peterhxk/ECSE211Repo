@@ -60,6 +60,7 @@ class Routing(SweepLineFollower):
         grabberInstance.start_loading()
         time.sleep(0.5)
         wait_for_loading(0,timeout=15.0,label="block 1") #loading first block 
+        time.sleep(0.5)
         self.pilot.move_distance(79)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.pilot.stop_motors()
