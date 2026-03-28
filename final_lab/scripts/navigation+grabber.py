@@ -137,15 +137,15 @@ try:
     grabber_controller.initialize_sensors()
 
     color_sensor_controller.set_arm_at_angle(90)
-    time.sleep(1)
+    time.sleep(0.2)
     color_sensor_controller.set_arm_at_angle(0)
-    time.sleep(1)
+    time.sleep(0.2)
     color_sensor_controller.set_arm_at_angle(90)
     driving_controller.set_speed(100)
 
     # Load block 1
     load_one_block(
-        move_distance_mm=200,
+        move_distance_mm=180,
         expected_bloc_count=1,
         label="block 1",
     )
@@ -154,14 +154,14 @@ try:
 
     # Load block 2
     load_one_block(
-        move_distance_mm=100,
+        move_distance_mm=80,
         expected_bloc_count=2,
         label="block 2",
     )
 
     # Prepare for unloading
     color_sensor_controller.set_arm_at_angle(0)
-    time.sleep(2)
+    time.sleep(1)
 
     # Unload first carried block
     unload_one_block(
