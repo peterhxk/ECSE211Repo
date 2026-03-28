@@ -31,6 +31,13 @@ def safe_float(x):
         return None
 
 
+def extract_trace(samples):
+    valid = [s for s in samples if "t" in s and "dps" in s]
+    t = [float(s["t"]) for s in valid]
+    dps = [float(s["dps"]) for s in valid]
+    return t, dps, valid
+
+
 def main():
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
@@ -40,23 +47,25 @@ def main():
         return
 
     for rec in records:
-        samples = rec.get("samples", [])
-        if not samples:
+        gyro_samples = rec.get("samples", [])
+        motor_samples = rec.get("motor_samples", [])
+
+        if not gyro_samples and not motor_samples:
             continue
 
-        valid_samples = [s for s in samples if "t" in s and "dps" in s]
-        if not valid_samples:
+        gyro_t, gyro_dps, valid_gyro_samples = extract_trace(gyro_samples)
+        motor_t, motor_dps, valid_motor_samples = extract_trace(motor_samples)
+
+        if not gyro_t and not motor_t:
             continue
 
-        t = [float(s["t"]) for s in valid_samples]
-        dps = [float(s["dps"]) for s in valid_samples]
         active = [
             s.get("detectors", {}).get("active_detector", False)
-            for s in valid_samples
+            for s in valid_gyro_samples
         ]
 
-        hit_t = [tt for tt, a in zip(t, active) if a]
-        hit_dps = [dd for dd, a in zip(dps, active) if a]
+        hit_t = [tt for tt, a in zip(gyro_t, active) if a]
+        hit_dps = [dd for dd, a in zip(gyro_dps, active) if a]
 
         extra = rec.get("extra", {}) or {}
         detector_name = extra.get("detector", "unknown")
@@ -66,30 +75,54 @@ def main():
         threshold = safe_float(extra.get("detector_threshold"))
         mu = safe_float(rec.get("mu"))
 
+        motor_threshold = safe_float(extra.get("motor_threshold"))
+        motor_mu_in = safe_float(extra.get("motor_mu_in"))
+
         fig, ax = plt.subplots(figsize=(12, 5))
-        ax.plot(t, dps, label="DPS")
+
+        if gyro_t:
+            ax.plot(gyro_t, gyro_dps, label="Gyro DPS")
+
+        if motor_t:
+            ax.plot(motor_t, motor_dps, label="Motor DPS")
 
         if hit_t:
-            ax.scatter(hit_t, hit_dps, s=20, label="Detection hits")
+            ax.scatter(hit_t, hit_dps, s=20, label="Gyro detection hits")
 
         if mu is not None:
-            ax.axhline(mu, linestyle="--", label=f"mu = {mu:.2f}")
+            ax.axhline(mu, linestyle="--", label=f"gyro mu = {mu:.2f}")
 
         if floor is not None:
-            ax.axhline(floor, linestyle="--", linewidth=2, label=f"floor = {floor:.2f}")
+            ax.axhline(floor, linestyle="--", linewidth=2, label=f"gyro floor = {floor:.2f}")
 
         if threshold is not None:
             ax.axhline(
                 threshold,
                 linestyle="-.",
                 linewidth=2,
-                label=f"threshold = {threshold:.2f}"
+                label=f"gyro threshold = {threshold:.2f}"
             )
 
         if floor is not None and threshold is not None and floor != threshold:
             low = min(floor, threshold)
             high = max(floor, threshold)
-            ax.axhspan(low, high, alpha=0.08, label="detector band")
+            ax.axhspan(low, high, alpha=0.08, label="gyro detector band")
+
+        if motor_mu_in is not None:
+            ax.axhline(
+                motor_mu_in,
+                linestyle="--",
+                linewidth=2,
+                label=f"motor mu = {motor_mu_in:.2f}"
+            )
+
+        if motor_threshold is not None:
+            ax.axhline(
+                motor_threshold,
+                linestyle="-.",
+                linewidth=2,
+                label=f"motor threshold = {motor_threshold:.2f}"
+            )
 
         filename = os.path.splitext(os.path.basename(rec.get("_path", "record")))[0]
         output_path = os.path.join(PLOTS_DIR, f"{filename}.png")
@@ -99,7 +132,6 @@ def main():
             f"{detector_name} | needed={needed}"
         )
         ax.set_xlabel("Time (s)")
-        print("Setting time")
         ax.set_ylabel("DPS")
         ax.grid(True)
         ax.legend()

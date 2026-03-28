@@ -266,8 +266,14 @@ class GrabberController:
 
             ok = self._is_motor_drop_detected(
                 timeout=5.0,
-                warmup_delay=0.9, # add some delay
+                warmup_delay=0.9,
                 stop_event=stop_event,
+                operation_name="unload_last_bloc",
+                extra={
+                    "bloc_count_before": self.bloc_count,
+                    "running_dps": self.running_dps,
+                    "direction": "outward",
+                },
             )
 
             if not ok:
@@ -496,8 +502,6 @@ class GrabberController:
         os.makedirs(calibration_dir, exist_ok=True)
 
         if calibration:
-            if not self.debug:
-                raise RuntimeError("Calibration requested but debug mode is disabled.")
 
             print("[Motor calibration] Ejecting outward first...")
             self.motor.set_dps(-self.motor_calibration_dps)
@@ -638,9 +642,22 @@ class GrabberController:
             "timeout": timeout,
             "extra": extra or {},
             "samples": [],
+            "motor_samples": [],  # <-- add this
             "outcome": None,
             "gyro_calibration": self.gyro_calibration_file,
         }
+
+    def _append_motor_sample_to_record(self, elapsed_s: float, motor_dps: float):
+        if self._current_record is None:
+            return
+
+        sample = {
+            "t": elapsed_s,
+            "dps": motor_dps,
+        }
+
+        with self._recording_lock:
+            self._current_record["motor_samples"].append(sample)
 
     def _append_gyro_sample_to_record(
         self,
@@ -665,6 +682,9 @@ class GrabberController:
             self._current_record["samples"].append(sample)
 
     def _end_operation_recording(self, outcome="completed"):
+        if not self.debug:
+            self._current_record = None
+            return
         if self._current_record is None:
             return
 
@@ -672,8 +692,8 @@ class GrabberController:
             self._current_record["outcome"] = outcome
             self._current_record["end_datetime"] = datetime.now().isoformat()
 
-            if not self._current_record["samples"]:
-                print("[Gyro recording] WARNING: no samples collected, not saving empty recording")
+            if not self._current_record["samples"] and not self._current_record["motor_samples"]:
+                print("[Recording] WARNING: no samples collected, not saving empty recording")
                 self._current_record = None
                 return
 
@@ -684,7 +704,7 @@ class GrabberController:
             with open(filename, "wb") as f:
                 pickle.dump(self._current_record, f)
 
-            print(f"[Gyro recording] Saved operation trace to {filename}")
+            print(f"[Recording] Saved operation trace to {filename}")
             self._current_record = None
 
     def _read_gyro_dps(self, last_seq=None, timeout=None):
@@ -736,7 +756,7 @@ class GrabberController:
             stop_event=None,
     ) -> bool:
         needed = self.consecutive_needed if needed is None else int(needed)
-        record_enabled = bool(detector_name) and bool(operation_name)
+        record_enabled = self.debug and bool(detector_name) and bool(operation_name)
 
         detector_threshold = None
         detector_direction = None
@@ -809,6 +829,12 @@ class GrabberController:
 
                 last_seq, ts, dps, z = sample
                 elapsed = ts - start
+                motor_speed = self.motor.get_speed()
+                if motor_speed is not None and record_enabled:
+                    self._append_motor_sample_to_record(
+                        elapsed_s=elapsed,
+                        motor_dps=float(motor_speed),
+                    )
 
                 detector_flags = {
                     "slow_in": self._is_tilted_inwards_sample(dps, GyroTilt.SLOW_TILT),
@@ -873,8 +899,29 @@ class GrabberController:
                     print("Operation finished, terminating")
 
 
+    def _is_motor_drop_detected(
+            self,
+            timeout=5.0,
+            warmup_delay=0.5,
+            stop_event=None,
+            operation_name=None,
+            extra=None,
+    ) -> bool:
+        record_enabled = self.debug and bool(operation_name)
 
-    def _is_motor_drop_detected(self, timeout=5.0, warmup_delay=0.5, stop_event=None) -> bool:
+        if record_enabled:
+            self._begin_operation_recording(
+                operation_name=operation_name,
+                timeout=timeout,
+                extra={
+                    **(extra or {}),
+                    "detector": "motor_drop",
+                    "motor_mu_in": self.motor_mu_in,
+                    "motor_sigma_in": self.motor_sigma_in,
+                    "motor_drop_k": self.motor_drop_k,
+                    "motor_threshold": self.motor_mu_in - self.motor_drop_k * self.motor_sigma_in,
+                },
+            )
         #Looks at the derivative of the velocity (acceleration) because sometimes the drop might be too subtle to be observed by looking at constant velocity threshold
         threshold = self.motor_mu_in - self.motor_drop_k * self.motor_sigma_in
         hits = 0
@@ -886,50 +933,80 @@ class GrabberController:
             f"threshold={threshold:.3f}, "
             f"k={self.motor_drop_k}, needed={self.motor_drop_consecutive_needed}"
         )
+        try :
+            while True:
+                if stop_event is not None and stop_event.is_set():
+                    if record_enabled:
+                        self._end_operation_recording(outcome="cancelled")
+                    return False
 
-        while True:
-            if stop_event is not None and stop_event.is_set():
-                return False
+                elapsed = time.time() - start
+                if timeout is not None and elapsed >= timeout:
+                    if record_enabled:
+                        self._end_operation_recording(outcome="timeout")
+                    return False
 
-            elapsed = time.time() - start
-            if timeout is not None and elapsed >= timeout:
-                return False
+                raw_speed = self.motor.get_speed()
+                if raw_speed is None:
+                    time.sleep(self.motor_sample_sleep)
+                    continue
 
-            raw_speed = self.motor.get_speed()
-            if raw_speed is None:
+                raw_speed = float(raw_speed)
+
+                if record_enabled:
+                    self._append_motor_sample_to_record(
+                        elapsed_s=elapsed,
+                        motor_dps=raw_speed,
+                    )
+
+                    # also store current gyro value if available, so both traces exist
+                    latest = self._read_gyro_dps(last_seq=None, timeout=0.0)
+                    if latest is not None:
+                        _, ts, dps, z = latest
+                        detector_flags = {
+                            "motor_drop_condition": speed_for_detection < threshold if 'speed_for_detection' in locals() else False
+                        }
+                        self._append_gyro_sample_to_record(
+                            elapsed_s=elapsed,
+                            dps=dps,
+                            z=z,
+                            detectors=detector_flags,
+                        )
+
+                if elapsed < warmup_delay:
+                    time.sleep(self.motor_sample_sleep)
+                    continue
+
+                if self.use_motor_moving_average and self.motor_moving_avg_window > 1:
+                    ma_window.append(raw_speed)
+                    speed_for_detection = sum(ma_window) / len(ma_window)
+                else:
+                    speed_for_detection = raw_speed
+
+                condition = speed_for_detection < threshold
+
+                if condition:
+                    hits += 1
+                else:
+                    hits = 0
+
+                if hits >= self.motor_drop_consecutive_needed:
+                    print(
+                        f"[Drop detect] Triggered: raw_speed={raw_speed:.3f}, "
+                        f"filtered_speed={speed_for_detection:.3f}, "
+                        f"threshold={threshold:.3f}"
+                    )
+                    print("Setting BLOCK CAUGHT flag")
+                    self._block_caught_event.set()
+                    if record_enabled:
+                        self._end_operation_recording(outcome="success")
+                    return True
+
                 time.sleep(self.motor_sample_sleep)
-                continue
-
-            raw_speed = float(raw_speed)
-
-            if elapsed < warmup_delay:
-                time.sleep(self.motor_sample_sleep)
-                continue
-
-            if self.use_motor_moving_average and self.motor_moving_avg_window > 1:
-                ma_window.append(raw_speed)
-                speed_for_detection = sum(ma_window) / len(ma_window)
-            else:
-                speed_for_detection = raw_speed
-
-            condition = speed_for_detection < threshold
-
-            if condition:
-                hits += 1
-            else:
-                hits = 0
-
-            if hits >= self.motor_drop_consecutive_needed:
-                print(
-                    f"[Drop detect] Triggered: raw_speed={raw_speed:.3f}, "
-                    f"filtered_speed={speed_for_detection:.3f}, "
-                    f"threshold={threshold:.3f}"
-                )
-                print("Setting BLOCK CAUGHT flag")
-                self._block_caught_event.set()
-                return True
-
-            time.sleep(self.motor_sample_sleep)
+        except Exception:
+            if record_enabled:
+                self._end_operation_recording(outcome="error")
+            raise
 
     # ----------------------------
     # High-level actions
@@ -1003,7 +1080,17 @@ class GrabberController:
                 print("[INFO] Loading cancelled during second-bloc warm-up.")
                 return False
 
-            ok = self._is_motor_drop_detected(timeout=5.0,warmup_delay=0.3,stop_event=stop_event)
+            ok = self._is_motor_drop_detected(
+                timeout=5.0,
+                warmup_delay=0.3,
+                stop_event=stop_event,
+                operation_name="load_second_bloc",
+                extra={
+                    "bloc_count_before": self.bloc_count,
+                    "running_dps": self.running_dps,
+                    "direction": "inward",
+                },
+            )
             #TODO : problem is that if the first block is only after the gyro sensor it might temporarily jam the grabber thus triggering the velocity drop event
             if not ok:
                 print("Timed out or cancelled waiting for motor velocity drop while loading second bloc.")
