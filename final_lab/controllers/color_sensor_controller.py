@@ -48,7 +48,8 @@ class ColourSensorController (EV3ColorSensor):
         self.colours_found = []
 
         # Reset the value of the motor encoder.
-        self._calibrate_angle()
+        #self._calibrate_angle()
+        self.motor.reset_encoder()
         # Sets maximum speed of motor.
         motor.set_limits(0, self.MOTOR_POWER_DPS)
 

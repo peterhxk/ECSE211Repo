@@ -154,7 +154,7 @@ try:
 
     # Load block 2
     load_one_block(
-        move_distance_mm=80,
+        move_distance_mm=75,
         expected_bloc_count=2,
         label="block 2",
     )
@@ -165,7 +165,7 @@ try:
 
     # Unload first carried block
     unload_one_block(
-        move_distance_mm=20,
+        move_distance_mm=10,
         expected_bloc_count=1,
         label="first unload",
     )
