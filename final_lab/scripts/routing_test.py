@@ -25,7 +25,7 @@ grabber_controller.initialize_sensors()
 print("Initialized grabber sensors")
 
 try:
-    routing.pharmacy_to_grab_block_position
+    routing.pharmacy_to_grab_block_position()
     routing.grab_block(grabber_controller)
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
