@@ -6,6 +6,7 @@ from enum import Enum
 from controllers.grabber_controller import GrabberController
 from controllers.driving_controller import DrivingController
 from controllers.sound_controller import SoundController
+import math
 
 class RoomType(Enum):
     CORNER_SINGLE = 1
@@ -267,7 +268,7 @@ class RoomTraverser:
 
                     # Drop block
                     print("Dropping block")
-                    self.color_sensor_controller.set_arm_at_angle(90)
+                    self.color_sensor_controller.set_arm_at_angle(math.copysign(90, bed_angle))
                     grabber_controller.start_unloading()
                     while True:
                         status = grabber_controller.get_unloading_status()
