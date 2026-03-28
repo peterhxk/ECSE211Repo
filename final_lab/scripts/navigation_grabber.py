@@ -39,15 +39,20 @@ line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 def wait_for_loading(expected_bloc_count, timeout=15.0, label="block"):
     start = time.time()
     last_log = start
+    consecutive_idle = 0
 
     while True:
         status = grabber_controller.get_loading_status()
 
         if status == "FAILED":
             raise RuntimeError(f"Failed while loading {label}")
-        
-        if grabber_controller.loading_finished():
-        #if grabber_controller.loading_finished() or status == "IDLE":
+
+        if status == "IDLE":
+            consecutive_idle += 1
+        else:
+            consecutive_idle = 0
+
+        if grabber_controller.loading_finished() or consecutive_idle >= 3:
             break
 
         now = time.time()
