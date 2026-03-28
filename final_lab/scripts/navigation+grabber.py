@@ -158,7 +158,7 @@ try:
     )
 
     # Prepare for unloading
-    color_sensor_controller.set_arm_at_angle(91)
+    color_sensor_controller.set_arm_at_angle(95)
     time.sleep(1)
 
     # Unload first carried block
