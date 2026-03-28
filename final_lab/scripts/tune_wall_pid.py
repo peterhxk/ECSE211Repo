@@ -39,7 +39,7 @@ def parse_args():
                     default="forward")
     p.add_argument("--alpha", type=float, default=0.7,
                     help="Low-pass smoothing alpha for steering")
-    p.add_argument("--steer-scale", type=float, default=1.3,
+    p.add_argument("--steer-scale", type=float, default=0.7,
                     help="Multiplier on adjustment applied to DPS")
     return p.parse_args()
 
