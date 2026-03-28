@@ -207,6 +207,7 @@ class RoomTraverser:
     """
     def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
         try:
+            # load 2 blocks.
             grabber_controller.start_loading()
             start = time.time()
             last_log = start
@@ -234,7 +235,35 @@ class RoomTraverser:
             print(f"[DEBUG] Loading finished with status={final_status}")
 
             time.sleep(2)
-            
+
+            grabber_controller.start_loading()
+            start = time.time()
+            last_log = start
+
+            while True:
+                status = grabber_controller.get_loading_status()
+
+                if status == "FAILED":
+                    raise RuntimeError(f"Failed while loading")
+
+                if grabber_controller.loading_finished():
+                    break
+
+                now = time.time()
+                if now - last_log > 1.0:
+                    print(f"[DEBUG] Waiting for loading... status={status}")
+                    last_log = now
+
+                if now - start > 15:
+                    raise TimeoutError(f"Timeout while loading")
+
+                time.sleep(0.05)
+
+            final_status = grabber_controller.get_loading_status()
+            print(f"[DEBUG] Loading finished with status={final_status}")
+
+            time.sleep(2)
+
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
             traverse_results = self.run(room_type, 45, detect_bed=True)
             bed_found = traverse_results[0] is not None
