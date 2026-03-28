@@ -52,30 +52,9 @@ class ColourSensorController (EV3ColorSensor):
         self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
 
         # Reset the value of the motor encoder.
-        #self._calibrate_angle()
         self.motor.reset_encoder()
-        self.motor.offset_encoder(-90) # so needs to be put at that position
         # Sets maximum speed of motor.
         motor.set_limits(0, self.MOTOR_POWER_DPS)
-
-    def _calibrate_angle(self) -> bool:
-        """resets the color sensor position by pushing the color sensor to one edge and resetting the encoder afterwards"""
-        RESET_DPS = 100
-        TOLERANCE = 20
-        self.motor.set_dps(RESET_DPS)
-        time.sleep(1)
-        timer = time.time()
-        while abs(self.motor.get_speed() - RESET_DPS) < TOLERANCE and time.time() - timer < 5:
-            time.sleep(0.01)
-        print("Resetting encoder")
-        self.motor.set_dps(0)
-        self.motor.reset_encoder()
-        self.motor.offset_encoder(-90)
-
-        if time.time() - timer > 5:
-            return False
-        print("SUCCESSFULLY RESET ENCODER")
-        return True
 
     def _is_at_boundary(self, range: Literal["left", "right", "full"]) -> bool:
         """
@@ -94,7 +73,7 @@ class ColourSensorController (EV3ColorSensor):
         """
         self.motor.set_limits(0, self.MOTOR_POWER_DPS)
         self.motor.set_position(angle)
-        self.motor.wait_is_moving()
+        self.motor.wait_is_stopped(0.01)
 
     def read_current_angle(self):
         pass
