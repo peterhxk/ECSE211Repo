@@ -160,7 +160,7 @@ class SweepLineFollower:
         self.pilot.left_motor.wait_is_stopped()
         
         if arm_avoid_block:
-            self.sensor.set_arm_at_angle(-120)
+            self.sensor.set_arm_at_angle(-110)
 
         print(f"pivoting {direction}")
         self.pilot.pivot_90(direction)
