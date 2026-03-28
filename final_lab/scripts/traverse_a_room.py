@@ -19,19 +19,16 @@ driving_controller = DrivingController(left_motor, right_motor, 150)
 
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_motor)
 room_traverser = RoomTraverser(left_motor, right_motor, MOTOR_POWER, color_sensor_controller)
-grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, False, False)
+grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=True, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
 
 print("Waiting for sensors to be ready...")
 
 wait_ready_sensors(True)
 
-try:
-    grabber_controller.initialize_sensors()
-    print("Initialized grabber sensors")
-    time.sleep(2)
-except Exception as err:
-    print(err)
+grabber_controller.initialize_sensors()
+print("Initialized grabber sensors")
+time.sleep(2)
     
 
 if __name__ == "__main__":
