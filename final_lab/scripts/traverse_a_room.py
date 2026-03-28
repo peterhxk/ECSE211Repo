@@ -8,7 +8,7 @@ from controllers.driving_controller import DrivingController
 from impl.routing import Routing
 
 
-MOTOR_POWER = 170
+MOTOR_POWER = 260
 
 # sensor declaration
 left_motor = Motor(Ports.LEFT_MOTOR.value)
