@@ -154,18 +154,18 @@ try:
 
     # Load block 2
     load_one_block(
-        move_distance_mm=60,
+        move_distance_mm=65,
         expected_bloc_count=2,
         label="block 2",
     )
 
     # Prepare for unloading
-    color_sensor_controller.set_arm_at_angle(85)
+    color_sensor_controller.set_arm_at_angle(91)
     time.sleep(1)
 
     # Unload first carried block
     unload_one_block(
-        move_distance_mm=10,
+        move_distance_mm=0,
         expected_bloc_count=1,
         label="first unload",
     )
