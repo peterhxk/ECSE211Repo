@@ -33,7 +33,7 @@ def parse_args():
                     help="Target wall distance in cm")
     p.add_argument("--distance", type=float, default=40.0,
                     help="Straight distance to travel in cm")
-    p.add_argument("--power", type=int, default=170,
+    p.add_argument("--power", type=int, default=220,
                     help="Base motor DPS")
     p.add_argument("--direction", choices=["forward", "backward"],
                     default="forward")
