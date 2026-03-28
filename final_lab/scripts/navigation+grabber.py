@@ -100,8 +100,7 @@ def wait_for_unloading(expected_bloc_count, timeout=15.0, label="block"):
             f"Unexpected bloc_count after unloading {label}: "
             f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
         )
-
-
+    
 def move_and_stop(distance_mm):
     driving_controller.move_distance(distance_mm)
     left_motor.wait_is_stopped(0.1)
