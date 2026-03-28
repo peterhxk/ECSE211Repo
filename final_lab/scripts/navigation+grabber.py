@@ -145,7 +145,7 @@ try:
 
     # Load block 1
     load_one_block(
-        move_distance_mm=128,
+        move_distance_mm=132,
         expected_bloc_count=1,
         label="block 1",
     )
@@ -154,7 +154,7 @@ try:
 
     # Load block 2
     load_one_block(
-        move_distance_mm=65,
+        move_distance_mm=75,
         expected_bloc_count=2,
         label="block 2",
     )
