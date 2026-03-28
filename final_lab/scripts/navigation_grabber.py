@@ -46,7 +46,7 @@ def wait_for_loading(expected_bloc_count, timeout=15.0, label="block"):
         if status == "FAILED":
             raise RuntimeError(f"Failed while loading {label}")
 
-        if grabber_controller.loading_finished():
+        if grabber_controller.loading_finished() or status == "IDLE":
             break
 
         now = time.time()
