@@ -1,4 +1,6 @@
 import sys
+
+from impl.room_traverser import RoomTraverser, RoomType
 sys.path.append("./")
 
 import traceback
@@ -19,6 +21,7 @@ driving_controller = DrivingController(left_motor, right_motor, 150)
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
 grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
+room_traverser = RoomTraverser(left_motor, right_motor, 250, color_sensor_controller)
 
 wait_ready_sensors(True)
 grabber_controller.initialize_sensors()
@@ -27,6 +30,10 @@ print("Initialized grabber sensors")
 try:
     routing.pharmacy_to_grab_block_position()
     routing.grab_block(grabber_controller)
+    routing.pharmacy_to_room1()
+    room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
+    routing.room1_to_pharmacy()
+
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
 
