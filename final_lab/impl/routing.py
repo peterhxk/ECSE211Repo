@@ -27,7 +27,7 @@ class Routing(SweepLineFollower):
     
     def room1_to_pharmacy(self):
         self.pilot.move_distance(-430)
-        self.pilot.right_motor.wait_is_stopped()
+        self.pilot.right_motor.wait_is_stopped(0.1)
     
     def room1_to_room2(self):
         self.turn_logic("right", "back")
@@ -47,7 +47,7 @@ class Routing(SweepLineFollower):
 
     def pharmacy_to_grab_block_position(self):
         self.pilot.move_distance(50)
-        self.pilot.right_motor.wait_is_stopped()
+        self.pilot.right_motor.wait_is_stopped(0.1)
         self.turn_logic("right", "front")
         self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)
 
@@ -57,15 +57,15 @@ class Routing(SweepLineFollower):
         grabberInstance.start_loading()
         time.sleep(0.5)
         wait_for_loading(0,timeout=15.0,label="block 1") #loading first block 
-        self.pilot.move_distance(80)
+        self.pilot.move_distance(78)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.pilot.stop_motors()
-        print("Waiting for 2 seconds before loading second block...")
-        time.sleep(2)
+        # print("Waiting for 2 seconds before loading second block...")
+        # time.sleep(2)
         grabberInstance.start_loading()
         time.sleep(0.5)
         wait_for_loading(1,timeout=15.0,label="block 2") #loading second block
-        self.pilot.move_distance(-190)
+        self.pilot.move_distance(-300)
         self.pilot.right_motor.wait_is_stopped(0.1)
 
         #reset arm angle at the end
