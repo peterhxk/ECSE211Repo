@@ -205,64 +205,81 @@ class RoomTraverser:
     Input:
     - room_type: The type of the room to traverse. This determines the path taken by the robot.
     """
+    def _wait_for_loading(self, grabber_controller: GrabberController, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
+        start = time.time()
+        last_log = start
+
+        while True:
+            status = grabber_controller.get_loading_status()
+
+            if status == "FAILED":
+                raise RuntimeError(f"Failed while loading {label}")
+
+            if grabber_controller.loading_finished():
+                break
+
+            now = time.time()
+            if now - last_log > 1.0:
+                print(f"[DEBUG] Waiting for loading of {label}... status={status}")
+                last_log = now
+
+            if now - start > timeout:
+                raise TimeoutError(f"Timeout while loading {label}")
+
+            time.sleep(0.05)
+
+        final_status = grabber_controller.get_loading_status()
+        print(f"[DEBUG] Loading finished for {label} with status={final_status}")
+
+        if grabber_controller.bloc_count != expected_bloc_count:
+            raise RuntimeError(
+                f"Unexpected bloc_count after loading {label}: "
+                f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
+            )
+
+    def _wait_for_unloading(self, grabber_controller: GrabberController, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
+        start = time.time()
+        last_log = start
+
+        while True:
+            status = grabber_controller.get_unloading_status()
+
+            if status == "FAILED":
+                raise RuntimeError(f"Failed while unloading {label}")
+
+            if status != "UNLOADING":
+                break
+
+            now = time.time()
+            if now - last_log > 1.0:
+                print(f"[DEBUG] Waiting for unloading of {label}... status={status}")
+                last_log = now
+
+            if now - start > timeout:
+                raise TimeoutError(f"Timeout while unloading {label}")
+
+            time.sleep(0.05)
+
+        final_status = grabber_controller.get_unloading_status()
+        print(f"[DEBUG] Unloading finished for {label} with status={final_status}")
+
+        if grabber_controller.bloc_count != expected_bloc_count:
+            raise RuntimeError(
+                f"Unexpected bloc_count after unloading {label}: "
+                f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
+            )
+
     def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
         try:
-            # load 2 blocks.
+            # Load block 1
             grabber_controller.start_loading()
-            start = time.time()
-            last_log = start
-
-            while True:
-                status = grabber_controller.get_loading_status()
-
-                if status == "FAILED":
-                    raise RuntimeError(f"Failed while loading")
-
-                if grabber_controller.loading_finished():
-                    break
-
-                now = time.time()
-                if now - last_log > 1.0:
-                    print(f"[DEBUG] Waiting for loading... status={status}")
-                    last_log = now
-
-                if now - start > 15:
-                    raise TimeoutError(f"Timeout while loading")
-
-                time.sleep(0.05)
-
-            final_status = grabber_controller.get_loading_status()
-            print(f"[DEBUG] Loading finished with status={final_status}")
+            self._wait_for_loading(grabber_controller, expected_bloc_count=1, label="block 1")
 
             time.sleep(2)
 
+            # Load block 2
             grabber_controller.start_loading()
-            start = time.time()
-            last_log = start
-
-            while True:
-                status = grabber_controller.get_loading_status()
-
-                if status == "FAILED":
-                    raise RuntimeError(f"Failed while loading")
-
-                if grabber_controller.loading_finished():
-                    break
-
-                now = time.time()
-                if now - last_log > 1.0:
-                    print(f"[DEBUG] Waiting for loading... status={status}")
-                    last_log = now
-
-                if now - start > 15:
-                    raise TimeoutError(f"Timeout while loading")
-
-                time.sleep(0.05)
-
-            final_status = grabber_controller.get_loading_status()
-            print(f"[DEBUG] Loading finished with status={final_status}")
-
-            time.sleep(2)
+            self._wait_for_loading(grabber_controller, expected_bloc_count=2, label="block 2")
 
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
             traverse_results = self.run(room_type, 45, detect_bed=True)
@@ -298,33 +315,12 @@ class RoomTraverser:
                     self.right_motor.wait_is_stopped()
                     time.sleep(0.5)
 
-                    # Drop block
+                    # Drop one block (2 -> 1)
                     print("Dropping block")
                     self.color_sensor_controller.set_arm_at_angle(math.copysign(90, bed_angle))
+
                     grabber_controller.start_unloading()
-                    start = time.time()
-                    last_log = start
-                    while True:
-                        status = grabber_controller.get_unloading_status()
-
-                        if status == "FAILED":
-                            raise RuntimeError(f"Failed while unloading")
-
-                        if status != "UNLOADING":
-                            break
-
-                        now = time.time()
-                        if now - last_log > 1.0:
-                            print(f"[DEBUG] Waiting for unloading... status={status}")
-                            last_log = now
-
-                        if now - start > 15:
-                            raise TimeoutError(f"Timeout while unloading")
-
-                        time.sleep(0.05)
-
-                    final_status = grabber_controller.get_unloading_status()
-                    print(f"[DEBUG] Unloading finished with status={final_status}")
+                    self._wait_for_unloading(grabber_controller, expected_bloc_count=1, label="unload")
 
                     self.sound_controller.play_success()
                     time.sleep(2)
@@ -362,5 +358,6 @@ class RoomTraverser:
             print("Interrupted via keyboard...")
         except Exception as err:
             print(err)  
-        finally:  
-            reset_brick()  
+        finally:
+            grabber_controller.stop_gyro_monitor()
+            reset_brick()
