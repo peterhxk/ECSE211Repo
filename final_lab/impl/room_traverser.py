@@ -168,8 +168,8 @@ class RoomTraverser:
                 left_dps  = self.base_power + adjustment * 1.3
                 right_dps = self.base_power - adjustment * 1.3
             else:
-                left_dps  = -self.base_power - adjustment * 0.8
-                right_dps = -self.base_power + adjustment * 0.8
+                left_dps  = -self.base_power - adjustment * 0.7
+                right_dps = -self.base_power + adjustment * 0.7
 
 
             print(f"Adjustment: {adjustment}, Left DPS: {left_dps}, Right DPS: {right_dps}")
