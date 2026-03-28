@@ -54,8 +54,8 @@ class ColourSensorController (EV3ColorSensor):
 
     def _calibrate_angle(self) -> bool:
         """resets the color sensor position by pushing the color sensor to one edge and resetting the encoder afterwards"""
-        RESET_DPS = 30
-        TOLERANCE = 8
+        RESET_DPS = 40
+        TOLERANCE = 10
         self.motor.set_dps(RESET_DPS)
         time.sleep(1)
         timer = time.time()
