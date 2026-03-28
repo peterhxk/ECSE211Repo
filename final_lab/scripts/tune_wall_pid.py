@@ -39,7 +39,7 @@ def parse_args():
                     default="forward")
     p.add_argument("--alpha", type=float, default=0.7,
                     help="Low-pass smoothing alpha for steering")
-    p.add_argument("--steer-scale", type=float, default=0.7,
+    p.add_argument("--steer-scale", type=float, default=1.3,
                     help="Multiplier on adjustment applied to DPS")
     p.add_argument("--ramp", type=float, default=0.0,
                     help="Seconds over which PID output ramps from 0%% to 100%% (0 = no ramp)")
