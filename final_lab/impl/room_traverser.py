@@ -267,6 +267,16 @@ class RoomTraverser:
 
     def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
         try:
+            # Load block 1
+            grabber_controller.start_loading()
+            self._wait_for_loading(grabber_controller, expected_bloc_count=1, label="block 1")
+
+            time.sleep(2)
+
+            # Load block 2
+            grabber_controller.start_loading()
+            self._wait_for_loading(grabber_controller, expected_bloc_count=2, label="block 2")
+
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
             traverse_results = self.run(room_type, 45, detect_bed=True)
             bed_found = traverse_results[0] is not None
