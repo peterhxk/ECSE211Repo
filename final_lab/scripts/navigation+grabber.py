@@ -28,7 +28,7 @@ grabber_controller = GrabberController(
     Ports.GRABBER_MOTOR.value,
     Ports.GYRO_SENSOR.value,
     False,
-    True,
+    False,
 )
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 
@@ -101,7 +101,6 @@ def wait_for_unloading(expected_bloc_count, timeout=15.0, label="block"):
             f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
         )
 
-
 def move_and_stop(distance_mm):
     driving_controller.move_distance(distance_mm)
     left_motor.wait_is_stopped(0.1)
@@ -137,12 +136,14 @@ try:
     wait_ready_sensors(True)
     grabber_controller.initialize_sensors()
 
-    color_sensor_controller.set_arm_at_angle(85)
+    color_sensor_controller.set_arm_at_angle(0)
+    time.sleep(1)
+    color_sensor_controller.set_arm_at_angle(90)
     driving_controller.set_speed(100)
 
     # Load block 1
     load_one_block(
-        move_distance_mm=100,
+        move_distance_mm=135,
         expected_bloc_count=1,
         label="block 1",
     )
@@ -151,18 +152,18 @@ try:
 
     # Load block 2
     load_one_block(
-        move_distance_mm=100,
+        move_distance_mm=83,
         expected_bloc_count=2,
         label="block 2",
     )
 
     # Prepare for unloading
-    color_sensor_controller.set_arm_at_angle(0)
-    time.sleep(2)
+    color_sensor_controller.set_arm_at_angle(95)
+    time.sleep(1)
 
     # Unload first carried block
     unload_one_block(
-        move_distance_mm=20,
+        move_distance_mm=0,
         expected_bloc_count=1,
         label="first unload",
     )
