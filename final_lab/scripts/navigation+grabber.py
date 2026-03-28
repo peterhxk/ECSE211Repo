@@ -136,16 +136,16 @@ try:
     wait_ready_sensors(True)
     grabber_controller.initialize_sensors()
 
-    color_sensor_controller.set_arm_at_angle(85)
-    time.sleep(2)
+    color_sensor_controller.set_arm_at_angle(90)
+    time.sleep(1)
     color_sensor_controller.set_arm_at_angle(0)
-    time.sleep(2)
-    color_sensor_controller.set_arm_at_angle(85)
+    time.sleep(1)
+    color_sensor_controller.set_arm_at_angle(90)
     driving_controller.set_speed(100)
 
     # Load block 1
     load_one_block(
-        move_distance_mm=100,
+        move_distance_mm=300,
         expected_bloc_count=1,
         label="block 1",
     )
