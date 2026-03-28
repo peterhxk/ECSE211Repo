@@ -143,10 +143,15 @@ class SweepLineFollower:
             raise Exception(f"Invalid parameter heading for method SweepLineFollower.turn_logic: {heading}. Valid options are front, back")
         print(f"The colors detected are : {self.sensor.read_black_white()}")
 
-        while (self.sensor.read_black_white() != "b"):
-            print(self.sensor.read_black_white())
+        consecutive_black = 0
+        while consecutive_black < 3:
+            reading = self.sensor.read_black_white()
+            print(reading)
+            if reading == "b":
+                consecutive_black += 1
+            else:
+                consecutive_black = 0
             time.sleep(0.1)
-            pass
 
         print("stopping motors")
         self.pilot.stop_motors()
