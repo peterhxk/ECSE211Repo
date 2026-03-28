@@ -139,8 +139,8 @@ def run(args):
                 left_dps = args.power + adj * s
                 right_dps = args.power - adj * s
             else:
-                left_dps = -args.power - adj * s
-                right_dps = -args.power + adj * s
+                left_dps = -args.power + adj * s
+                right_dps = -args.power - adj * s
 
             left_motor.set_dps(left_dps)
             right_motor.set_dps(right_dps)
