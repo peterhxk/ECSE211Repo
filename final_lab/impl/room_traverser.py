@@ -122,6 +122,9 @@ class RoomTraverser:
             # check travelled distance
             travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
 
+            if target_degrees < 0 and travelled_deg >= target_degrees / 2:
+                # set color arm back halfway to prevent the cube from being dragged
+                self.color_sensor_controller.set_arm_at_angle(0)
             if target_degrees > 0 and travelled_deg >= target_degrees:
                 break
             elif target_degrees < 0 and travelled_deg <= target_degrees:
@@ -312,7 +315,6 @@ class RoomTraverser:
                     time.sleep(0.5)
 
                     print("Back at original position, ready for backwards pass")
-                    self.color_sensor_controller.set_arm_at_angle(0)
                 else:
                     print("Red bed detected, skipping unloading")
                 time.sleep(2)
