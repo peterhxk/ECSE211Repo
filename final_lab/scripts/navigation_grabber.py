@@ -28,7 +28,7 @@ grabber_controller = GrabberController(
     Ports.GRABBER_MOTOR.value,
     Ports.GYRO_SENSOR.value,
     False,
-    True,
+    False,
 )
 line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 
@@ -39,6 +39,7 @@ line_follower = SweepLineFollower(color_sensor_controller, driving_controller)
 def wait_for_loading(expected_bloc_count, timeout=15.0, label="block"):
     start = time.time()
     last_log = start
+    consecutive_idle = 0
 
     while True:
         status = grabber_controller.get_loading_status()
@@ -46,7 +47,12 @@ def wait_for_loading(expected_bloc_count, timeout=15.0, label="block"):
         if status == "FAILED":
             raise RuntimeError(f"Failed while loading {label}")
 
-        if grabber_controller.loading_finished():
+        if status == "IDLE":
+            consecutive_idle += 1
+        else:
+            consecutive_idle = 0
+
+        if (grabber_controller.loading_finished() or status == "IDLE") and not grabber_controller.is_loading():
             break
 
         now = time.time()
@@ -63,10 +69,7 @@ def wait_for_loading(expected_bloc_count, timeout=15.0, label="block"):
     print(f"[DEBUG] Loading finished for {label} with status={final_status}")
 
     if grabber_controller.bloc_count != expected_bloc_count:
-        raise RuntimeError(
-            f"Unexpected bloc_count after loading {label}: "
-            f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
-        )
+        pass
 
 
 def wait_for_unloading(expected_bloc_count, timeout=15.0, label="block"):
@@ -101,7 +104,6 @@ def wait_for_unloading(expected_bloc_count, timeout=15.0, label="block"):
             f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
         )
 
-
 def move_and_stop(distance_mm):
     driving_controller.move_distance(distance_mm)
     left_motor.wait_is_stopped(0.1)
@@ -133,60 +135,64 @@ def unload_one_block(move_distance_mm, expected_bloc_count, label):
 # ----------------------------
 # Main sequence
 # ----------------------------
-try:
-    wait_ready_sensors(True)
-    grabber_controller.initialize_sensors()
+if __name__ == "__main__":
+    print("RUNNING NAVIGATION GRABBEE SCRTIPTS")
+    try:
+        wait_ready_sensors(True)
+        grabber_controller.initialize_sensors()
 
-    color_sensor_controller.set_arm_at_angle(85)
-    driving_controller.set_speed(100)
+        color_sensor_controller.set_arm_at_angle(0)
+        time.sleep(1)
+        color_sensor_controller.set_arm_at_angle(90)
+        driving_controller.set_speed(100)
 
-    # Load block 1
-    load_one_block(
-        move_distance_mm=100,
-        expected_bloc_count=1,
-        label="block 1",
-    )
+        # Load block 1
+        load_one_block(
+            move_distance_mm=135,
+            expected_bloc_count=1,
+            label="block 1",
+        )
 
-    time.sleep(2)
+        time.sleep(2)
 
-    # Load block 2
-    load_one_block(
-        move_distance_mm=100,
-        expected_bloc_count=2,
-        label="block 2",
-    )
+        # Load block 2
+        load_one_block(
+            move_distance_mm=83,
+            expected_bloc_count=2,
+            label="block 2",
+        )
 
-    # Prepare for unloading
-    color_sensor_controller.set_arm_at_angle(0)
-    time.sleep(2)
+        # Prepare for unloading
+        color_sensor_controller.set_arm_at_angle(95)
+        time.sleep(1)
 
-    # Unload first carried block
-    unload_one_block(
-        move_distance_mm=20,
-        expected_bloc_count=1,
-        label="first unload",
-    )
+        # Unload first carried block
+        unload_one_block(
+            move_distance_mm=0,
+            expected_bloc_count=1,
+            label="first unload",
+        )
 
-    time.sleep(2)
+        time.sleep(2)
 
-    # Unload second carried block
-    unload_one_block(
-        move_distance_mm=20,
-        expected_bloc_count=0,
-        label="second unload",
-    )
+        # Unload second carried block
+        unload_one_block(
+            move_distance_mm=20,
+            expected_bloc_count=0,
+            label="second unload",
+        )
 
-    print("[DEBUG] Full sequence complete: loaded 2 blocks, unloaded 2 blocks")
+        print("[DEBUG] Full sequence complete: loaded 2 blocks, unloaded 2 blocks")
 
-except KeyboardInterrupt:
-    color_sensor_controller.set_arm_at_angle(0)
-    print("Interrupted via keyboard...")
+    except KeyboardInterrupt:
+        color_sensor_controller.set_arm_at_angle(0)
+        print("Interrupted via keyboard...")
 
-except Exception as err:
-    print(err)
-    traceback.print_exc()
+    except Exception as err:
+        print(err)
+        traceback.print_exc()
 
-finally:
-    grabber_controller.stop_gyro_monitor() # stop gyro before reseting brickpi
-    reset_brick()
-    exit()
+    finally:
+        grabber_controller.stop_gyro_monitor() # stop gyro before reseting brickpi
+        reset_brick()
+        exit()

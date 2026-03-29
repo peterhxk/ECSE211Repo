@@ -1,10 +1,12 @@
 from utils.brick import EV3ColorSensor, Motor
 import time
 import json
+import threading
 from enum import Enum
 from typing import Literal, List, Tuple, Union, NamedTuple, Optional
 import math
 import data.measurements as consts
+from collections import deque
 
 
 def normalize_colours(r, g, b):
@@ -38,7 +40,7 @@ class ColourSensorController (EV3ColorSensor):
     # Angle tolerance at which the line is still considered the same one
     THETA_TOLERANCE = 10
 
-    MOTOR_POWER_DPS = 140
+    MOTOR_POWER_DPS = 250
 
     def __init__(self, port, motor: Motor, mode="component", bp=None):
         super().__init__(port)
@@ -46,6 +48,9 @@ class ColourSensorController (EV3ColorSensor):
         self.motor = motor
         self.sweep_dir = None
         self.colours_found = []
+        self._bw_history = deque(maxlen=8)
+        self.BW_DROP_THRESHOLD = 1.5   # drop from baseline → black
+        self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
 
         # Reset the value of the motor encoder.
         self.motor.reset_encoder()
@@ -69,11 +74,81 @@ class ColourSensorController (EV3ColorSensor):
         """
         self.motor.set_limits(0, self.MOTOR_POWER_DPS)
         self.motor.set_position(angle)
-        self.motor.wait_is_moving()
+        self.motor.wait_is_stopped(0.01)
 
     def read_current_angle(self):
         pass
 
+
+    def sweep_start(self, colours: List[str] = [], range: Literal["left", "right", "full"] = "full",
+                    starting_on_right: bool = True, black_white: bool = False):
+        """Launch a background thread that sweeps continuously until a match
+        is found or sweep_stop() is called. Poll sweep_get_result() from the
+        main loop to check for detections."""
+        self._sweep_result: Optional[List[Tuple[int, str, int]]] = None
+        self._sweep_stop_event = threading.Event()
+
+        def _sweep_loop():
+            stop = self._sweep_stop_event
+            sweep_range = range
+            sweep_dir = SweepDirection.RIGHT if starting_on_right else SweepDirection.LEFT
+            consecutive_count = 0
+            consecutive_positions = []
+            prev_reversed = False
+            found = []
+
+            self.sweep_dir = sweep_dir
+            self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
+
+            while not stop.is_set():
+                if self.motor.get_speed() * self.sweep_dir.value <= 0:
+                    self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
+
+                if black_white:
+                    detected = self.read_black_white()
+                else:
+                    detected = self.read_colour()
+
+                if detected in colours:
+                    consecutive_count += 1
+                    consecutive_positions.append(self.motor.get_position())
+                    if consecutive_count >= 5:
+                        avg_pos = sum(consecutive_positions) / len(consecutive_positions)
+                        found.append((avg_pos, detected, 0))
+                        print(found)
+                        self._sweep_result = list(found)
+                        self.motor.set_dps(0)
+                        return
+                else:
+                    consecutive_count = 0
+                    consecutive_positions = []
+
+                if self._is_at_boundary(sweep_range):
+                    self.sweep_dir = SweepDirection.LEFT if self.sweep_dir == SweepDirection.RIGHT else SweepDirection.RIGHT
+                    if prev_reversed:
+                        prev_reversed = False
+                    else:
+                        prev_reversed = True
+
+                time.sleep(0.01)
+
+            self.motor.set_dps(0)
+
+        self._sweep_thread = threading.Thread(target=_sweep_loop, daemon=True)
+        self._sweep_thread.start()
+
+    def sweep_get_result(self) -> Optional[List[Tuple[int, str, int]]]:
+        """Non-blocking check for a sweep detection. Returns None if still
+        sweeping, or the detection list if a match was found."""
+        return self._sweep_result
+
+    def sweep_stop(self):
+        """Stop the background sweep thread and release the motor."""
+        if hasattr(self, '_sweep_stop_event'):
+            self._sweep_stop_event.set()
+        if hasattr(self, '_sweep_thread') and self._sweep_thread.is_alive():
+            self._sweep_thread.join(timeout=2.0)
+        self.motor.set_dps(0)
 
     def sweep(self, colours=[], range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True, black_white = False) -> List[Tuple[int, str, int]]:
         """Sweeps the colour sensor arm and checks the colour.
@@ -94,10 +169,7 @@ class ColourSensorController (EV3ColorSensor):
 
         #initial colour sensor position (should be straight)
         init_position = 0 #self.motor.get_position()
-        self.motor.set_position(0)
-        
-        print("------------")
-        print(init_position)
+
         if starting_on_right:
             self.sweep_dir = SweepDirection.RIGHT
         else:
@@ -121,7 +193,7 @@ class ColourSensorController (EV3ColorSensor):
             if detected_colour in colours:
                 consecutive_count += 1
                 consecutive_positions.append(self.motor.get_position())
-                if consecutive_count >= 5:
+                if consecutive_count >= 3:
                     avg_pos = sum(consecutive_positions) / len(consecutive_positions)
                     self.colours_found.append((avg_pos, detected_colour, duration))
                     print(self.colours_found)
@@ -131,8 +203,7 @@ class ColourSensorController (EV3ColorSensor):
                         results = self.colours_found
                         self.colours_found = []
                         self.motor.set_dps(0)
-                        self.motor.set_position(init_position)
-                        self.motor.wait_is_moving()
+                        self.set_arm_at_angle(init_position)
                         return results
             else:
                 consecutive_count = 0
@@ -148,8 +219,7 @@ class ColourSensorController (EV3ColorSensor):
                     results = self.colours_found
                     self.colours_found = []
                     self.motor.set_dps(0)
-                    self.motor.set_position(init_position)
-                    self.motor.wait_is_moving()
+                    self.set_arm_at_angle(init_position)
                     print(f"force return angle result")
                     return results
                 prev_reversed = True
@@ -164,15 +234,59 @@ class ColourSensorController (EV3ColorSensor):
 
     def read_black_white(self):
         """
-        Uses ambient light to classify surface as black or white.
-        Returns "b" if ambient == 1, "w" if ambient >= 2, None otherwise.
+        Reads the current raw RGB, accumulates it into a rolling average,
+        then classifies as "b" or "w" by Euclidean distance to calibrated raw RGB
+        values in black_white.json. Raw values preserve brightness, which is the
+        key distinguishing feature between black and white.
+        Returns None if the file is missing or lacks both entries.
         """
-        ambient = self.read_ambient()
-        if ambient == 1:
-            return "b"
-        elif ambient >= 2:
-            return "w"
-        return None
+        raw = self.get_rgb()
+
+        try:
+            with open("data/black_white.json", "r") as f:
+                bw = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None
+
+        if "b" not in bw or "w" not in bw:
+            return None
+
+        def euclid(a, b):
+            return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+
+        dist_b = euclid(raw, bw["b"])
+        dist_w = euclid(raw, bw["w"])
+        return "b" if dist_b < dist_w else "w"
+
+    def ingest_bw(self, label: str):
+        """
+        Reads the current raw RGB and updates the running average for
+        label ("b" or "w") in data/black_white.json.
+        Raw values preserve brightness — the key signal for black vs white.
+        Call this while the sensor is positioned over the target surface to calibrate.
+        """
+        if label not in ("b", "w"):
+            raise ValueError(f"label must be 'b' or 'w', got '{label}'")
+
+        try:
+            with open("data/black_white.json", "r") as f:
+                bw = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            bw = {}
+
+        raw = self.get_rgb()
+        r, g, b = float(raw[0]), float(raw[1]), float(raw[2])
+
+        old = bw.get(label)
+        if isinstance(old, list) and len(old) == 3:
+            bw[label] = [(old[0] + r) / 2, (old[1] + g) / 2, (old[2] + b) / 2]
+        else:
+            bw[label] = [r, g, b]
+
+        with open("data/black_white.json", "w") as f:
+            json.dump(bw, f, indent=2)
+
+        print(f"Updated '{label}': {bw[label]}  magnitude={math.sqrt(r**2+g**2+b**2):.1f}")
 
     def ingest_colours(self, colour_name: str):
         """

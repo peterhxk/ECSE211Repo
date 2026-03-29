@@ -134,6 +134,24 @@ class DrivingController:
             self.left_motor.set_position_relative(180*self.ORIENTTODEG)
         print(f"turning {180*self.ORIENTTODEG} degrees on wheel")
 
+    def pivot_angle(self, direction: Literal["left", "right"], angle: float):
+        """
+        Pivots the robot with one of the wheels as a pivot point (exactly 90 degrees).
+        
+        Args:
+            power (int): The power at which to rotate the moving wheel.
+            direction (left | right): The direction in which to turn the robot.
+        """
+        print(f"pivoting {direction}")
+
+        if direction == "left":
+            self.right_motor.set_limits(0, self.base_power)
+            self.right_motor.set_position_relative(angle/90*180*self.ORIENTTODEG)
+        elif direction == "right":
+            self.left_motor.set_limits(0, self.base_power)
+            self.left_motor.set_position_relative(angle/90*180*self.ORIENTTODEG)
+        print(f"turning {angle/90*180*self.ORIENTTODEG} degrees on wheel")
+
     def adjust_direction(self, adjustment: int):
         """
         Adjusts the robots direction by changing the left and right motor powers by a fixed amount `adjustment`.
