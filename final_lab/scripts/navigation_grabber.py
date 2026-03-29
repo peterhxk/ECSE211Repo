@@ -53,7 +53,6 @@ def wait_for_loading(expected_bloc_count, timeout=15.0, label="block"):
             consecutive_idle = 0
 
         if (grabber_controller.loading_finished() or status == "IDLE") and not grabber_controller.is_loading():
-            grabber_controller.stop_loading() # ensure loading is stopped
             break
 
         now = time.time()
