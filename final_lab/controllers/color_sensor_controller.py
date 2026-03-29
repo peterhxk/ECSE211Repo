@@ -89,15 +89,50 @@ class ColourSensorController (EV3ColorSensor):
         self._sweep_stop_event = threading.Event()
 
         def _sweep_loop():
-            while not self._sweep_stop_event.is_set():
-                result = self.sweep(
-                    colours=colours, range=range,
-                    stop_on_match=True, starting_on_right=starting_on_right,
-                    black_white=black_white,
-                )
-                if result:
-                    self._sweep_result = result
-                    return
+            stop = self._sweep_stop_event
+            sweep_range = range
+            sweep_dir = SweepDirection.RIGHT if starting_on_right else SweepDirection.LEFT
+            consecutive_count = 0
+            consecutive_positions = []
+            prev_reversed = False
+            found = []
+
+            self.sweep_dir = sweep_dir
+            self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
+
+            while not stop.is_set():
+                if self.motor.get_speed() * self.sweep_dir.value <= 0:
+                    self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
+
+                if black_white:
+                    detected = self.read_black_white()
+                else:
+                    detected = self.read_colour()
+
+                if detected in colours:
+                    consecutive_count += 1
+                    consecutive_positions.append(self.motor.get_position())
+                    if consecutive_count >= 5:
+                        avg_pos = sum(consecutive_positions) / len(consecutive_positions)
+                        found.append((avg_pos, detected, 0))
+                        print(found)
+                        self._sweep_result = list(found)
+                        self.motor.set_dps(0)
+                        return
+                else:
+                    consecutive_count = 0
+                    consecutive_positions = []
+
+                if self._is_at_boundary(sweep_range):
+                    self.sweep_dir = SweepDirection.LEFT if self.sweep_dir == SweepDirection.RIGHT else SweepDirection.RIGHT
+                    if prev_reversed:
+                        prev_reversed = False
+                    else:
+                        prev_reversed = True
+
+                time.sleep(0.01)
+
+            self.motor.set_dps(0)
 
         self._sweep_thread = threading.Thread(target=_sweep_loop, daemon=True)
         self._sweep_thread.start()
@@ -108,7 +143,7 @@ class ColourSensorController (EV3ColorSensor):
         return self._sweep_result
 
     def sweep_stop(self):
-        """Stop the background sweep thread."""
+        """Stop the background sweep thread and release the motor."""
         if hasattr(self, '_sweep_stop_event'):
             self._sweep_stop_event.set()
         if hasattr(self, '_sweep_thread') and self._sweep_thread.is_alive():
