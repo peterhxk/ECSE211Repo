@@ -1039,7 +1039,7 @@ class GrabberController:
                     detector_name="gyro_outwards_fast", #TODO fix the inconsistency
                     predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT),
                     needed=1,
-                    timeout=5.0,
+                    timeout=8.0,
                     extra={
                         "bloc_count_before": self.bloc_count,
                         "running_dps": self.running_dps,
