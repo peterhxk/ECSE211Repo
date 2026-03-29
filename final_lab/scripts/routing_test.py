@@ -1,4 +1,5 @@
 import sys
+import time
 
 from impl.room_traverser import RoomTraverser, RoomType
 sys.path.append("./")
@@ -36,6 +37,7 @@ try:
     room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
     # routing.room1_to_pharmacy() # Week Demo
     # sound_controller.play_mission_complete()
+    time.sleep(1)
 
     routing.room1_to_room2()
     room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
