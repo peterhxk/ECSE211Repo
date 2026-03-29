@@ -931,12 +931,15 @@ class Motor:
     def wait_is_moving(self, sleep_interval: float = None):
         if sleep_interval is None:
             sleep_interval = WAIT_READY_INTERVAL
+        time.sleep(sleep_interval)
         while not self.is_moving():
             time.sleep(sleep_interval)
 
     def wait_is_stopped(self, sleep_interval: float = None):
         if sleep_interval is None:
             sleep_interval = WAIT_READY_INTERVAL
+        time.sleep(sleep_interval)
+
         while self.is_moving():
             time.sleep(sleep_interval)
 

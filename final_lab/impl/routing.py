@@ -1,6 +1,7 @@
 from impl.sweep_line_follower import SweepLineFollower
 import data.measurements as consts
 from controllers.grabber_controller import GrabberController
+
 import time
 from scripts.navigation_grabber import wait_for_loading
 
@@ -27,8 +28,9 @@ class Routing(SweepLineFollower):
         print("Found orange line.")
     
     def room1_to_pharmacy(self):
-        self.pilot.move_distance(-430)
+        self.pilot.move_distance(-435)
         self.pilot.right_motor.wait_is_stopped(0.1)
+
     
     def room1_to_room2(self):
         self.turn_logic("right", "back")
@@ -58,9 +60,11 @@ class Routing(SweepLineFollower):
         grabberInstance.start_loading()
         time.sleep(0.5)
         wait_for_loading(0,timeout=15.0,label="block 1") #loading first block 
-        self.pilot.move_distance(78)
+        time.sleep(0.5)
+        self.pilot.move_distance(79)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.pilot.stop_motors()
+        time.sleep(0.5)
         # print("Waiting for 2 seconds before loading second block...")
         # time.sleep(2)
         grabberInstance.start_loading()

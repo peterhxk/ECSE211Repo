@@ -60,6 +60,10 @@ class SweepLineFollower:
                 results = self.sensor.sweep(colours=["b"], range="full", stop_on_match=True, starting_on_right=starting_direction_right, black_white=True)
                 starting_direction_right = not starting_direction_right
                 print(f"sweeping result {results}")
+                if not results:
+                    results = self.sensor.sweep(colours=["b"], range="full", stop_on_match=True, starting_on_right=starting_direction_right, black_white=True)
+                    starting_direction_right = not starting_direction_right
+                    print(f"sweeping result 2 {results}")
                 angle = results[0][0]
 
                 # Positive angles -> line is detected on the left

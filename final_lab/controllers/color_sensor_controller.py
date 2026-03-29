@@ -193,7 +193,7 @@ class ColourSensorController (EV3ColorSensor):
             if detected_colour in colours:
                 consecutive_count += 1
                 consecutive_positions.append(self.motor.get_position())
-                if consecutive_count >= 5:
+                if consecutive_count >= 3:
                     avg_pos = sum(consecutive_positions) / len(consecutive_positions)
                     self.colours_found.append((avg_pos, detected_colour, duration))
                     print(self.colours_found)
