@@ -3,7 +3,6 @@ import data.measurements as consts
 from controllers.grabber_controller import GrabberController
 
 import time
-from scripts.navigation_grabber import wait_for_loading
 
 class Routing(SweepLineFollower):
 
@@ -59,17 +58,15 @@ class Routing(SweepLineFollower):
         self.pilot.right_motor.wait_is_stopped(0.1)
         grabberInstance.start_loading()
         time.sleep(0.5)
-        wait_for_loading(0,timeout=15.0,label="block 1") #loading first block 
+        grabberInstance.wait_for_loading(0,timeout=15.0,label="block 1") #loading first block 
         time.sleep(0.5)
         self.pilot.move_distance(79)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.pilot.stop_motors()
         time.sleep(0.5)
-        # print("Waiting for 2 seconds before loading second block...")
-        # time.sleep(2)
         grabberInstance.start_loading()
         time.sleep(0.5)
-        wait_for_loading(1,timeout=15.0,label="block 2") #loading second block
+        grabberInstance.wait_for_loading(1,timeout=15.0,label="block 2") #loading second block
         self.pilot.move_distance(-100)
         self.pilot.right_motor.wait_is_stopped(0.1)
 
