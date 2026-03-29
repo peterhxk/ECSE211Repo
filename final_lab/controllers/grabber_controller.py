@@ -359,7 +359,7 @@ class GrabberController:
         self.start_gyro_monitor()  # THIS IS KEY
         print("started gyro monitor")
 
-        self.calibrate_motor_drop_detection(self.calibration)
+        self.calibrate_motor_drop_detection(calibration=self.calibration)
         if self.calibration:
             print("Calibrated motor inward speed-drop mu and sigma.")
         else:
@@ -1039,7 +1039,7 @@ class GrabberController:
                     detector_name="gyro_outwards_fast", #TODO fix the inconsistency
                     predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT),
                     needed=1,
-                    timeout=8.0,
+                    timeout=5.0,
                     extra={
                         "bloc_count_before": self.bloc_count,
                         "running_dps": self.running_dps,
@@ -1203,31 +1203,38 @@ class GrabberController:
 
         return "IDLE"
 
+    def wait_for_loading(self,expected_bloc_count=0, timeout=15.0, label="block"):
+        start = time.time()
+        last_log = start
+        initial_count = self.bloc_count
 
-    def initialize_sensors_with_prev_data(self):
-        """Same hardware setup as initialize_sensors() but loads calibration
-        from the most recently saved files instead of running live calibration.
+        while True:
+            status = self.get_loading_status()
 
-        Raises FileNotFoundError if no calibration files exist yet.
-        """
-        print("[Calibration] Initializing sensors with previous calibration data...")
-        self.gyro.wait_ready()
-        self.gyro.reset_measure()
-        self.motor.set_dps(0)
-        print("Reset measures; motor stopped.")
-        self.start_gyro_monitor()
-        print("Started gyro monitor.")
+            if status == "FAILED":
+                raise RuntimeError(f"Failed while loading {label}")
 
-        self.calibrate_motor_drop_detection(calibration=False)
-        print("Loaded motor calibration from file.")
+            if (self.loading_finished() or status == "IDLE") and not self.is_loading():
+                break
 
-        self.calibrate_gyro_noise(
-            seconds=15.0,
-            sample_hz=self.sample_hz,
-            warmup=0.5,
-            calibration=False,
-        )
-        print("Loaded gyro calibration from file.")
+            now = time.time()
+            if now - last_log > 1.0:
+                print(f"[DEBUG] Waiting for loading of {label}... status={status}")
+                last_log = now
+
+            if now - start > timeout:
+                raise TimeoutError(f"Timeout while loading {label}")
+
+            time.sleep(0.05)
+
+        final_status = self.get_loading_status()
+        print(f"[DEBUG] Loading finished for {label} with status={final_status}")
+
+        if self.bloc_count != initial_count+1:
+            raise RuntimeError(f"Failed while loading {label}. Block count wasn't incremented properly")
+
+
+
 
 if __name__ == "__main__":
     #controller = GrabberController("D", 4, False , True)
