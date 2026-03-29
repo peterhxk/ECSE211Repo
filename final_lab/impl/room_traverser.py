@@ -285,6 +285,8 @@ class RoomTraverser:
                     else:
                         turn_angle = 0
 
+                    self.color_sensor_controller.set_arm_at_angle(math.copysign(90, -1 * bed_angle))
+
                     # Turn towards green bed
                     print(f"Turning {turn_angle:.1f}° towards green bed (sensor arm was at {bed_angle:.1f}°)")
                     self.driving_controller.turn_in_place(turn_angle)
@@ -301,7 +303,6 @@ class RoomTraverser:
 
                     # Drop one block (2 -> 1)
                     print("Dropping block")
-                    self.color_sensor_controller.set_arm_at_angle(math.copysign(90, -1 * bed_angle))
 
                     grabber_controller.start_unloading()
                     self._wait_for_unloading(grabber_controller, expected_bloc_count=1, label="unload")
