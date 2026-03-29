@@ -1203,6 +1203,38 @@ class GrabberController:
 
         return "IDLE"
 
+    def wait_for_loading(self,expected_bloc_count=0, timeout=15.0, label="block"):
+        start = time.time()
+        last_log = start
+        initial_count = self.bloc_count
+
+        while True:
+            status = self.get_loading_status()
+
+            if status == "FAILED":
+                raise RuntimeError(f"Failed while loading {label}")
+
+            if (self.loading_finished() or status == "IDLE") and not self.is_loading():
+                break
+
+            now = time.time()
+            if now - last_log > 1.0:
+                print(f"[DEBUG] Waiting for loading of {label}... status={status}")
+                last_log = now
+
+            if now - start > timeout:
+                raise TimeoutError(f"Timeout while loading {label}")
+
+            time.sleep(0.05)
+
+        final_status = self.get_loading_status()
+        print(f"[DEBUG] Loading finished for {label} with status={final_status}")
+
+        if self.bloc_count != initial_count+1:
+            raise RuntimeError(f"Failed while loading {label}. Block count wasn't incremented properly")
+
+
+
 
 if __name__ == "__main__":
     #controller = GrabberController("D", 4, False , True)
