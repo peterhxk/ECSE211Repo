@@ -63,10 +63,10 @@ try:
                 elif ans2 == "3":
                     angle = input("angle: ")
                     dir = input("Direction (left, right): ")
-                    pilot.pivot
+                    pilot.pivot_angle(dir, angle)
                 elif ans2 == "4":
-                    dir = input("Direction (left, right): ")
-                    pilot.pivot_90(dir)
+                    angle = input("Angle: ")
+                    pilot.pivot_90(angle)
                 elif ans2 in ["5", "e", "E"]:
                     break
                 else:
