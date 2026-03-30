@@ -61,11 +61,11 @@ try:
                     dir = input("Direction (left, right): ")
                     pilot.pivot_90(dir)
                 elif ans2 == "3":
-                    angle = input("angle: ")
+                    angle = float(input("angle: "))
                     dir = input("Direction (left, right): ")
                     pilot.pivot_angle(dir, angle)
                 elif ans2 == "4":
-                    angle = input("Angle: ")
+                    angle = float(input("Angle: "))
                     pilot.pivot_90(angle)
                 elif ans2 in ["5", "e", "E"]:
                     break
