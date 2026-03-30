@@ -66,7 +66,7 @@ try:
                     pilot.pivot_angle(dir, angle)
                 elif ans2 == "4":
                     angle = float(input("Angle: "))
-                    pilot.pivot_90(angle)
+                    pilot.turn_in_place(angle)
                 elif ans2 in ["5", "e", "E"]:
                     break
                 else:
