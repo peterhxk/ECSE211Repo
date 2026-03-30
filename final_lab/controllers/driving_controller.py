@@ -121,7 +121,6 @@ class DrivingController:
         Pivots the robot with one of the wheels as a pivot point (exactly 90 degrees).
         
         Args:
-            power (int): The power at which to rotate the moving wheel.
             direction (left | right): The direction in which to turn the robot.
         """
         print(f"pivoting {direction}")
@@ -136,10 +135,9 @@ class DrivingController:
 
     def pivot_angle(self, direction: Literal["left", "right"], angle: float):
         """
-        Pivots the robot with one of the wheels as a pivot point (exactly 90 degrees).
+        Pivots the robot with one of the wheels as a pivot point by angle.
         
         Args:
-            power (int): The power at which to rotate the moving wheel.
             direction (left | right): The direction in which to turn the robot.
         """
         print(f"pivoting {direction}")
