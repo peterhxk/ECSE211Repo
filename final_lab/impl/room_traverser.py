@@ -36,7 +36,7 @@ class RoomTraverser:
                 "ramp": 0.0,
             },
             RoomType.WALL_SINGLE: {
-                "Kp": 80,
+                "Kp": 150,
                 "Ki": 0,
                 "Kd": 120,
                 "steer_scale": 1.2,
