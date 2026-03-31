@@ -91,9 +91,6 @@ class RoomTraverser:
 
         bed_detected = False
         start_detected = False
-        orange_count = 0
-        orange_iter = 0
-        ORANGE_CONFIRM_THRESHOLD = 3
 
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * math.pi)) * 360
 
