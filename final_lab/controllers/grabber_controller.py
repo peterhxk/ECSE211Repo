@@ -1126,7 +1126,7 @@ class GrabberController:
 
     def monitor_kill(self):
         self._kill_event.wait()
-        self.kill(reason="event set")
+        #self.kill(reason="event set") OPTIONAL ONLY FOR DEBUGGING
 
     def loop(self):
         self.start_gyro_monitor()
@@ -1199,10 +1199,12 @@ class GrabberController:
             self.motor.set_dps(0)
             self._gyro_stop.set()
 
+            """
             try:
                 reset_brick()
             except Exception as e:
                 print(f"[WARN] reset_brick failed during kill: {e}")
+            """
 
     def monitor_kill(self):
         self._kill_event.wait()
