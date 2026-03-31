@@ -153,9 +153,10 @@ class GrabberController:
             return
         self._gyro_stop.clear()
         self._gyro_thread = threading.Thread(target=self._gyro_worker, daemon=True)
+        self._gyro_thread.start()
+        time.sleep(0.1)
         print("STARTING KILL SWITCH MONITOR")
         threading.Thread(target=self.monitor_kill, daemon=True).start()
-        self._gyro_thread.start()
     # ----------------------------
     # Setup / calibration
     # ----------------------------
@@ -1126,6 +1127,7 @@ class GrabberController:
 
     def loop(self):
         self.start_gyro_monitor()
+
         threading.Thread(target=self.monitor_kill, daemon=True).start()
         self.motor.set_dps(-self.running_dps)
         time.sleep(1)
