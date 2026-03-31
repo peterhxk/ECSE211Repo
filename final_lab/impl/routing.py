@@ -11,7 +11,7 @@ class Routing(SweepLineFollower):
     """Class defines fixed routing commands to move the robot between rooms."""
 
     def __init__(self, sensor: ColourSensorController, pilot: DrivingController):
-        super.__init__(sensor, pilot)
+        super().__init__(sensor, pilot)
         self.thread: threading.Thread = None
 
     def _begin_routing(self, worker):
