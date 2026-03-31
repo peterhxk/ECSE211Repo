@@ -321,7 +321,7 @@ class RoomTraverser:
                 print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm, Angle: {bed_angle}")
                 if bed_color_found == "green":
                     APPROACH_MM = 80
-                    NOT_GREEN_CONSECUTIVE_THRESHOLD = 5
+                    NOT_GREEN_CONSECUTIVE_THRESHOLD = 2
 
                     # Lock the arm at the detected angle so it keeps
                     # pointing at the bed while we reverse.
