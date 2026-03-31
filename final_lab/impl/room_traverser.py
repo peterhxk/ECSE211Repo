@@ -91,9 +91,6 @@ class RoomTraverser:
 
         bed_detected = False
         start_detected = False
-        orange_count = 0
-        orange_iter = 0
-        ORANGE_CONFIRM_THRESHOLD = 3
 
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * math.pi)) * 360
 
@@ -191,14 +188,7 @@ class RoomTraverser:
             return ("orange", dist_cm, None)
         else:
             return (None, dist_cm, None)
-        
-    """
-    The main function to traverse a room depending on the room type. Everything is self contained here.
-    This is the only function to call when you are in front of a room.
-
-    Input:
-    - room_type: The type of the room to traverse. This determines the path taken by the robot.
-    """
+    
     def _wait_for_loading(self, grabber_controller: GrabberController, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
         start = time.time()
         last_log = start
@@ -263,6 +253,14 @@ class RoomTraverser:
                 f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
             )
 
+    """
+    The main function to traverse a room depending on the room type. Everything is self contained here.
+    This is the only function to call when you are in front of a room.
+
+    Input:
+    - room_type: The type of the room to traverse. This determines the path taken by the robot.
+    - grabber_controller: The grabber controller to use to load and unload blocks.
+    """
     def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
         try:
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.

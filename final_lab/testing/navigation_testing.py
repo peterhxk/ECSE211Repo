@@ -52,14 +52,22 @@ try:
 
         elif ans1 in ["2", "d", "D"]:
             while True:
-                ans2 = input("Driving controller:\n 1. Move forward 2. Pivot or 3. Exit (e)? ")
+                ans2 = input("Driving controller:\n 1. Move forward by dist 2. Pivot90 " \
+                " 3. Pivot angle 4. Turn angle 5. Exit (e)? ")
                 if ans2 == "1":
                     dist = float(input("Distance (mm): "))
                     pilot.move_distance(dist)
                 elif ans2 == "2":
                     dir = input("Direction (left, right): ")
                     pilot.pivot_90(dir)
-                elif ans2 in ["3", "e", "E"]:
+                elif ans2 == "3":
+                    angle = float(input("angle: "))
+                    dir = input("Direction (left, right): ")
+                    pilot.pivot_angle(dir, angle)
+                elif ans2 == "4":
+                    angle = float(input("Angle: "))
+                    pilot.turn_in_place(angle)
+                elif ans2 in ["5", "e", "E"]:
                     break
                 else:
                     print("Wrong input\n")
