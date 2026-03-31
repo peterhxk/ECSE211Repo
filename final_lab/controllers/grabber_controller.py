@@ -174,13 +174,7 @@ class GrabberController:
         finally:
             self._load_done_event.set()
 
-    def start_loading(self,timeout=5.0) -> bool:
-        """
-        Start load_bloc() in a background thread and return immediately.
-
-        Returns False if a loading operation is already in progress, or if
-        an unloading operation is currently running. True otherwise.
-        """
+    def start_loading(self, timeout=5.0) -> bool:
         if self._load_thread is not None and self._load_thread.is_alive():
             print("[INFO] Loading already in progress.")
             return False
@@ -194,7 +188,11 @@ class GrabberController:
         self._block_caught_event.clear()
         self._load_result = None
 
-        self._load_thread = threading.Thread(target=self._load_bloc_worker(timeout=timeout), daemon=True)
+        self._load_thread = threading.Thread(
+            target=self._load_bloc_worker,
+            kwargs={"timeout": timeout},
+            daemon=True,
+        )
         self._load_thread.start()
         return True
 
@@ -939,6 +937,10 @@ class GrabberController:
         )
         try :
             while True:
+                if self.kill_switch or self._kill_event.is_set():
+                    if record_enabled:
+                        self._end_operation_recording(outcome="killed")
+                    return False
                 if stop_event is not None and stop_event.is_set():
                     if record_enabled:
                         self._end_operation_recording(outcome="cancelled")
@@ -1127,8 +1129,7 @@ class GrabberController:
 
     def loop(self):
         self.start_gyro_monitor()
-
-        threading.Thread(target=self.monitor_kill, daemon=True).start()
+        #threading.Thread(target=self.monitor_kill, daemon=True).start()
         self.motor.set_dps(-self.running_dps)
         time.sleep(1)
         self.motor.set_dps(0)
@@ -1235,6 +1236,7 @@ class GrabberController:
 
 
 if __name__ == "__main__":
-    controller = GrabberController(threading.Event(),"D", 4, False , False)
+    kill_event = threading.Event()
+    controller = GrabberController(kill_event, "D", 4, False, False)
     controller.initialize_sensors()
     controller.loop()
