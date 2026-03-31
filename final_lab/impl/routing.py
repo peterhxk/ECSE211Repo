@@ -14,7 +14,7 @@ class Routing(SweepLineFollower):
         super.__init__(sensor, pilot)
         self.thread: threading.Thread = None
 
-    def _begin_routing(self, worker: function):
+    def _begin_routing(self, worker):
         """
         Helper to begin routing in a separate thread.
         

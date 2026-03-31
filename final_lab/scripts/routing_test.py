@@ -3,7 +3,7 @@ import time
 
 from impl.kill_switch import KillSwitchInterrupt
 from impl.room_traverser import RoomTraverser, RoomType
-sys.path.append("./")
+sys.path.append(".")
 
 import traceback
 from utils.brick import wait_ready_sensors, reset_brick, Motor
