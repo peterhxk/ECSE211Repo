@@ -53,9 +53,24 @@ class ColourSensorController (EV3ColorSensor):
         self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
 
         # Reset the value of the motor encoder.
-        self.motor.reset_encoder()
+        self._calibrate_arm()
+        print("Calibrated Arm")
         # Sets maximum speed of motor.
         motor.set_limits(0, self.MOTOR_POWER_DPS)
+
+    def _calibrate_arm(self):
+        CALIBRATION_DPS = 20
+        self.motor.set_dps(CALIBRATION_DPS)
+        counter = 0
+        start = time.time()
+        while counter < 5:
+            if abs(self.motor.get_speed() - CALIBRATION_DPS) < 5 and time.time() - start > 0.5: # wait for cooldown
+                counter+=1
+                start = time.time()
+        self.motor.set_dps(0)
+        self.motor.reset_encoder()
+        self.motor.offset_encoder(90)
+
 
     def _is_at_boundary(self, range: Literal["left", "right", "full"]) -> bool:
         """
