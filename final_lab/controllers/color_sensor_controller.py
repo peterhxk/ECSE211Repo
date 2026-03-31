@@ -71,6 +71,7 @@ class ColourSensorController (EV3ColorSensor):
         self.motor.set_dps(0)
         self.motor.reset_encoder()
         self.motor.offset_encoder(90)
+        self.motor.set_position(0)
 
 
     def _is_at_boundary(self, range: Literal["left", "right", "full"]) -> bool:
