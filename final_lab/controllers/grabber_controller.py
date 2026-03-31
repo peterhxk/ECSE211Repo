@@ -1039,7 +1039,7 @@ class GrabberController:
                     detector_name="gyro_outwards_fast", #TODO fix the inconsistency
                     predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT),
                     needed=1,
-                    timeout=5.0,
+                    timeout=timeout,
                     extra={
                         "bloc_count_before": self.bloc_count,
                         "running_dps": self.running_dps,
@@ -1203,16 +1203,14 @@ class GrabberController:
 
         return "IDLE"
 
-    def wait_for_loading(self,expected_bloc_count=0, timeout=15.0, label="block"):
+    def wait_for_loading(self,expected_bloc_count=0, label="block")->bool:
         start = time.time()
         last_log = start
-        initial_count = self.bloc_count
-
         while True:
             status = self.get_loading_status()
 
-            if status == "FAILED":
-                raise RuntimeError(f"Failed while loading {label}")
+            if status == "FAILED" or not status:
+                return False
 
             if (self.loading_finished() or status == "IDLE") and not self.is_loading():
                 break
@@ -1222,17 +1220,11 @@ class GrabberController:
                 print(f"[DEBUG] Waiting for loading of {label}... status={status}")
                 last_log = now
 
-            if now - start > timeout:
-                raise TimeoutError(f"Timeout while loading {label}")
-
             time.sleep(0.05)
 
         final_status = self.get_loading_status()
         print(f"[DEBUG] Loading finished for {label} with status={final_status}")
-
-        if self.bloc_count != initial_count+1:
-            raise RuntimeError(f"Failed while loading {label}. Block count wasn't incremented properly")
-
+        return True
 
 
 
