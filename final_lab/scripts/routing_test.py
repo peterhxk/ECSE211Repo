@@ -31,13 +31,13 @@ grabber_controller.initialize_sensors()
 print("Initialized grabber sensors")
 
 try:
-    routing.pharmacy_to_grab_block_position()
-    routing.grab_block(grabber_controller)
-    routing.pharmacy_to_room1()
-    room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
+    # routing.pharmacy_to_grab_block_position()
+    # routing.grab_block(grabber_controller)
+    # routing.pharmacy_to_room1()
+    # room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
     # routing.room1_to_pharmacy() # Week Demo
     # sound_controller.play_mission_complete()
-    time.sleep(1)
+    # time.sleep(1)
 
     routing.room1_to_room2()
     room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
