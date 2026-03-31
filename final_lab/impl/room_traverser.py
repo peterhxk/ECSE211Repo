@@ -4,6 +4,9 @@ import time
 from data.ports_brick import Ports
 from enum import Enum
 from controllers.grabber_controller import GrabberController
+from controllers.driving_controller import DrivingController
+from controllers.sound_controller import SoundController
+import math
 
 class RoomType(Enum):
     CORNER_SINGLE = 1
@@ -12,7 +15,7 @@ class RoomType(Enum):
     CORNER_DOUBLE_SECOND_HALF = 4
 
 room_type_to_wall_distance_map = {
-    RoomType.CORNER_SINGLE: 4.5,
+    RoomType.CORNER_SINGLE: 4.8,
     RoomType.WALL_SINGLE: 53.4,
     RoomType.CORNER_DOUBLE_FIRST_HALF: 30,
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4
@@ -21,23 +24,36 @@ room_type_to_wall_distance_map = {
 class RoomTraverser:
     WHEEL_DIAMETER_MM = 42.6
     WHEEL_BASE_MM = 159
-    MOTOR_POWER = 160
     
     # PID constants
-    Kp = 8
-    Ki = 3
-    Kd = 4
+    pid_constants = {
+        "forward": {
+            "Kp": 100,
+            "Ki": 0,
+            "Kd": 140,
+            "steer_scale": 1.3,
+            "ramp": 0.0,
+        },
+        "backward": {
+            "Kp": 1,
+            "Ki": 0,
+            "Kd": 180,
+            "steer_scale": 0.7,
+            "ramp": 0.0,
+        }
+    }
 
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.7
 
-    def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int, color_sensor_controller: ColourSensorController):
+    def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int, color_sensor_controller: ColourSensorController, sound_controller: SoundController = None):
         self.left_motor = left_motor
         self.right_motor = right_motor
         self.base_power = base_power
         self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         self.color_sensor_controller = color_sensor_controller
-        self.grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value)
+        self.driving_controller = DrivingController(left_motor, right_motor, base_power)
+        self.sound_controller = sound_controller
         wait_ready_sensors(True)
         print("Room Traverser ready.")
 
@@ -53,10 +69,14 @@ class RoomTraverser:
     Returns:
     - Tuple of (bed color detected or None, distance travelled in CM)
     """
-    def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False):
-        # reset motor encoders
+    def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False, detect_start: bool = False):
+        # Reset encoders first, then immediately float so the BrickPi3 position
+        # controller (briefly engaged by reset_encoder) cannot lock the wheels
+        # before set_dps takes over.
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
+        self.left_motor.float_motor()
+        self.right_motor.float_motor()
 
         # reject spikes: ignore readings that jump more than this from the last accepted value
         OUTLIER_THRESHOLD_CM = 8
@@ -70,26 +90,40 @@ class RoomTraverser:
         smoothed_adjustment = None
 
         bed_detected = False
+        start_detected = False
 
-        target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * 3.14159)) * 360
+        target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * math.pi)) * 360
 
         motor_base_power = self.base_power
+        pid_cfg = self.pid_constants["forward"] if straight_distance >= 0 else self.pid_constants["backward"]
         start_dps = motor_base_power if straight_distance > 0 else -motor_base_power
+        t0 = time.time()
         self.left_motor.set_dps(start_dps)
         self.right_motor.set_dps(start_dps)
 
+        if detect_bed:
+            self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
+
         while True:
-            color_sensor_sweep_result = None
             if detect_bed:
-                color_sensor_sweep_result = self.color_sensor_controller.sweep(colours=["red", "green"], range="full", stop_on_match=True)
-            if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
-                # if color detected, stop moving.
-                bed_detected = True
-                break
+                color_sensor_sweep_result = self.color_sensor_controller.sweep_get_result()
+                if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
+                    bed_detected = True
+                    break
+
+            if detect_start:
+                detected = self.color_sensor_controller.read_colour()
+                if detected == "orange":
+                    print("Orange detected — arrived back at starting point.")
+                    start_detected = True
+                    break
 
             # check travelled distance
             travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
 
+            if target_degrees < 0 and travelled_deg <= target_degrees / 4:
+                print(f"[ARM] Halfway reached ({travelled_deg:.0f}/{target_degrees:.0f} deg), resetting arm to 0°")
+                self.color_sensor_controller.set_arm_at_angle(0)
             if target_degrees > 0 and travelled_deg >= target_degrees:
                 break
             elif target_degrees < 0 and travelled_deg <= target_degrees:
@@ -105,15 +139,17 @@ class RoomTraverser:
 
             distance_cm = last_distance_cm
 
-            # P (optional I/D later)
             error = room_type_to_wall_distance_map[room_type] - distance_cm
             integral = max(-50.0, min(50.0, integral + error * dt))
             derivative = (error - prev_error) / dt
             prev_error = error
 
-            raw_adjustment = self.Kp * error + self.Ki * integral + self.Kd * derivative
+            raw_adjustment = pid_cfg["Kp"] * error + pid_cfg["Ki"] * integral + pid_cfg["Kd"] * derivative
 
-            # Keep differential steering bounded so one wheel does not reverse / stall abruptly
+            if pid_cfg["ramp"] > 0:
+                ramp_factor = min(1.0, (now - t0) / pid_cfg["ramp"])
+                raw_adjustment *= ramp_factor
+
             base_abs = abs(motor_base_power)
             max_steer = max(12, min(int(base_abs * 0.42), base_abs - 15))
             raw_adjustment = max(-max_steer, min(max_steer, raw_adjustment))
@@ -125,93 +161,185 @@ class RoomTraverser:
                 smoothed_adjustment = a * raw_adjustment + (1.0 - a) * smoothed_adjustment
 
             adjustment = int(round(smoothed_adjustment))
+            s = pid_cfg["steer_scale"]
 
-            # Sensor is LEFT-mounted.
-            # Positive error = too close to left wall → steer RIGHT (away from wall).
-            # Left wheel faster = steer right, so left gets +adj, right gets -adj.
             if straight_distance >= 0:
-                left_dps  = self.base_power + adjustment * 1.3
-                right_dps = self.base_power - adjustment * 1.3
+                left_dps  = self.base_power + adjustment * s
+                right_dps = self.base_power - adjustment * s
             else:
-                left_dps  = -self.base_power - adjustment * 1.3
-                right_dps = -self.base_power + adjustment * 1.3
+                left_dps  = -self.base_power - adjustment * s
+                right_dps = -self.base_power + adjustment * s
 
-
+            print(f"Adjustment: {adjustment}, Left DPS: {left_dps}, Right DPS: {right_dps}")
             self.left_motor.set_dps(left_dps)
             self.right_motor.set_dps(right_dps)
 
-            time.sleep(0.02)
+            time.sleep(0.04)
 
-        self.left_motor.set_dps(0)
-        self.right_motor.set_dps(0)
+        self.driving_controller.stop_motors()
+        if detect_bed:
+            self.color_sensor_controller.sweep_stop()
+        dist_cm = (abs(travelled_deg) / 360) * (self.WHEEL_DIAMETER_MM * math.pi) / 10
         if bed_detected:
             detected_color = color_sensor_sweep_result[0][1]
-            
-            return (detected_color, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
+            detected_angle = color_sensor_sweep_result[0][0]
+            return (detected_color, dist_cm, detected_angle)
+        elif start_detected:
+            return ("orange", dist_cm, None)
         else:
-            return (None, (travelled_deg / 360) * (self.WHEEL_DIAMETER_MM * 3.14159) / 10)
-        
+            return (None, dist_cm, None)
+    
+    def _wait_for_loading(self, grabber_controller: GrabberController, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
+        start = time.time()
+        last_log = start
+
+        while True:
+            status = grabber_controller.get_loading_status()
+
+            if status == "FAILED":
+                raise RuntimeError(f"Failed while loading {label}")
+
+            if grabber_controller.loading_finished():
+                break
+
+            now = time.time()
+            if now - last_log > 1.0:
+                print(f"[DEBUG] Waiting for loading of {label}... status={status}")
+                last_log = now
+
+            if now - start > timeout:
+                raise TimeoutError(f"Timeout while loading {label}")
+
+            time.sleep(0.05)
+
+        final_status = grabber_controller.get_loading_status()
+        print(f"[DEBUG] Loading finished for {label} with status={final_status}")
+
+        if grabber_controller.bloc_count != expected_bloc_count:
+            raise RuntimeError(
+                f"Unexpected bloc_count after loading {label}: "
+                f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
+            )
+
+    def _wait_for_unloading(self, grabber_controller: GrabberController, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
+        start = time.time()
+        last_log = start
+
+        while True:
+            status = grabber_controller.get_unloading_status()
+
+            if status == "FAILED":
+                raise RuntimeError(f"Failed while unloading {label}")
+
+            if status != "UNLOADING":
+                break
+
+            now = time.time()
+            if now - last_log > 1.0:
+                print(f"[DEBUG] Waiting for unloading of {label}... status={status}")
+                last_log = now
+
+            if now - start > timeout:
+                raise TimeoutError(f"Timeout while unloading {label}")
+
+            time.sleep(0.05)
+
+        final_status = grabber_controller.get_unloading_status()
+        print(f"[DEBUG] Unloading finished for {label} with status={final_status}")
+
+        if grabber_controller.bloc_count != expected_bloc_count:
+            raise RuntimeError(
+                f"Unexpected bloc_count after unloading {label}: "
+                f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
+            )
+
     """
     The main function to traverse a room depending on the room type. Everything is self contained here.
     This is the only function to call when you are in front of a room.
 
     Input:
     - room_type: The type of the room to traverse. This determines the path taken by the robot.
+    - grabber_controller: The grabber controller to use to load and unload blocks.
     """
-    def traverse_a_room(self, room_type: RoomType) -> None:
+    def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
         try:
-            self.grabber_controller.load_bloc()
-            while not self.grabber_controller.loading_finished():
-                time.sleep(0.01)
-
-            if self.grabber_controller.get_loading_result():
-                print("Loading successful")
-            else:
-                print("Loading failed")
-
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
-            traverse_results = self.run(room_type, 35, detect_bed=True)
+            traverse_results = self.run(room_type, 45, detect_bed=True)
             bed_found = traverse_results[0] is not None
             bed_color_found = traverse_results[0]
             distance_travelled = traverse_results[1]
+            bed_angle = traverse_results[2]
             
             if bed_found:
-                print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm")
+                print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm, Angle: {bed_angle}")
                 if bed_color_found == "green":
-                    print("DROPPING BLOCK!!!")
-                    try:
-                        # Prepare for unloading
-                        self.color_sensor_controller.set_arm_at_angle(0)
-                        time.sleep(2)
+                    APPROACH_MM = 80
 
-                        # Unload first carried block
-                        self.grabber_controller.unload_bloc()
+                    robot_turn_mag = self.driving_controller.convert_sensor_angle_to_robot_angle(bed_angle)
+                    if bed_angle > 0:
+                        turn_angle = robot_turn_mag
+                    elif bed_angle < 0:
+                        turn_angle = -robot_turn_mag
+                    else:
+                        turn_angle = 0
 
-                        while not self.grabber_controller.unloading_finished():
-                            time.sleep(0.01)
+                    self.color_sensor_controller.set_arm_at_angle(math.copysign(90, -1 * bed_angle))
 
-                        if self.grabber_controller.get_unloading_result():
-                            print("Unloading successful")
-                        else:
-                            print("Unloading failed")
+                    # Turn towards green bed
+                    print(f"Turning {turn_angle:.1f}° towards green bed (sensor arm was at {bed_angle:.1f}°)")
+                    self.driving_controller.turn_in_place(turn_angle)
+                    self.left_motor.wait_is_stopped()
+                    self.right_motor.wait_is_stopped()
+                    time.sleep(0.5)
 
-                    except Exception as err:
-                        print(err)
+                    # Drive towards bed
+                    print(f"Driving {APPROACH_MM}mm towards green bed")
+                    self.driving_controller.move_distance(APPROACH_MM)
+                    self.left_motor.wait_is_stopped()
+                    self.right_motor.wait_is_stopped()
+                    time.sleep(0.5)
 
-                    finally:
-                        time.sleep(2)
+                    # Drop one block (2 -> 1)
+                    print("Dropping block")
+
+                    grabber_controller.start_unloading()
+                    self._wait_for_unloading(grabber_controller, expected_bloc_count=1, label="unload")
+
+                    self.sound_controller.play_success()
+                    time.sleep(2)
+
+                    # Drive back to where the bed was detected
+                    print(f"Reversing {APPROACH_MM}mm from green bed")
+                    self.driving_controller.move_distance(-APPROACH_MM)
+                    self.left_motor.wait_is_stopped()
+                    self.right_motor.wait_is_stopped()
+                    time.sleep(0.5)
+
+                    # Turn back to original heading
+                    print(f"Turning back {-turn_angle:.1f}° to restore heading")
+                    self.driving_controller.turn_in_place(-turn_angle)
+                    self.left_motor.wait_is_stopped()
+                    self.right_motor.wait_is_stopped()
+                    time.sleep(0.5)
+
+                    print("Back at original position, ready for backwards pass")
                 else:
-                    print("No red bed detected, skipping unloading")
+                    print("Red bed detected, skipping unloading")
                 time.sleep(2)
             else:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
             
             print("Going back.")
-            self.run(room_type, -1.15 * distance_travelled, detect_bed=False)
-
+            back_result = self.run(room_type, -2 * distance_travelled, detect_bed=False, detect_start=True)
+            if back_result[0] == "orange":
+                print(f"Returned to starting point (orange detected) after {back_result[1]:.2f} cm.")
+            else:
+                print(f"Back run completed without detecting orange after {back_result[1]:.2f} cm.")
+            
         except KeyboardInterrupt:
             print("Interrupted via keyboard...")
         except Exception as err:
             print(err)  
-        finally:  
-            reset_brick()  
+        finally:
+            grabber_controller.stop_gyro_monitor()
+            reset_brick()

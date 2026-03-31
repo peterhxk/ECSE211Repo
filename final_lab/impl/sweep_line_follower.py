@@ -60,6 +60,10 @@ class SweepLineFollower:
                 results = self.sensor.sweep(colours=["b"], range="full", stop_on_match=True, starting_on_right=starting_direction_right, black_white=True)
                 starting_direction_right = not starting_direction_right
                 print(f"sweeping result {results}")
+                if not results:
+                    results = self.sensor.sweep(colours=["b"], range="full", stop_on_match=True, starting_on_right=starting_direction_right, black_white=True)
+                    starting_direction_right = not starting_direction_right
+                    print(f"sweeping result 2 {results}")
                 angle = results[0][0]
 
                 # Positive angles -> line is detected on the left
@@ -115,7 +119,7 @@ class SweepLineFollower:
         return t
 
 
-    def turn_logic(self, direction: Literal["left", "right"], heading: Literal["front", "back"] = "front", additional_dist=0):
+    def turn_logic(self, direction: Literal["left", "right"], heading: Literal["front", "back"] = "front", additional_dist=0, arm_avoid_block = False):
         """
         Detects the intersecting line, and performs robot turning logic to be aligned with the next line.
 
@@ -132,10 +136,6 @@ class SweepLineFollower:
         else:
             raise Exception("Wrong direction input")
         
-        print("Moving arm")
-        time.sleep(0.1)
-        # Wait for sensor arm to be stopped before proceeding
-        self.sensor.motor.wait_is_stopped()
 
         # Moves 30 mm forward to find intersection
         if heading == "front":
@@ -144,10 +144,17 @@ class SweepLineFollower:
             self.pilot.move_backward()
         else:
             raise Exception(f"Invalid parameter heading for method SweepLineFollower.turn_logic: {heading}. Valid options are front, back")
-        print(f"The colors detected are : {self.sensor.get_rgb()}")
+        print(f"The colors detected are : {self.sensor.read_black_white()}")
 
-        while (self.sensor.read_black_white() == "w"):
-            print("reading white")
+        consecutive_black = 0
+        while consecutive_black < 3:
+            reading = self.sensor.read_black_white()
+            print(reading)
+            if reading == "b":
+                consecutive_black += 1
+            else:
+                consecutive_black = 0
+            time.sleep(0.01)
 
         print("stopping motors")
         self.pilot.stop_motors()
@@ -156,6 +163,9 @@ class SweepLineFollower:
         self.pilot.move_distance(consts.dist_move_mm+additional_dist)
         self.pilot.left_motor.wait_is_stopped()
         
+        if arm_avoid_block:
+            self.sensor.set_arm_at_angle(-110)
+
         print(f"pivoting {direction}")
         self.pilot.pivot_90(direction)
 
@@ -164,9 +174,13 @@ class SweepLineFollower:
         getattr(self.pilot, f"{'right' if direction == 'left' else 'left'}_motor").wait_is_stopped()
 
         # Set colour arm back to the normal position
-        self.sensor.set_arm_at_angle(0)
+        if not arm_avoid_block:
+            self.sensor.set_arm_at_angle(0)
         time.sleep(0.1)
         self.sensor.motor.wait_is_stopped()
         time.sleep(0.1)
+
+    def reset_arm(self):
+        self.sensor.set_arm_at_angle(0)
 
     
