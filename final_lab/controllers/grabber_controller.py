@@ -164,13 +164,13 @@ class GrabberController:
 
         self._gyro_thread = None
 
-    def _load_bloc_worker(self):
+    def _load_bloc_worker(self,timeout=5.0):
         try:
-            self._load_result = self.load_bloc(stop_event=self._load_cancel_event)
+            self._load_result = self.load_bloc(timeout=timeout,stop_event=self._load_cancel_event)
         finally:
             self._load_done_event.set()
 
-    def start_loading(self) -> bool:
+    def start_loading(self,timeout=5.0) -> bool:
         """
         Start load_bloc() in a background thread and return immediately.
 
@@ -190,7 +190,7 @@ class GrabberController:
         self._block_caught_event.clear()
         self._load_result = None
 
-        self._load_thread = threading.Thread(target=self._load_bloc_worker, daemon=True)
+        self._load_thread = threading.Thread(target=self._load_bloc_worker(timeout=timeout), daemon=True)
         self._load_thread.start()
         return True
 
@@ -1011,7 +1011,7 @@ class GrabberController:
     # ----------------------------
     # High-level actions
     # ----------------------------
-    def load_bloc(self, stop_event=None) -> bool:
+    def load_bloc(self, timeout=5.0,stop_event=None) -> bool:
         """
         Returns True on success, False on failure.
 
