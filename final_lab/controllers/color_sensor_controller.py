@@ -53,9 +53,53 @@ class ColourSensorController (EV3ColorSensor):
         self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
 
         # Reset the value of the motor encoder.
-        self.motor.reset_encoder()
+        self._calibrate_arm()
+        print("Calibrated Arm")
         # Sets maximum speed of motor.
         motor.set_limits(0, self.MOTOR_POWER_DPS)
+
+    def _calibrate_arm(self):
+        CALIBRATION_DPS = 50
+        HIT_SPEED_THRESHOLD = 10  # near zero speed means likely stalled at stop
+        STABLE_HITS_NEEDED = 1
+        SAMPLE_DT = 0.04
+        MAX_TIME = 8.0
+
+        self.motor.set_dps(-CALIBRATION_DPS)
+        counter = 0
+        t0 = time.time()
+
+        time.sleep(0.5)  # let motion settle
+
+        while counter < STABLE_HITS_NEEDED:
+            elapsed = time.time() - t0
+            if elapsed > MAX_TIME:
+                print("[WARN] Calibration timed out")
+                break
+
+            speed = self.motor.get_speed()
+            if speed is None:
+                time.sleep(SAMPLE_DT)
+                continue
+
+            speed = float(speed)
+            #print("speed =", speed)
+
+            # Detect stall / end-stop: commanded motion but measured speed near zero
+            if abs(speed) < HIT_SPEED_THRESHOLD:
+                counter += 1
+                print(f"HIT! {counter}/{STABLE_HITS_NEEDED}")
+            else:
+                counter = 0
+
+            time.sleep(SAMPLE_DT)
+
+        print("CALIBRATE DONE")
+        self.motor.set_dps(0)
+        self.motor.reset_encoder()
+        self.motor.offset_encoder(90)
+        self.motor.set_position(0)
+
 
     def _is_at_boundary(self, range: Literal["left", "right", "full"]) -> bool:
         """
