@@ -61,8 +61,8 @@ class ColourSensorController (EV3ColorSensor):
     def _calibrate_arm(self):
         CALIBRATION_DPS = 50
         HIT_SPEED_THRESHOLD = 10  # near zero speed means likely stalled at stop
-        STABLE_HITS_NEEDED = 2
-        SAMPLE_DT = 0.05
+        STABLE_HITS_NEEDED = 1
+        SAMPLE_DT = 0.04
         MAX_TIME = 8.0
 
         self.motor.set_dps(-CALIBRATION_DPS)
@@ -83,7 +83,7 @@ class ColourSensorController (EV3ColorSensor):
                 continue
 
             speed = float(speed)
-            print("speed =", speed)
+            #print("speed =", speed)
 
             # Detect stall / end-stop: commanded motion but measured speed near zero
             if abs(speed) < HIT_SPEED_THRESHOLD:
