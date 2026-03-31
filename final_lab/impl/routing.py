@@ -56,11 +56,11 @@ class Routing(SweepLineFollower):
     def grab_block(self,grabberInstance:GrabberController):
         self.pilot.move_distance(110)
         self.pilot.right_motor.wait_is_stopped(0.1)
-        grabberInstance.start_loading(timeout=5.0)
-        time.sleep(0.5)
         attempts = 0
         EXTRA_DISTANCE = 10
         while attempts < 3:
+            grabberInstance.start_loading(timeout=5.0)
+            time.sleep(0.5)
             if grabberInstance.wait_for_loading(0, label="block 1"):
                 print(f"Successfully loaded block 1 after {attempts} attempts")
                 break
