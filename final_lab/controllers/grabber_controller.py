@@ -603,7 +603,7 @@ class GrabberController:
         if tilt == GyroTilt.SLOW_TILT:
             return 10.0
         elif tilt == GyroTilt.FAST_TILT_KILL :
-            return 25.0
+            return 20.0
         else:
             return 16.0
 
@@ -1235,7 +1235,7 @@ class GrabberController:
 
 
 if __name__ == "__main__":
-    #controller = GrabberController("D", 4, False , True)
-    #controller.initialize_sensors()
-    #controller.loop()
+    controller = GrabberController(None,"D", 4, False , False)
+    controller.initialize_sensors()
+    controller.loop()
     pass
