@@ -7,6 +7,7 @@ from controllers.grabber_controller import GrabberController
 from controllers.driving_controller import DrivingController
 from controllers.sound_controller import SoundController
 import math
+import threading
 
 class RoomType(Enum):
     CORNER_SINGLE = 1
@@ -20,6 +21,11 @@ room_type_to_wall_distance_map = {
     RoomType.CORNER_DOUBLE_FIRST_HALF: 30,
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4
 }
+
+def _kill_switch_callback():
+    print("Kill switch pressed, resetting brick...")
+    reset_brick()
+    exit()
 
 class RoomTraverser:
     WHEEL_DIAMETER_MM = 42.6
@@ -310,6 +316,7 @@ class RoomTraverser:
     """
     def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
         try:
+            threading.Thread(target=_kill_switch_callback).start()
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
             traverse_results = self.run(room_type, 45, detect_bed=True)
             bed_found = traverse_results[0] is not None
@@ -358,37 +365,32 @@ class RoomTraverser:
                     self.driving_controller.turn_in_place(turn_angle)
                     self.left_motor.wait_is_stopped()
                     self.right_motor.wait_is_stopped()
-                    time.sleep(0.5)
 
                     print(f"Driving {APPROACH_MM}mm towards green bed")
                     self.driving_controller.move_distance(APPROACH_MM)
                     self.left_motor.wait_is_stopped()
                     self.right_motor.wait_is_stopped()
-                    time.sleep(0.5)
 
                     print("Dropping block")
                     grabber_controller.start_unloading()
                     self._wait_for_unloading(grabber_controller, expected_bloc_count=1, label="unload")
 
                     self.sound_controller.play_success()
-                    time.sleep(2)
 
                     print(f"Reversing {APPROACH_MM}mm from green bed")
                     self.driving_controller.move_distance(-APPROACH_MM)
                     self.left_motor.wait_is_stopped()
                     self.right_motor.wait_is_stopped()
-                    time.sleep(0.5)
 
                     print(f"Turning back {-turn_angle:.1f}° to restore heading")
                     self.driving_controller.turn_in_place(-turn_angle)
                     self.left_motor.wait_is_stopped()
                     self.right_motor.wait_is_stopped()
-                    time.sleep(0.5)
 
                     print("Back at bed edge position, ready for backwards pass")
                 else:
                     print("Red bed detected, skipping unloading")
-                time.sleep(2)
+                time.sleep(0.5)
             else:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
             
