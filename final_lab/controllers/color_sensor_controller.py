@@ -60,11 +60,11 @@ class ColourSensorController (EV3ColorSensor):
 
     def _calibrate_arm(self):
         CALIBRATION_DPS = 20
-        self.motor.set_dps(CALIBRATION_DPS)
+        self.motor.set_dps(-CALIBRATION_DPS)
         counter = 0
         start = time.time()
         while counter < 5:
-            if abs(self.motor.get_speed() - CALIBRATION_DPS) < 5 and time.time() - start > 0.5: # wait for cooldown
+            if abs(-self.motor.get_speed() - CALIBRATION_DPS) < 5 and time.time() - start > 0.5: # wait for cooldown
                 counter+=1
                 start = time.time()
         self.motor.set_dps(0)
