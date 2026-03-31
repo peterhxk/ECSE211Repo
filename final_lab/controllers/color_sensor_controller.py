@@ -66,6 +66,7 @@ class ColourSensorController (EV3ColorSensor):
         time.sleep(1)
         while counter < 6:
             print(abs(-self.motor.get_speed() - CALIBRATION_DPS))
+            self.motor.set_dps(-CALIBRATION_DPS)
             if (thresh:=abs(-self.motor.get_speed() - CALIBRATION_DPS)) < 10 and time.time() - start > 0.5: # wait for cooldown
                 print("HIT!",thresh)
                 counter+=1
