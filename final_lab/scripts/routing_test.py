@@ -57,6 +57,9 @@ try:
     main_worker = threading.Thread(target=worker, daemon=True)
     stop_event_worker = threading.Thread(target=check_stop_event, daemon=True)
 
+    main_worker.start()
+    stop_event_worker.start()
+
     stop_event.wait()
     print("[INFO] Kill switch activated. Terminating script...")
 
