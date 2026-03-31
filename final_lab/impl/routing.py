@@ -1,34 +1,52 @@
+from controllers.color_sensor_controller import ColourSensorController
+from controllers.driving_controller import DrivingController
 from impl.sweep_line_follower import SweepLineFollower
 import data.measurements as consts
 from controllers.grabber_controller import GrabberController
+import threading
 
 import time
 
 class Routing(SweepLineFollower):
-
-
     """Class defines fixed routing commands to move the robot between rooms."""
 
+    def __init__(self, sensor: ColourSensorController, pilot: DrivingController):
+        super.__init__(sensor, pilot)
+        self.thread: threading.Thread = None
+
+    def _begin_routing(self, worker: function):
+        """
+        Helper to begin routing in a separate thread.
+        
+        Args:
+            worker (function): The worker to run in a separate thread
+        
+        Returns:
+            success (bool): `False` if another worker is already being run in the thread,
+                `True` otherwise
+        """
+
+        if self.thread and self.thread.is_active():
+            return False
+        else:
+            self.thread = threading.Thread(target=worker, daemon=True)
+            return True
+        
+    def kill(self):
+        """Abruptly terminates all actions and routing commands."""
+        self.kill_event.set()
+        self.pilot.stop_motors()
+
     def pharmacy_to_room1(self):
-        print("Reversing 50mm")
         self.pilot.move_distance(-50)
         self.pilot.right_motor.wait_is_stopped()
-        print("Motors stopped")
-        
-        print("Turning right")
         self.turn_logic("right", "back")
-        
-        print("Turning right")
         self.turn_logic("right", "front")
-        
-        print("Moving forward, searching for orange line")
         self.move_forward(200, "orange")
-        
-        print("Found orange line.")
     
     def room1_to_pharmacy(self):
         self.pilot.move_distance(-435)
-        self.pilot.right_motor.wait_is_stopped(0.1)
+        self.pilot.right_motor.wait_is_stopped()
 
     
     def room1_to_room2(self):

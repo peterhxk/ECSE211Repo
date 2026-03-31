@@ -3,6 +3,7 @@ from utils.brick import Motor
 import time
 import math
 import data.measurements as consts
+import threading
 
 class DrivingController:
     """Controller to drive the robot."""
@@ -60,7 +61,6 @@ class DrivingController:
 
     def move_distance(self, dist: float):
         """
-        UNTESTED
         Moves robot by distance (mm).
         Non-blocking (use time.sleep for testing so other code does not run)
         Inputs:
