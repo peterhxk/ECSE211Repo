@@ -75,10 +75,21 @@ class Routing(SweepLineFollower):
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.pilot.stop_motors()
         time.sleep(0.5)
-        grabberInstance.start_loading(timeout=5.0)
-        time.sleep(0.5)
-        grabberInstance.wait_for_loading(1,label="block 2") #loading second block
-        self.pilot.move_distance(-100)
+        attempts = 0
+        EXTRA_DISTANCE = 5
+        while attempts < 2:
+            grabberInstance.start_loading(timeout=5.0)
+            time.sleep(0.5)
+            if grabberInstance.wait_for_loading(0, label="block 2"):
+                print(f"Successfully loaded block 2 after {attempts} attempts")
+                break
+            else:
+                self.pilot.move_distance(EXTRA_DISTANCE)
+                self.pilot.right_motor.wait_is_stopped(0.1)
+                attempts += 1
+        if attempts == 3:
+            raise RuntimeError
+        self.pilot.move_distance(-100-attempts*EXTRA_DISTANCE) # move extra if had to move forward
         self.pilot.right_motor.wait_is_stopped(0.1)
 
         #reset arm angle at the end

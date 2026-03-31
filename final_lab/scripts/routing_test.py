@@ -12,8 +12,11 @@ from impl.routing import Routing
 from data.ports_brick import Ports
 from controllers.grabber_controller import GrabberController
 from controllers.sound_controller import SoundController
-
+import threading
 # Sensor declaration
+
+# Kill switch flag
+kill_switch_flag = threading.Event()
 
 left_motor = Motor(Ports.LEFT_MOTOR.value)
 right_motor = Motor(Ports.RIGHT_MOTOR.value)
@@ -21,7 +24,7 @@ color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 driving_controller = DrivingController(left_motor, right_motor, 200)
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
-grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
+grabber_controller = GrabberController(kill_switch_flag,Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
 sound_controller = SoundController()
 room_traverser = RoomTraverser(left_motor, right_motor, 160, color_sensor_controller, sound_controller=sound_controller)

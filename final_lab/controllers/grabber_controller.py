@@ -39,7 +39,7 @@ class GrabberController:
       5) Record gyro traces for empirical calibration
     """
 
-    def __init__(self, motor_port="A", gyro_port=3, calibration=True, debug=True):
+    def __init__(self, kill_switch_flag : threading.Event = None, motor_port="A", gyro_port=3, calibration=True, debug=True):
         # Internal state
         self.bloc_count = 0
         self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
@@ -112,7 +112,7 @@ class GrabberController:
         self._gyro_sample = None
         self._gyro_sample_lock = threading.Lock()
 
-        self._kill_event = threading.Event()
+        self._kill_event = kill_switch_flag
         self._active_gyro_detector = None
         self._active_gyro_detector_lock = threading.Lock()
 
