@@ -113,7 +113,9 @@ class GrabberController:
         self._gyro_sample = None
         self._gyro_sample_lock = threading.Lock()
 
-        self._kill_event = kill_switch_flag
+        self._kill_event = kill_switch_flag if kill_switch_flag is not None else threading.Event()
+        self.kill_switch = False
+        self._kill_lock = threading.Lock()
         self._active_gyro_detector = None
         self._active_gyro_detector_lock = threading.Lock()
 
@@ -122,7 +124,6 @@ class GrabberController:
 
     def _gyro_worker(self):
         dt = 1.0 / float(self.sample_hz)
-        kill_hits = 0
         print("[GYRO] worker started")
 
         try:
@@ -131,12 +132,16 @@ class GrabberController:
                 now = time.time()
 
                 if raw is None:
-                    print("[GYRO] raw is None")
                     time.sleep(dt)
                     continue
 
                 dps = float(raw)
                 z = (dps - self.mu) / max(self.sigma, 1e-6)
+
+                # internal kill trigger
+                if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
+                    self.kill(reason=f"FAST_TILT_KILL detected: dps={dps:.3f}")
+                    return
 
                 with self._gyro_sample_cond:
                     self._gyro_sample = (now, dps, z)
@@ -144,6 +149,7 @@ class GrabberController:
                     self._gyro_sample_cond.notify_all()
 
                 time.sleep(dt)
+
         except Exception as e:
             print(f"[GYRO] worker crashed: {e}")
             raise
@@ -154,8 +160,8 @@ class GrabberController:
         self._gyro_stop.clear()
         self._gyro_thread = threading.Thread(target=self._gyro_worker, daemon=True)
         self._gyro_thread.start()
-        time.sleep(0.1)
-        print("STARTING KILL SWITCH MONITOR")
+
+        # only needed if you still want external event-setting to work too
         threading.Thread(target=self.monitor_kill, daemon=True).start()
     # ----------------------------
     # Setup / calibration
@@ -805,7 +811,7 @@ class GrabberController:
 
         try:
             while hits < needed:
-                if self.kill_switch or self._kill_event.is_set():
+                if self.kill_switch or (self._kill_event is not None and self._kill_event.is_set()):
                     if record_enabled:
                         self._end_operation_recording(outcome="killed")
                     return False
@@ -937,10 +943,10 @@ class GrabberController:
         )
         try :
             while True:
-                if self.kill_switch or self._kill_event.is_set():
-                    if record_enabled:
-                        self._end_operation_recording(outcome="killed")
-                    return False
+                if self.kill_switch or (self._kill_event is not None and self._kill_event.is_set()):
+                        if record_enabled:
+                            self._end_operation_recording(outcome="killed")
+                        return False
                 if stop_event is not None and stop_event.is_set():
                     if record_enabled:
                         self._end_operation_recording(outcome="cancelled")
@@ -1120,12 +1126,7 @@ class GrabberController:
 
     def monitor_kill(self):
         self._kill_event.wait()
-        print("[INFO] KILL SWITCH ACTIVATED")
-        self.kill_switch = True
-        self.cancel_loading()
-        self.cancel_unloading()
-        self.motor.set_dps(0)
-        reset_brick()
+        self.kill(reason="event set")
 
     def loop(self):
         self.start_gyro_monitor()
@@ -1179,8 +1180,33 @@ class GrabberController:
             self.motor.set_dps(0)
             self._gyro_stop.set()
 
-    def kill(self):
-        raise NotImplementedError()
+    def kill(self, reason="internal trigger"):
+        with self._kill_lock:
+            if self.kill_switch:
+                return
+
+            print(f"[INFO] KILL SWITCH ACTIVATED: {reason}")
+            self.kill_switch = True
+
+            # publish the kill state to the shared event
+            self._kill_event.set()
+
+            # cancel cooperative operations
+            self.cancel_loading()
+            self.cancel_unloading()
+
+            # stop hardware
+            self.motor.set_dps(0)
+            self._gyro_stop.set()
+
+            try:
+                reset_brick()
+            except Exception as e:
+                print(f"[WARN] reset_brick failed during kill: {e}")
+
+    def monitor_kill(self):
+        self._kill_event.wait()
+        self.kill(reason="event set")
 
     def isBlockCaught(self) -> bool:
         return self._block_caught_event.is_set()
