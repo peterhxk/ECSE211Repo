@@ -28,20 +28,67 @@ class RoomTraverser:
     # PID constants
     pid_constants = {
         "forward": {
-            "Kp": 100,
-            "Ki": 0,
-            "Kd": 140,
-            "steer_scale": 1.3,
-            "ramp": 0.0,
-        },
+            RoomType.CORNER_SINGLE: {
+                "Kp": 100,
+                "Ki": 0,
+                "Kd": 140,
+                "steer_scale": 1.3,
+                "ramp": 0.0,
+            },
+            RoomType.WALL_SINGLE: {
+                "Kp": 80,
+                "Ki": 0,
+                "Kd": 120,
+                "steer_scale": 1.2,
+                "ramp": 0.0,
+            },
+            RoomType.CORNER_DOUBLE_FIRST_HALF: {
+                "Kp": 100,
+                "Ki": 0,
+                "Kd": 140,
+                "steer_scale": 1.3,
+                "ramp": 0.0,
+            },
+            RoomType.CORNER_DOUBLE_SECOND_HALF: {
+                "Kp": 100,
+                "Ki": 0,
+                "Kd": 140,
+                "steer_scale": 1.3,
+                "ramp": 0.0,
+            },
+        }, 
         "backward": {
-            "Kp": 1,
-            "Ki": 0,
-            "Kd": 180,
-            "steer_scale": 0.7,
-            "ramp": 0.0,
+            RoomType.CORNER_SINGLE: {
+                "Kp": 1,
+                "Ki": 0,
+                "Kd": 180,
+                "steer_scale": 0.7,
+                "ramp": 0.0,
+            },
+            RoomType.WALL_SINGLE: {
+                "Kp": 1,
+                "Ki": 0,
+                "Kd": 180,
+                "steer_scale": 0.7,
+                "ramp": 0.0,
+            },
+            RoomType.CORNER_DOUBLE_FIRST_HALF: {
+                "Kp": 1,
+                "Ki": 0,
+                "Kd": 180,
+                "steer_scale": 0.7,
+                "ramp": 0.0,
+            },
+            RoomType.CORNER_DOUBLE_SECOND_HALF: {
+                "Kp": 1,
+                "Ki": 0,
+                "Kd": 180,
+                "steer_scale": 0.7,
+                "ramp": 0.0,
+            },
+        },
         }
-    }
+    
 
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.7
@@ -95,7 +142,7 @@ class RoomTraverser:
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * math.pi)) * 360
 
         motor_base_power = self.base_power
-        pid_cfg = self.pid_constants["forward"] if straight_distance >= 0 else self.pid_constants["backward"]
+        pid_cfg = self.pid_constants["forward"][room_type] if straight_distance >= 0 else self.pid_constants["backward"][room_type]
         start_dps = motor_base_power if straight_distance > 0 else -motor_base_power
         t0 = time.time()
         self.left_motor.set_dps(start_dps)
