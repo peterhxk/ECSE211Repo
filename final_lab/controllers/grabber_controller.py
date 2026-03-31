@@ -119,6 +119,8 @@ class GrabberController:
 
         self._gyro_sample_seq = 0
         self._gyro_sample_cond = threading.Condition(self._gyro_sample_lock)
+        print("Starting kill switch threading")
+        threading.Thread(target=self.monitor_kill, daemon=True).start()
 
     def _gyro_worker(self):
         dt = 1.0 / float(self.sample_hz)
