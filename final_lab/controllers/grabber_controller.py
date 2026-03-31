@@ -6,8 +6,9 @@ from enum import Enum
 from collections import deque
 import sys
 from tqdm import tqdm
+
 sys.path.append("../utils")
-from brick import EV3GyroSensor, Motor
+from brick import EV3GyroSensor, Motor,reset_brick
 import os
 import glob
 import time
@@ -1119,6 +1120,7 @@ class GrabberController:
         self.cancel_loading()
         self.cancel_unloading()
         self.motor.set_dps(0)
+        reset_brick()
 
     def loop(self):
         self.start_gyro_monitor()
