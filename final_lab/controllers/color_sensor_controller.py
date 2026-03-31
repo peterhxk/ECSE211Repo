@@ -60,17 +60,40 @@ class ColourSensorController (EV3ColorSensor):
 
     def _calibrate_arm(self):
         CALIBRATION_DPS = 50
+        HIT_SPEED_THRESHOLD = 10  # near zero speed means likely stalled at stop
+        STABLE_HITS_NEEDED = 6
+        SAMPLE_DT = 0.05
+        MAX_TIME = 8.0
+
         self.motor.set_dps(-CALIBRATION_DPS)
         counter = 0
-        start = time.time()
-        time.sleep(1)
-        while counter < 6:
-            print(abs(-self.motor.get_speed() - CALIBRATION_DPS))
-            self.motor.set_dps(-CALIBRATION_DPS)
-            if (thresh:=abs(-self.motor.get_speed() - CALIBRATION_DPS)) < 10 and time.time() - start > 0.5: # wait for cooldown
-                print("HIT!",thresh)
-                counter+=1
-                start = time.time()
+        t0 = time.time()
+
+        time.sleep(0.5)  # let motion settle
+
+        while counter < STABLE_HITS_NEEDED:
+            elapsed = time.time() - t0
+            if elapsed > MAX_TIME:
+                print("[WARN] Calibration timed out")
+                break
+
+            speed = self.motor.get_speed()
+            if speed is None:
+                time.sleep(SAMPLE_DT)
+                continue
+
+            speed = float(speed)
+            print("speed =", speed)
+
+            # Detect stall / end-stop: commanded motion but measured speed near zero
+            if abs(speed) < HIT_SPEED_THRESHOLD:
+                counter += 1
+                print(f"HIT! {counter}/{STABLE_HITS_NEEDED}")
+            else:
+                counter = 0
+
+            time.sleep(SAMPLE_DT)
+
         print("CALIBRATE DONE")
         self.motor.set_dps(0)
         self.motor.reset_encoder()
