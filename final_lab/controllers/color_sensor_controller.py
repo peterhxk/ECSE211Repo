@@ -1,3 +1,5 @@
+import sys
+sys.path.append("../")
 from utils.brick import EV3ColorSensor, Motor
 import time
 import json
