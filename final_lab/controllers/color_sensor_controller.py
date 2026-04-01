@@ -63,7 +63,7 @@ class ColourSensorController (EV3ColorSensor):
 
     def _calibrate_arm(self):
         CALIBRATION_DPS = 50
-        HIT_SPEED_THRESHOLD = 5  # near zero speed means likely stalled at stop
+        HIT_SPEED_THRESHOLD = 3  # near zero speed means likely stalled at stop
         STABLE_HITS_NEEDED = 1
         SAMPLE_DT = 0.02
         MAX_TIME = 8.0
@@ -72,7 +72,7 @@ class ColourSensorController (EV3ColorSensor):
         counter = 0
         t0 = time.time()
 
-        time.sleep(0.5)  # let motion settle
+        time.sleep(0.3)  # let motion settle
 
         while counter < STABLE_HITS_NEEDED:
             elapsed = time.time() - t0
