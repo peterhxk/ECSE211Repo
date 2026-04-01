@@ -42,7 +42,7 @@ class ColourSensorController (EV3ColorSensor):
 
     MOTOR_POWER_DPS = 250
 
-    def __init__(self, port, motor: Motor, mode="component", bp=None):
+    def __init__(self, port, motor: Motor, mode="component", calibrate=False):
         super().__init__(port)
 
         self.motor = motor
@@ -53,8 +53,9 @@ class ColourSensorController (EV3ColorSensor):
         self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
 
         # Reset the value of the motor encoder.
-        self._calibrate_arm()
-        print("Calibrated Arm")
+        if calibrate:
+            self._calibrate_arm()
+            print("Calibrated Arm")
         # Sets maximum speed of motor.
         motor.set_limits(0, self.MOTOR_POWER_DPS)
 
