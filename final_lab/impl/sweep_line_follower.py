@@ -149,7 +149,6 @@ class SweepLineFollower:
         consecutive_black = 0
         while consecutive_black < 3:
             reading = self.sensor.read_black_white()
-            print(reading)
             if reading == "b":
                 consecutive_black += 1
             else:
