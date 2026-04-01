@@ -28,7 +28,7 @@ class Routing(SweepLineFollower):
     
     def room1_to_pharmacy(self):
         self.pilot.move_distance(-435)
-        self.pilot.right_motor.wait_is_stopped(0.1)
+        self.pilot.right_motor.wait_is_stopped()
 
     
     def room1_to_room2(self):
@@ -46,6 +46,11 @@ class Routing(SweepLineFollower):
         self.turn_logic("left", "back")
         self.turn_logic("right", "front")
         self.move_forward(50, "orange") 
+
+    def room3B_to_pharmacy(self):
+        self.turn_logic("right", "back")
+        self.move_forward(300)
+        self.turn_logic("left", "front")
 
     def pharmacy_to_grab_block_position(self):
         self.pilot.move_distance(50)
