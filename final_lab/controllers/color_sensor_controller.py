@@ -101,7 +101,7 @@ class ColourSensorController (EV3ColorSensor):
         self.motor.set_dps(0)
         time.sleep(1)
         self.motor.reset_encoder()
-        self.motor.offset_encoder(90)
+        self.motor.offset_encoder(95)
         self.motor.set_position(0)
 
 
