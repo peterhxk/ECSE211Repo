@@ -5,9 +5,16 @@ from controllers.grabber_controller import GrabberController
 import time
 
 class Routing(SweepLineFollower):
-
-
     """Class defines fixed routing commands to move the robot between rooms."""
+
+    ROOM_EXIT_DST = -30
+    """Distance (mm) we must back up when exiting the room
+    so that the colour sensor is not on the orange line"""
+
+    def _exit_room(self):
+        """Backs off the orange line and waits for motors to stop."""
+        self.pilot.move_distance(self.ROOM_EXIT_DST)
+        self.pilot.right_motor.wait_is_stopped()
 
     def pharmacy_to_room1(self):
         print("Reversing 50mm")
@@ -28,24 +35,44 @@ class Routing(SweepLineFollower):
     
     def room1_to_pharmacy(self):
         self.pilot.move_distance(-435)
-        self.pilot.right_motor.wait_is_stopped(0.1)
+        self.pilot.right_motor.wait_is_stopped()
 
     
     def room1_to_room2(self):
+        # Back off of orange line
+        print('[DEBUG] routing: Exiting room')
+        self._exit_room()
+
+        print('[DEBUG] routing: Beginning left turn')
         self.turn_logic("right", "back")
+
+        print('[DEBUG] routing: Moving forward 200mm')
         self.move_forward(200)
+
+        print('[DEBUG] routing: Beginning second left turn')
         self.turn_logic("left", "front")
         self.move_forward(50, "orange")
     
     def room2_to_room3A(self):
+        self._exit_room()
+
         self.turn_logic("right", "back")
         self.turn_logic("right", "front")
         self.move_forward(50, "orange")
 
     def room3A_to_room3B(self):
+        self._exit_room()
+
         self.turn_logic("left", "back")
         self.turn_logic("right", "front")
         self.move_forward(50, "orange") 
+
+    def room3B_to_pharmacy(self):
+        self._exit_room()
+
+        self.turn_logic("right", "back")
+        self.move_forward(300)
+        self.turn_logic("left", "front")
 
     def pharmacy_to_grab_block_position(self):
         self.pilot.move_distance(50)
