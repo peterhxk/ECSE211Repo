@@ -144,7 +144,7 @@ class SweepLineFollower:
             self.pilot.move_backward()
         else:
             raise Exception(f"Invalid parameter heading for method SweepLineFollower.turn_logic: {heading}. Valid options are front, back")
-        print(f"[DEBUG] turn_logic: The colors detected are : {self.sensor.read_black_white()}")
+        # print(f"[DEBUG] turn_logic: The colors detected are : {self.sensor.read_black_white()}")
 
         consecutive_black = 0
         while consecutive_black < 3:
@@ -168,11 +168,12 @@ class SweepLineFollower:
 
         print(f"[DEBUG] turn_logic: pivoting {direction}")
         self.pilot.pivot_90(direction)
-        print("[DEBUG] turn_logic: done pivoting.")
 
         # Wait for pivot to complete before proceeding
         time.sleep(0.1)
         getattr(self.pilot, f"{'right' if direction == 'left' else 'left'}_motor").wait_is_stopped()
+
+        print("[DEBUG] turn_logic: done pivoting.")
 
         # Set colour arm back to the normal position
         if not arm_avoid_block:
