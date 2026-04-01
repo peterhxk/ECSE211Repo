@@ -35,8 +35,8 @@ print("Initialized grabber sensors")
 
 try:
     # routing.pharmacy_to_room1()
-    routing.room1_to_room2()
-    # routing.room2_to_room3A()
+    # routing.room1_to_room2()
+    routing.room2_to_room3A()
     # routing.room3A_to_room3B()
     # routing.room3B_to_pharmacy()
 
