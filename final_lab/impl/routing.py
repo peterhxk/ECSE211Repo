@@ -40,10 +40,16 @@ class Routing(SweepLineFollower):
     
     def room1_to_room2(self):
         # Back off of orange line
+        print('[DEBUG] routing: Exiting room')
         self._exit_room()
 
+        print('[DEBUG] routing: Beginning left turn')
         self.turn_logic("right", "back")
+
+        print('[DEBUG] routing: Moving forward 200mm')
         self.move_forward(200)
+
+        print('[DEBUG] routing: Beginning second left turn')
         self.turn_logic("left", "front")
         self.move_forward(50, "orange")
     
