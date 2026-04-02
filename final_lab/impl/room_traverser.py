@@ -153,11 +153,13 @@ class RoomTraverser:
         bed_detected = False
         start_detected = False
 
-        straight_distance = self.parameters[room_type]["straight_distance"]
+        # parameters are keyed by direction then room type (not room_type at top level)
+        direction_key = "backward" if detect_start else "forward"
+        pid_cfg = self.parameters[direction_key][room_type]
+        straight_distance = pid_cfg["straight_distance"]
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * math.pi)) * 360
 
         motor_base_power = self.base_power
-        pid_cfg = self.parameters["forward"][room_type] if straight_distance >= 0 else self.parameters["backward"][room_type]
         start_dps = motor_base_power if straight_distance > 0 else -motor_base_power
         t0 = time.time()
         self.left_motor.set_dps(start_dps)
