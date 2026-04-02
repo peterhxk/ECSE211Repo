@@ -150,6 +150,14 @@ class RoomTraverser:
         self.left_motor.float_motor()
         self.right_motor.float_motor()
 
+        # BrickPi3 reset_all() sets every port's SensorType to NONE. Without
+        # re-applying modes, get_sensor raises "Sensor not configured or not supported."
+        # (e.g. second run() after reset_brick, or any prior reset_all).
+        self.ultrasonic_sensor.set_mode(self.ultrasonic_sensor.Mode.CM)
+        self.ultrasonic_sensor.wait_ready()
+        self.color_sensor_controller.set_mode("component")
+        self.color_sensor_controller.wait_ready()
+
         # reject spikes: ignore readings that jump more than this from the last accepted value
         OUTLIER_THRESHOLD_CM = 8
 
@@ -176,93 +184,96 @@ class RoomTraverser:
         self.left_motor.set_dps(start_dps)
         self.right_motor.set_dps(start_dps)
 
-        if detect_bed:
-            self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
-
-        while True:
+        travelled_deg = 0.0
+        try:
             if detect_bed:
-                color_sensor_sweep_result = self.color_sensor_controller.sweep_get_result()
-                if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
-                    bed_detected = True
+                self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
+
+            while True:
+                if detect_bed:
+                    color_sensor_sweep_result = self.color_sensor_controller.sweep_get_result()
+                    if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
+                        bed_detected = True
+                        break
+
+                if detect_start:
+                    detected = self.color_sensor_controller.read_colour()
+                    if detected == "orange":
+                        if abs(self.color_sensor_controller.motor.get_encoder()) > 10:
+                            self.color_sensor_controller.set_arm_at_angle(0)
+                            continue
+                        print("Orange detected — arrived back at starting point.")
+                        start_detected = True
+                        break
+
+                # check travelled distance
+                travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
+
+                if target_degrees < 0 and travelled_deg <= target_degrees / 5.5:
+                    print(f"[ARM] Halfway reached ({travelled_deg:.0f}/{target_degrees:.0f} deg), resetting arm to 0°")
+                    self.color_sensor_controller.set_arm_at_angle(0)
+                if target_degrees > 0 and travelled_deg >= target_degrees:
+                    break
+                elif target_degrees < 0 and travelled_deg <= target_degrees:
                     break
 
-            if detect_start:
-                detected = self.color_sensor_controller.read_colour()
-                if detected == "orange":
-                    if abs(self.color_sensor_controller.motor.get_encoder()) > 10:
-                        self.color_sensor_controller.set_arm_at_angle(0)
-                        continue
-                    print("Orange detected — arrived back at starting point.")
-                    start_detected = True
-                    break
+                now = time.time()
+                dt = max(now - prev_time, 0.001)
+                prev_time = now
 
-            # check travelled distance
-            travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
+                raw = self.ultrasonic_sensor.get_cm()
+                if last_distance_cm is None or abs(raw - last_distance_cm) <= OUTLIER_THRESHOLD_CM:
+                    last_distance_cm = raw
 
-            if target_degrees < 0 and travelled_deg <= target_degrees / 5.5:
-                print(f"[ARM] Halfway reached ({travelled_deg:.0f}/{target_degrees:.0f} deg), resetting arm to 0°")
-                self.color_sensor_controller.set_arm_at_angle(0)
-            if target_degrees > 0 and travelled_deg >= target_degrees:
-                break
-            elif target_degrees < 0 and travelled_deg <= target_degrees:
-                break
+                distance_cm = last_distance_cm
 
-            now = time.time()
-            dt = max(now - prev_time, 0.001)
-            prev_time = now
+                error = room_type_to_wall_distance_map[room_type] - distance_cm
+                integral = max(-50.0, min(50.0, integral + error * dt))
+                derivative = (error - prev_error) / dt
+                prev_error = error
 
-            raw = self.ultrasonic_sensor.get_cm()
-            if last_distance_cm is None or abs(raw - last_distance_cm) <= OUTLIER_THRESHOLD_CM:
-                last_distance_cm = raw
+                g_p = self._wall_gain_scale(error, self.wall_gain_schedule_kp)
+                g_d = self._wall_gain_scale(error, self.wall_gain_schedule_kd)
+                raw_adjustment = (
+                    pid_cfg["Kp"] * g_p * error
+                    + pid_cfg["Ki"] * integral
+                    + pid_cfg["Kd"] * g_d * derivative
+                )
 
-            distance_cm = last_distance_cm
+                if pid_cfg["ramp"] > 0:
+                    ramp_factor = min(1.0, (now - t0) / pid_cfg["ramp"])
+                    raw_adjustment *= ramp_factor
 
-            error = room_type_to_wall_distance_map[room_type] - distance_cm
-            integral = max(-50.0, min(50.0, integral + error * dt))
-            derivative = (error - prev_error) / dt
-            prev_error = error
+                base_abs = abs(motor_base_power)
+                max_steer = max(12, min(int(base_abs * 0.42), base_abs - 15))
+                raw_adjustment = max(-max_steer, min(max_steer, raw_adjustment))
 
-            g_p = self._wall_gain_scale(error, self.wall_gain_schedule_kp)
-            g_d = self._wall_gain_scale(error, self.wall_gain_schedule_kd)
-            raw_adjustment = (
-                pid_cfg["Kp"] * g_p * error
-                + pid_cfg["Ki"] * integral
-                + pid_cfg["Kd"] * g_d * derivative
-            )
+                a = self.adjustment_smooth_alpha
+                if smoothed_adjustment is None:
+                    smoothed_adjustment = raw_adjustment
+                else:
+                    smoothed_adjustment = a * raw_adjustment + (1.0 - a) * smoothed_adjustment
 
-            if pid_cfg["ramp"] > 0:
-                ramp_factor = min(1.0, (now - t0) / pid_cfg["ramp"])
-                raw_adjustment *= ramp_factor
+                adjustment = int(round(smoothed_adjustment))
+                s = pid_cfg["steer_scale"]
 
-            base_abs = abs(motor_base_power)
-            max_steer = max(12, min(int(base_abs * 0.42), base_abs - 15))
-            raw_adjustment = max(-max_steer, min(max_steer, raw_adjustment))
+                if straight_distance >= 0:
+                    left_dps  = self.base_power + adjustment * s
+                    right_dps = self.base_power - adjustment * s
+                else:
+                    left_dps  = -self.base_power - adjustment * s
+                    right_dps = -self.base_power + adjustment * s
 
-            a = self.adjustment_smooth_alpha
-            if smoothed_adjustment is None:
-                smoothed_adjustment = raw_adjustment
-            else:
-                smoothed_adjustment = a * raw_adjustment + (1.0 - a) * smoothed_adjustment
+                print(f"Adjustment: {adjustment}, Left DPS: {left_dps}, Right DPS: {right_dps}")
+                self.left_motor.set_dps(left_dps)
+                self.right_motor.set_dps(right_dps)
 
-            adjustment = int(round(smoothed_adjustment))
-            s = pid_cfg["steer_scale"]
+                time.sleep(0.04)
+        finally:
+            self.driving_controller.stop_motors()
+            if detect_bed:
+                self.color_sensor_controller.sweep_stop()
 
-            if straight_distance >= 0:
-                left_dps  = self.base_power + adjustment * s
-                right_dps = self.base_power - adjustment * s
-            else:
-                left_dps  = -self.base_power - adjustment * s
-                right_dps = -self.base_power + adjustment * s
-
-            print(f"Adjustment: {adjustment}, Left DPS: {left_dps}, Right DPS: {right_dps}")
-            self.left_motor.set_dps(left_dps)
-            self.right_motor.set_dps(right_dps)
-
-            time.sleep(0.04)
-
-        self.driving_controller.stop_motors()
-        if detect_bed:
-            self.color_sensor_controller.sweep_stop()
         dist_cm = (abs(travelled_deg) / 360) * (self.WHEEL_DIAMETER_MM * math.pi) / 10
         if bed_detected:
             detected_color = color_sensor_sweep_result[0][1]
@@ -435,7 +446,13 @@ class RoomTraverser:
         except KeyboardInterrupt:
             print("Interrupted via keyboard...")
         except Exception as err:
-            print(err)  
+            print(err)
         finally:
-            # grabber_controller.stop_gyro_monitor()
-            reset_brick()
+            # Do not reset_brick() here: reset_all() clears every sensor type to NONE, so the next
+            # run(), routing, or another traverse would hit "Sensor not configured or not supported."
+            # Scripts should call reset_brick in their own main finally / rely on atexit.
+            try:
+                self.driving_controller.stop_motors()
+                self.color_sensor_controller.motor.set_dps(0)
+            except Exception:
+                pass
