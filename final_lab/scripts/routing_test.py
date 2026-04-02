@@ -34,9 +34,11 @@ grabber_controller.initialize_sensors()
 print("Initialized grabber sensors")
 
 try:
-    # routing.pharmacy_to_room1()
+     routing.pharmacy_to_grab_block_position()
+     routing.grab_block(grabber_controller)
+     routing.pharmacy_to_room1()
     # routing.room1_to_room2()
-    routing.room2_to_room3A()
+    #routing.room2_to_room3A()
     # routing.room3A_to_room3B()
     # routing.room3B_to_pharmacy()
 
