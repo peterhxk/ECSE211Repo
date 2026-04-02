@@ -415,5 +415,5 @@ class RoomTraverser:
         except Exception as err:
             print(err)  
         finally:
-            grabber_controller.stop_gyro_monitor()
+            # grabber_controller.stop_gyro_monitor()
             reset_brick()
