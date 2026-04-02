@@ -10,32 +10,14 @@ import time
 class Routing(SweepLineFollower):
     """Class defines fixed routing commands to move the robot between rooms."""
 
-    def __init__(self, sensor: ColourSensorController, pilot: DrivingController):
-        super().__init__(sensor, pilot)
-        self.thread: threading.Thread = None
+    ROOM_EXIT_DST = -30
+    """Distance (mm) we must back up when exiting the room
+    so that the colour sensor is not on the orange line"""
 
-    def _begin_routing(self, worker):
-        """
-        Helper to begin routing in a separate thread.
-        
-        Args:
-            worker (function): The worker to run in a separate thread
-        
-        Returns:
-            success (bool): `False` if another worker is already being run in the thread,
-                `True` otherwise
-        """
-
-        if self.thread and self.thread.is_active():
-            return False
-        else:
-            self.thread = threading.Thread(target=worker, daemon=True)
-            return True
-        
-    def kill(self):
-        """Abruptly terminates all actions and routing commands."""
-        self.kill_event.set()
-        self.pilot.stop_motors()
+    def _exit_room(self):
+        """Backs off the orange line and waits for motors to stop."""
+        self.pilot.move_distance(self.ROOM_EXIT_DST)
+        self.pilot.right_motor.wait_is_stopped()
 
     def pharmacy_to_room1(self):
         self.pilot.move_distance(-50)
@@ -50,20 +32,40 @@ class Routing(SweepLineFollower):
 
     
     def room1_to_room2(self):
+        # Back off of orange line
+        print('[DEBUG] routing: Exiting room')
+        self._exit_room()
+
+        print('[DEBUG] routing: Beginning left turn')
         self.turn_logic("right", "back")
-        self.move_forward(200)
+
+        print('[DEBUG] routing: Moving forward 200mm')
+        self.move_forward(230)
+
+        print('[DEBUG] routing: Beginning second left turn')
         self.turn_logic("left", "front")
         self.move_forward(50, "orange")
     
     def room2_to_room3A(self):
+        self._exit_room()
+
         self.turn_logic("right", "back")
         self.turn_logic("right", "front")
         self.move_forward(50, "orange")
 
     def room3A_to_room3B(self):
+        self._exit_room()
+
         self.turn_logic("left", "back")
         self.turn_logic("right", "front")
         self.move_forward(50, "orange") 
+
+    def room3B_to_pharmacy(self):
+        self._exit_room()
+
+        self.turn_logic("right", "back")
+        self.move_forward(300)
+        self.turn_logic("left", "front")
 
     def pharmacy_to_grab_block_position(self):
         self.pilot.move_distance(50)
