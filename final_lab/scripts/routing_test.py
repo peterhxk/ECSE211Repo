@@ -12,11 +12,8 @@ from impl.routing import Routing
 from data.ports_brick import Ports
 from controllers.grabber_controller import GrabberController
 from controllers.sound_controller import SoundController
-import threading
-# Sensor declaration
 
-# Kill switch flag
-kill_switch_flag = threading.Event()
+# Sensor declaration
 
 left_motor = Motor(Ports.LEFT_MOTOR.value)
 right_motor = Motor(Ports.RIGHT_MOTOR.value)
@@ -24,7 +21,7 @@ color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 driving_controller = DrivingController(left_motor, right_motor, 200)
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
-grabber_controller = GrabberController(kill_switch_flag,Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
+grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
 sound_controller = SoundController()
 room_traverser = RoomTraverser(left_motor, right_motor, 160, color_sensor_controller, sound_controller=sound_controller)
@@ -34,6 +31,12 @@ grabber_controller.initialize_sensors()
 print("Initialized grabber sensors")
 
 try:
+    while True:
+        route = int(input("Which code (1-3): "))
+        if (route == 1): routing.room2_to_pharmacy()
+        elif (route == 2): routing.room3A_to_pharmacy()
+        elif (route == 3): routing.room3B_to_pharmacy()
+    '''
     routing.pharmacy_to_grab_block_position()
     routing.grab_block(grabber_controller)
     routing.pharmacy_to_room1()
@@ -41,7 +44,7 @@ try:
     routing.room1_to_pharmacy() # Week Demo
     sound_controller.play_mission_complete()
     time.sleep(1)
-
+    '''
     # routing.room1_to_room2()
     # room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
     # sound_controller.play_mission_complete()
