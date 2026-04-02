@@ -1,5 +1,3 @@
-import sys
-sys.path.append("../")
 from utils.brick import EV3ColorSensor, Motor
 import time
 import json
@@ -123,9 +121,6 @@ class ColourSensorController (EV3ColorSensor):
         self.motor.set_limits(0, self.MOTOR_POWER_DPS)
         self.motor.set_position(angle)
         self.motor.wait_is_stopped(0.01)
-
-    def read_current_angle(self):
-        pass
 
 
     def sweep_start(self, colours: List[str] = [], range: Literal["left", "right", "full"] = "full",

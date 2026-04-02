@@ -1,8 +1,9 @@
 import sys
 import time
 
+from impl.kill_switch import KillSwitchInterrupt
 from impl.room_traverser import RoomTraverser, RoomType
-sys.path.append("./")
+sys.path.append(".")
 
 import traceback
 from utils.brick import wait_ready_sensors, reset_brick, Motor
@@ -13,6 +14,7 @@ from data.ports_brick import Ports
 from controllers.grabber_controller import GrabberController
 from controllers.sound_controller import SoundController
 import threading
+
 # Sensor declaration
 
 # Kill switch flag
@@ -34,14 +36,33 @@ grabber_controller.initialize_sensors()
 print("Initialized grabber sensors")
 
 try:
-    # routing.pharmacy_to_room1()
-    # routing.room1_to_room2()
-    routing.room2_to_room3A()
-    # routing.room3A_to_room3B()
-    # routing.room3B_to_pharmacy()
+    def worker():
+        routing.pharmacy_to_grab_block_position()
+        routing.grab_block(grabber_controller)
+        routing.pharmacy_to_room1()
+        room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
+        # routing.room1_to_pharmacy() # Week Demo
+        # sound_controller.play_mission_complete()
+        time.sleep(1)
+
+        routing.room1_to_room2()
+        room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
+        sound_controller.play_mission_complete()
+    
+    main_worker = threading.Thread(target=worker, daemon=True)
+
+    main_worker.start()
+
+    kill_switch_flag.wait()
+    print("[INFO] Kill switch activated. Terminating script...")
+
+    raise KillSwitchInterrupt()
 
 except KeyboardInterrupt:
     print("Interrupted via keyboard...")
+
+except KillSwitchInterrupt:
+    pass
 
 except Exception as err:
     print(err)

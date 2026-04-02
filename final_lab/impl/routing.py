@@ -1,6 +1,9 @@
+from controllers.color_sensor_controller import ColourSensorController
+from controllers.driving_controller import DrivingController
 from impl.sweep_line_follower import SweepLineFollower
 import data.measurements as consts
 from controllers.grabber_controller import GrabberController
+import threading
 
 import time
 
@@ -17,21 +20,11 @@ class Routing(SweepLineFollower):
         self.pilot.right_motor.wait_is_stopped()
 
     def pharmacy_to_room1(self):
-        print("Reversing 50mm")
         self.pilot.move_distance(-50)
         self.pilot.right_motor.wait_is_stopped()
-        print("Motors stopped")
-        
-        print("Turning right")
         self.turn_logic("right", "back")
-        
-        print("Turning right")
         self.turn_logic("right", "front")
-        
-        print("Moving forward, searching for orange line")
         self.move_forward(200, "orange")
-        
-        print("Found orange line.")
     
     def room1_to_pharmacy(self):
         self.pilot.move_distance(-435)
