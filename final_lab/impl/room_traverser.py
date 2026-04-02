@@ -43,7 +43,7 @@ class RoomTraverser:
                 "straight_distance": 45,
             },
             RoomType.WALL_SINGLE: {
-                "Kp": 205,
+                "Kp": 100,
                 "Ki": 0,
                 "Kd": 170,
                 "steer_scale": 1.3,
