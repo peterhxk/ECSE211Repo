@@ -60,9 +60,10 @@ class Routing(SweepLineFollower):
         self.turn_logic("right", "front")
         self.move_forward(50, "orange") 
 
-<<<<<<< HEAD
     def room2_to_pharmacy(self):
         # UNTESTED
+        self._exit_room()
+
         self.turn_logic("left", "back")
         # add move forward?
         self.turn_logic("left", "front")
@@ -70,27 +71,21 @@ class Routing(SweepLineFollower):
 
     def room3A_to_pharmacy(self):
         # UNTESTED
+        self._exit_room()
+
         self.turn_logic("right", "back")
         self.move_forward(50) # change dist?
         self.turn_logic("left", "front")
         self.move_forward(100, "blue") # change color/dist?
 
-    def room3B_to_pharmacy(self):
-        # UNTESTED
-        self.turn_logic("right", "back")
-        self.move_forward(80) # change dist?
-        self.turn_logic("left", "front")
-        self.move_forward(100, "blue") # change color/dist?
 
-
-=======
     def room3B_to_pharmacy(self):
         self._exit_room()
 
         self.turn_logic("right", "back")
         self.move_forward(300)
         self.turn_logic("left", "front")
->>>>>>> main
+        self.move_forward(100, "blue")
 
     def pharmacy_to_grab_block_position(self):
         self.pilot.move_distance(50)
