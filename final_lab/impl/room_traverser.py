@@ -107,6 +107,17 @@ class RoomTraverser:
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.7
 
+    # Gain scheduling on |wall error| (cm): g = 1/(1 + k * |e|). Larger k → softer when far.
+    # P and D use separate k so D can be pulled down harder against ultrasonic spikes.
+    wall_gain_schedule_kp = 0.04
+    wall_gain_schedule_kd = 0.07
+
+    @staticmethod
+    def _wall_gain_scale(error_cm: float, k: float) -> float:
+        if k <= 0:
+            return 1.0
+        return 1.0 / (1.0 + k * abs(error_cm))
+
     def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int, color_sensor_controller: ColourSensorController, sound_controller: SoundController = None):
         self.left_motor = left_motor
         self.right_motor = right_motor
@@ -208,7 +219,13 @@ class RoomTraverser:
             derivative = (error - prev_error) / dt
             prev_error = error
 
-            raw_adjustment = pid_cfg["Kp"] * error + pid_cfg["Ki"] * integral + pid_cfg["Kd"] * derivative
+            g_p = self._wall_gain_scale(error, self.wall_gain_schedule_kp)
+            g_d = self._wall_gain_scale(error, self.wall_gain_schedule_kd)
+            raw_adjustment = (
+                pid_cfg["Kp"] * g_p * error
+                + pid_cfg["Ki"] * integral
+                + pid_cfg["Kd"] * g_d * derivative
+            )
 
             if pid_cfg["ramp"] > 0:
                 ramp_factor = min(1.0, (now - t0) / pid_cfg["ramp"])
