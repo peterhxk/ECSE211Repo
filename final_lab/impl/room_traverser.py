@@ -43,7 +43,7 @@ class RoomTraverser:
                 "straight_distance": 45,
             },
             RoomType.WALL_SINGLE: {
-                "Kp": 100,
+                "Kp": 205,
                 "Ki": 0,
                 "Kd": 170,
                 "steer_scale": 1.3,
@@ -107,23 +107,6 @@ class RoomTraverser:
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.7
 
-    # Wall-follow: below this |error| (cm) PID uses true error; above, error is shaped sublinearly
-    # so large offsets do not scale steering linearly (less wobble / bang-bang near max_steer).
-    wall_error_linear_cm = 12.0
-    # Low-pass weight on new derivative sample (ultrasonic noise); higher = smoother D term.
-    wall_deriv_lowpass_alpha = 0.28
-
-    @staticmethod
-    def _shape_wall_error(error_cm: float, linear_cm: float) -> float:
-        if linear_cm <= 0:
-            return error_cm
-        mag = abs(error_cm)
-        if mag <= linear_cm:
-            return error_cm
-        extra = mag - linear_cm
-        shaped_mag = linear_cm + math.sqrt(extra * linear_cm)
-        return math.copysign(shaped_mag, error_cm)
-
     def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int, color_sensor_controller: ColourSensorController, sound_controller: SoundController = None):
         self.left_motor = left_motor
         self.right_motor = right_motor
@@ -166,7 +149,6 @@ class RoomTraverser:
         prev_error = 0.0
         prev_time = time.time()
         smoothed_adjustment = None
-        deriv_filtered = None
 
         bed_detected = False
         start_detected = False
@@ -222,22 +204,11 @@ class RoomTraverser:
             distance_cm = last_distance_cm
 
             error = room_type_to_wall_distance_map[room_type] - distance_cm
-            e_pi = self._shape_wall_error(error, self.wall_error_linear_cm)
-            integral = max(-50.0, min(50.0, integral + e_pi * dt))
-
-            derivative_raw = (error - prev_error) / dt
-            if deriv_filtered is None:
-                deriv_filtered = derivative_raw
-            else:
-                a = self.wall_deriv_lowpass_alpha
-                deriv_filtered = a * derivative_raw + (1.0 - a) * deriv_filtered
+            integral = max(-50.0, min(50.0, integral + error * dt))
+            derivative = (error - prev_error) / dt
             prev_error = error
 
-            raw_adjustment = (
-                pid_cfg["Kp"] * e_pi
-                + pid_cfg["Ki"] * integral
-                + pid_cfg["Kd"] * deriv_filtered
-            )
+            raw_adjustment = pid_cfg["Kp"] * error + pid_cfg["Ki"] * integral + pid_cfg["Kd"] * derivative
 
             if pid_cfg["ramp"] > 0:
                 ramp_factor = min(1.0, (now - t0) / pid_cfg["ramp"])
