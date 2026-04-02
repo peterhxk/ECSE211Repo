@@ -6,6 +6,7 @@ from data.ports_brick import Ports
 from controllers.grabber_controller import GrabberController
 from controllers.driving_controller import DrivingController
 from impl.routing import Routing
+from controllers.sound_controller import SoundController
 
 
 MOTOR_POWER = 260
@@ -18,7 +19,7 @@ color_motor = Motor(Ports.COLOR_MOTOR.value)
 driving_controller = DrivingController(left_motor, right_motor, 120)
 
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_motor)
-room_traverser = RoomTraverser(left_motor, right_motor, MOTOR_POWER, color_sensor_controller)
+room_traverser = RoomTraverser(left_motor, right_motor, MOTOR_POWER, color_sensor_controller, SoundController())
 # grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
 
