@@ -68,7 +68,7 @@ class Routing(SweepLineFollower):
         # add move forward?
         self.turn_logic("left", "front")
         print("move forward to pharma")
-        self.move_forward(100, "blue") # change color/dist?
+        self.move_forward(100, "orange") # change color/dist?
 
     def room3A_to_pharmacy(self):
         # UNTESTED
