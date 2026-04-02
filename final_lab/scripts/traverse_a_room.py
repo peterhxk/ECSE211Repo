@@ -26,15 +26,16 @@ print("Waiting for sensors to be ready...")
 
 wait_ready_sensors(True)
 
-grabber_controller.initialize_sensors()
-print("Initialized grabber sensors")
-time.sleep(2)
+# grabber_controller.initialize_sensors()
+# print("Initialized grabber sensors")
+# time.sleep(2)
     
 
 if __name__ == "__main__":
     try:
         # Example usage: traverse a corner room while detecting for a bed
-        room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
+        # room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
+        room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE)
     except Exception as err:
         print(err)
     finally:

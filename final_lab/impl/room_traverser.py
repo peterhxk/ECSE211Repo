@@ -323,7 +323,8 @@ class RoomTraverser:
     - room_type: The type of the room to traverse. This determines the path taken by the robot.
     - grabber_controller: The grabber controller to use to load and unload blocks.
     """
-    def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
+    # def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
+    def traverse_a_room(self, room_type: RoomType) -> None:
         try:
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
             traverse_results = self.run(room_type, detect_bed=True)
