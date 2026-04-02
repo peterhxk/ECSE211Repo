@@ -48,13 +48,25 @@ class Routing(SweepLineFollower):
         self.move_forward(50, "orange") 
 
     def room2_to_pharmacy(self):
-        pass
+        # UNTESTED
+        self.turn_logic("left", "back")
+        # add move forward?
+        self.turn_logic("left", "front")
+        self.move_forward(100, "blue") # change color/dist?
 
     def room3A_to_pharmacy(self):
-        pass
+        # UNTESTED
+        self.turn_logic("right", "back")
+        self.move_forward(50) # change dist?
+        self.turn_logic("left", "front")
+        self.move_forward(100, "blue") # change color/dist?
 
     def room3B_to_pharmacy(self):
-        pass
+        # UNTESTED
+        self.turn_logic("right", "back")
+        self.move_forward(80) # change dist?
+        self.turn_logic("left", "front")
+        self.move_forward(100, "blue") # change color/dist?
 
 
 
