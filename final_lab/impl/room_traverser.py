@@ -189,6 +189,9 @@ class RoomTraverser:
             if detect_start:
                 detected = self.color_sensor_controller.read_colour()
                 if detected == "orange":
+                    if math.abs(self.color_sensor_controller.motor.get_encoder()) > 10:
+                        self.color_sensor_controller.set_arm_at_angle(0)
+                        continue
                     print("Orange detected — arrived back at starting point.")
                     start_detected = True
                     break
