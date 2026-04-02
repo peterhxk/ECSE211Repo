@@ -7,6 +7,7 @@ Authors: Ryan Au, Younes Boubekeur
 
 from __future__ import annotations
 
+import threading
 from typing import Literal, Type
 import math
 import atexit
@@ -14,6 +15,8 @@ import os
 import signal
 import time
 import sys
+
+from impl.kill_switch import KillSwitchInterrupt
 
 
 def busy_sleep(seconds: float):
@@ -935,11 +938,14 @@ class Motor:
         while not self.is_moving():
             time.sleep(sleep_interval)
 
-    def wait_is_stopped(self, sleep_interval: float = None):
+    def wait_is_stopped(self, sleep_interval: float = None, kill_event: threading.Event = None):
         if sleep_interval is None:
             sleep_interval = WAIT_READY_INTERVAL
         time.sleep(sleep_interval*10)
         while self.is_moving():
+            if kill_event and kill_event.is_set():
+                raise KillSwitchInterrupt()
+            
             time.sleep(sleep_interval)
 
 

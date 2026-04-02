@@ -98,7 +98,7 @@ class GrabberController:
             print("Warning: running power too high. Pick a lower value")
 
         # Empirical gyro trace recording
-        self.recordings_dir = "gyro_operation_recordings"
+        self.recordings_dir = "data/gyro_operation_recordings"
         os.makedirs(self.recordings_dir, exist_ok=True)
 
         self._current_record = None
@@ -394,7 +394,7 @@ class GrabberController:
         If calibration=False:
             - Load most recent calibration
         """
-        calibration_dir = getattr(self, "gyro_calibration_dir", "gyro_calibrations")
+        calibration_dir = getattr(self, "gyro_calibration_dir", "data/gyro_calibrations")
         os.makedirs(calibration_dir, exist_ok=True)
 
         if calibration:
@@ -506,7 +506,7 @@ class GrabberController:
         If calibration=False:
             - Load the latest saved calibration
         """
-        calibration_dir = getattr(self, "motor_calibration_dir", "motor_calibrations")
+        calibration_dir = getattr(self, "motor_calibration_dir", "data/motor_calibrations")
         os.makedirs(calibration_dir, exist_ok=True)
 
         if calibration:
