@@ -35,8 +35,6 @@ wait_ready_sensors(True)
 grabber_controller.initialize_sensors()
 print("Initialized grabber sensors")
 
-stop_event = threading.Event()
-
 try:
     def worker():
         routing.pharmacy_to_grab_block_position()
@@ -51,19 +49,11 @@ try:
         room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
         sound_controller.play_mission_complete()
     
-    def check_stop_event():
-        while True:
-            user_input = input("Enter k to kill the process: ")
-            if user_input == 'k':
-                stop_event.set()
-    
     main_worker = threading.Thread(target=worker, daemon=True)
-    stop_event_worker = threading.Thread(target=check_stop_event, daemon=True)
 
     main_worker.start()
-    stop_event_worker.start()
 
-    stop_event.wait()
+    kill_switch_flag.wait()
     print("[INFO] Kill switch activated. Terminating script...")
 
     raise KillSwitchInterrupt()
