@@ -32,7 +32,7 @@ class RoomTraverser:
     WHEEL_BASE_MM = 159
     
     # PID constants
-    pid_constants = {
+    parameters = {
         "forward": {
             RoomType.CORNER_SINGLE: {
                 "Kp": 100,
@@ -40,6 +40,7 @@ class RoomTraverser:
                 "Kd": 140,
                 "steer_scale": 1.3,
                 "ramp": 0.0,
+                "straight_distance": 45,
             },
             RoomType.WALL_SINGLE: {
                 "Kp": 205,
@@ -47,6 +48,7 @@ class RoomTraverser:
                 "Kd": 170,
                 "steer_scale": 1.3,
                 "ramp": 0.0,
+                "straight_distance": 40,
             },
             RoomType.CORNER_DOUBLE_FIRST_HALF: {
                 "Kp": 100,
@@ -54,6 +56,7 @@ class RoomTraverser:
                 "Kd": 140,
                 "steer_scale": 1.3,
                 "ramp": 0.0,
+                "straight_distance": 40,
             },
             RoomType.CORNER_DOUBLE_SECOND_HALF: {
                 "Kp": 100,
@@ -61,6 +64,7 @@ class RoomTraverser:
                 "Kd": 140,
                 "steer_scale": 1.3,
                 "ramp": 0.0,
+                "straight_distance": 40,
             },
         }, 
         "backward": {
@@ -70,6 +74,7 @@ class RoomTraverser:
                 "Kd": 180,
                 "steer_scale": 0.7,
                 "ramp": 0.0,
+                "straight_distance": -80,
             },
             RoomType.WALL_SINGLE: {
                 "Kp": 1,
@@ -77,6 +82,7 @@ class RoomTraverser:
                 "Kd": 180,
                 "steer_scale": 0.7,
                 "ramp": 0.0,
+                "straight_distance": -80,
             },
             RoomType.CORNER_DOUBLE_FIRST_HALF: {
                 "Kp": 1,
@@ -84,6 +90,7 @@ class RoomTraverser:
                 "Kd": 180,
                 "steer_scale": 0.7,
                 "ramp": 0.0,
+                "straight_distance": -80,
             },
             RoomType.CORNER_DOUBLE_SECOND_HALF: {
                 "Kp": 1,
@@ -91,6 +98,7 @@ class RoomTraverser:
                 "Kd": 180,
                 "steer_scale": 0.7,
                 "ramp": 0.0,
+                "straight_distance": -80,
             },
         },
         }
@@ -122,7 +130,7 @@ class RoomTraverser:
     Returns:
     - Tuple of (bed color detected or None, distance travelled in CM)
     """
-    def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, straight_distance: float = 25, detect_bed: bool = False, detect_start: bool = False):
+    def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, detect_bed: bool = False, detect_start: bool = False):
         # Reset encoders first, then immediately float so the BrickPi3 position
         # controller (briefly engaged by reset_encoder) cannot lock the wheels
         # before set_dps takes over.
@@ -145,10 +153,11 @@ class RoomTraverser:
         bed_detected = False
         start_detected = False
 
+        straight_distance = self.parameters[room_type]["straight_distance"]
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * math.pi)) * 360
 
         motor_base_power = self.base_power
-        pid_cfg = self.pid_constants["forward"][room_type] if straight_distance >= 0 else self.pid_constants["backward"][room_type]
+        pid_cfg = self.parameters["forward"][room_type] if straight_distance >= 0 else self.parameters["backward"][room_type]
         start_dps = motor_base_power if straight_distance > 0 else -motor_base_power
         t0 = time.time()
         self.left_motor.set_dps(start_dps)
@@ -318,7 +327,7 @@ class RoomTraverser:
         try:
             threading.Thread(target=_kill_switch_callback).start()
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
-            traverse_results = self.run(room_type, 45, detect_bed=True)
+            traverse_results = self.run(room_type, detect_bed=True)
             bed_found = traverse_results[0] is not None
             bed_color_found = traverse_results[0]
             distance_travelled = traverse_results[1]
@@ -372,8 +381,8 @@ class RoomTraverser:
                     self.right_motor.wait_is_stopped()
 
                     print("Dropping block")
-                    grabber_controller.start_unloading()
-                    self._wait_for_unloading(grabber_controller, expected_bloc_count=1, label="unload")
+                    # grabber_controller.start_unloading()
+                    # self._wait_for_unloading(grabber_controller, expected_bloc_count=1, label="unload")
 
                     self.sound_controller.play_success()
 
@@ -395,7 +404,7 @@ class RoomTraverser:
                 print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
             
             print("Going back.")
-            back_result = self.run(room_type, -2 * distance_travelled, detect_bed=False, detect_start=True)
+            back_result = self.run(room_type, detect_bed=False, detect_start=True)
             if back_result[0] == "orange":
                 print(f"Returned to starting point (orange detected) after {back_result[1]:.2f} cm.")
             else:
