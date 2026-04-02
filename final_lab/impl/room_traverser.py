@@ -325,7 +325,6 @@ class RoomTraverser:
     """
     def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
         try:
-            threading.Thread(target=_kill_switch_callback).start()
             # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
             traverse_results = self.run(room_type, detect_bed=True)
             bed_found = traverse_results[0] is not None
