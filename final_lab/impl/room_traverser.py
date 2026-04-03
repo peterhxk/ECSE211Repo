@@ -619,6 +619,9 @@ class RoomTraverser:
 
         POWER = 250
 
+        print("MOVING FORWARD, SWEEPING")
+        self.color_sensor_controller.sweep_start(colours=[], range="full")
+
         self.move_differential(0, -20, POWER)
         self.move_differential(60, 0, POWER)
         for _ in range(NUM_ITERATIONS):
@@ -631,6 +634,9 @@ class RoomTraverser:
 
         self.move_differential(-20, 0, POWER)
         self.move_differential(0, 60, POWER)
+
+        print("DONE!!! SWEEPING")
+        self.color_sensor_controller.sweep_stop()
 
         # self.run(room_type=room_type, detect_bed=False, detect_start=True)
     
