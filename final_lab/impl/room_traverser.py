@@ -413,6 +413,39 @@ class RoomTraverser:
         else:
             print(f"Back run completed without detecting orange after {back_result[1]:.2f} cm.")
 
+    # Ultrasonic: settle after motion, then median over samples (spike-resistant).
+    _US_ENTRY_SETTLE_S = 0.15
+    _US_ENTRY_SAMPLES = 9
+    _US_ENTRY_INTERVAL_S = 0.04
+    _US_CM_MIN = 2.0
+    _US_CM_MAX = 250.0
+
+    def _ultrasonic_cm_robust(self) -> float:
+        """
+        One stable reading in cm after the robot has stopped: brief settle, then
+        median of several samples (EV3 ultrasonic often throws outliers).
+        """
+        time.sleep(self._US_ENTRY_SETTLE_S)
+        buf: list[float] = []
+        for _ in range(self._US_ENTRY_SAMPLES):
+            v = self.ultrasonic_sensor.get_cm()
+            if v is not None:
+                try:
+                    fv = float(v)
+                    if self._US_CM_MIN <= fv <= self._US_CM_MAX:
+                        buf.append(fv)
+                except (TypeError, ValueError):
+                    pass
+            time.sleep(self._US_ENTRY_INTERVAL_S)
+        if not buf:
+            v = self.ultrasonic_sensor.get_cm()
+            return float(v) if v is not None else 0.0
+        buf.sort()
+        mid = len(buf) // 2
+        if len(buf) % 2:
+            return buf[mid]
+        return (buf[mid - 1] + buf[mid]) / 2.0
+
     """
     When at room entry, we may or may not be perpendicular to the entry.
     This function is used to center the robot at the room entry.
@@ -420,13 +453,14 @@ class RoomTraverser:
     def center_at_room_entry(self):
         # 10 degrees.
         ALPHA = 10
+        alpha_rad = math.radians(ALPHA)
 
         # 1. while loop turn 1-2 degrees in the same direction until distance-change changes sign
         current_distance = 0
         for _ in range(5):
             current_distance += self.ultrasonic_sensor.get_cm()
         current_distance /= 5
-        print(f"Initial distance: {current_distance} cm")
+
         last_distance = current_distance
         delta_distance = 0
         last_delta_distance = 0
@@ -441,22 +475,24 @@ class RoomTraverser:
             delta_distance = current_distance - last_distance
             last_delta_distance = delta_distance
             last_distance = current_distance
-            print(f"Current distance: {current_distance} cm, Delta distance: {delta_distance} cm")
+            
             if delta_distance > 0 and last_delta_distance > 0:
                 break
 
         
         # 2. Now read the current distance, and turn another alpha, and read again
-        d1 = self.ultrasonic_sensor.get_cm()
+        d1 = self._ultrasonic_cm_robust()
         self.driving_controller.turn_in_place(ALPHA)
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
 
-        d2 = self.ultrasonic_sensor.get_cm()
-
+        d2 = self._ultrasonic_cm_robust()
 
         # 3. Use d1, d2 alongside derived formula to get theta_1
-        theta_1 = math.atan2(d1 - d2 * math.cos(ALPHA), d1 * math.sin(ALPHA)) * 180 / math.pi
+        theta_1 = math.atan2(
+            d1 - d2 * math.cos(alpha_rad),
+            d1 * math.sin(alpha_rad),
+        ) * 180 / math.pi
 
         
         # 4. Turn in place the other way by theta_1 + alpha degrees
