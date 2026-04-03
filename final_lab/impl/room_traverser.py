@@ -289,14 +289,12 @@ class RoomTraverser:
                 self.driving_controller.turn_in_place(turn_angle)
                 self.left_motor.wait_is_stopped()
                 self.right_motor.wait_is_stopped()
-                time.sleep(0.5)
 
                 # Drive towards bed
                 print(f"Driving {APPROACH_MM}mm towards green bed")
                 self.driving_controller.move_distance(APPROACH_MM)
                 self.left_motor.wait_is_stopped()
                 self.right_motor.wait_is_stopped()
-                time.sleep(0.5)
 
                 # Drop one block (2 -> 1)
                 print("Dropping block")
@@ -305,26 +303,24 @@ class RoomTraverser:
                 self._wait_for_unloading(grabber_controller, expected_bloc_count=1, label="unload")
 
                 self.sound_controller.play_success()
-                time.sleep(2)
+                self.sound_controller.wait_done()
 
                 # Drive back to where the bed was detected
                 print(f"Reversing {APPROACH_MM}mm from green bed")
                 self.driving_controller.move_distance(-APPROACH_MM)
                 self.left_motor.wait_is_stopped()
                 self.right_motor.wait_is_stopped()
-                time.sleep(0.5)
 
                 # Turn back to original heading
                 print(f"Turning back {-turn_angle:.1f}° to restore heading")
                 self.driving_controller.turn_in_place(-turn_angle)
                 self.left_motor.wait_is_stopped()
                 self.right_motor.wait_is_stopped()
-                time.sleep(0.5)
 
                 print("Back at original position, ready for backwards pass")
             else:
                 print("Red bed detected, skipping unloading")
-            time.sleep(2)
+            time.sleep(0.1)
         else:
             print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
         

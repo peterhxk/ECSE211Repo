@@ -132,6 +132,8 @@ try:
         routing.room1_to_room2()
         room_traverser.traverse_a_room(RoomType.WALL_SINGLE, grabber_controller)
 
+        routing.room2_to_room3A()
+
         sound_controller.play_mission_complete()
         sound_controller.wait_done()
 
