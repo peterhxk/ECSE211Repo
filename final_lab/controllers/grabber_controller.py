@@ -127,6 +127,8 @@ class GrabberController:
         print("[GYRO] worker started")
 
         try:
+            kill_hits = 0
+            kill_needed = 5
             while not self._gyro_stop.is_set():
                 raw = self.gyro.get_dps_measure()
                 now = time.time()
@@ -140,7 +142,11 @@ class GrabberController:
 
                 # internal kill trigger
                 if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
-                    self.kill(reason=f"FAST_TILT_KILL detected: dps={dps:.3f}")
+                    kill_hits += 1
+                else:
+                    kill_hits = 0
+                if kill_hits >= kill_needed:
+                    self.kill(reason=f"FAST_TILT_KILL detected ({kill_hits} hits): dps={dps:.3f}")
                     return
 
                 with self._gyro_sample_cond:
@@ -494,6 +500,14 @@ class GrabberController:
             self.motor.set_dps(0)
 
         return samples
+
+    def eject_existing_blocs(self,duration=5):
+        print("[Eject] Ejecting any existing blocs...")
+        self.motor.set_dps(-self.motor_calibration_dps)
+        time.sleep(duration)
+        self.motor.set_dps(0)
+        time.sleep(0.5)
+
 
     def calibrate_motor_drop_detection(self, calibration=True):
         """
