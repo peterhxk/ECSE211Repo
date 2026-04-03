@@ -617,7 +617,7 @@ class RoomTraverser:
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
 
-        POWER = 150
+        POWER = 250
 
         self.move_differential(0, -20, POWER)
         self.move_differential(60, 0, POWER)
