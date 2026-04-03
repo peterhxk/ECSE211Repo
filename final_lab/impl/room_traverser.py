@@ -46,13 +46,13 @@ class RoomTraverser:
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.7
 
-    def __init__(self, left_motor: Motor, right_motor: Motor, base_power: int, color_sensor_controller: ColourSensorController, sound_controller: SoundController = None):
-        self.left_motor = left_motor
-        self.right_motor = right_motor
-        self.base_power = base_power
+    def __init__(self, driving_controller: DrivingController, color_sensor_controller: ColourSensorController, sound_controller: SoundController = None):
+        self.left_motor = driving_controller.left_motor
+        self.right_motor = driving_controller.right_motor
+        self.base_power = driving_controller.base_power
         self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         self.color_sensor_controller = color_sensor_controller
-        self.driving_controller = DrivingController(left_motor, right_motor, base_power)
+        self.driving_controller = driving_controller
         self.sound_controller = sound_controller
         wait_ready_sensors(True)
         print("Room Traverser ready.")

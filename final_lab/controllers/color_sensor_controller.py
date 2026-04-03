@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Literal, List, Tuple, Union, NamedTuple, Optional
 import math
 import data.measurements as consts
-from collections import deque
+from collections import deque, Counter
 
 
 def normalize_colours(r, g, b):
@@ -450,12 +450,11 @@ class ColourSensorController (EV3ColorSensor):
         current_colour = self.read_colour()
         self._colour_window.append(current_colour)
         
-        # If window is not yet full, return the current reading
+        # If window is not yet full, return None
         if len(self._colour_window) < 3:
-            return current_colour
+            return None
         
         # Window is full, return the most common colour (majority vote)
-        from collections import Counter
         colour_counts = Counter(self._colour_window)
         most_common_colour = colour_counts.most_common(1)[0][0]
         return most_common_colour
