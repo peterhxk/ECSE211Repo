@@ -40,9 +40,9 @@ class ColourSensorController (EV3ColorSensor):
     # Angle tolerance at which the line is still considered the same one
     THETA_TOLERANCE = 10
 
-    MOTOR_POWER_DPS = 400
+    MOTOR_POWER_DPS = 250
 
-    def __init__(self, port, motor: Motor, mode="component", bp=None):
+    def __init__(self, port, motor: Motor, mode="component", calibrate=False):
         super().__init__(port)
 
         self.motor = motor
@@ -52,33 +52,56 @@ class ColourSensorController (EV3ColorSensor):
         self.BW_DROP_THRESHOLD = 1.5   # drop from baseline → black
         self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
 
-        self._cached_colours = None
-        self._cached_bw = None
-        self._load_colour_caches()
-
         # Reset the value of the motor encoder.
-        self.motor.reset_encoder()
+        if calibrate:
+            self._calibrate_arm()
+            print("Calibrated Arm")
         # Sets maximum speed of motor.
         motor.set_limits(0, self.MOTOR_POWER_DPS)
 
-    def _load_colour_caches(self):
-        """Load colour and black/white JSON data into memory so sweep loops
-        don't hit the filesystem on every reading."""
-        try:
-            with open("data/colours.json", "r") as f:
-                self._cached_colours = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            self._cached_colours = None
+    def _calibrate_arm(self):
+        CALIBRATION_DPS = 50
+        HIT_SPEED_THRESHOLD = 2  # near zero speed means likely stalled at stop
+        STABLE_HITS_NEEDED = 1
+        SAMPLE_DT = 0.02
+        MAX_TIME = 8.0
 
-        try:
-            with open("data/black_white.json", "r") as f:
-                self._cached_bw = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            self._cached_bw = None
+        self.motor.set_dps(-CALIBRATION_DPS)
+        counter = 0
+        t0 = time.time()
 
-    def reload_colour_caches(self):
-        """Public wrapper to refresh caches after recalibration."""
-        self._load_colour_caches()
+        time.sleep(0.3)  # let motion settle
+
+        while counter < STABLE_HITS_NEEDED:
+            elapsed = time.time() - t0
+            if elapsed > MAX_TIME:
+                print("[WARN] Calibration timed out")
+                break
+
+            speed = self.motor.get_speed()
+            if speed is None:
+                time.sleep(SAMPLE_DT)
+                continue
+
+            speed = float(speed)
+            #print("speed =", speed)
+
+            # Detect stall / end-stop: commanded motion but measured speed near zero
+            if abs(speed) < HIT_SPEED_THRESHOLD:
+                counter += 1
+                print(f"HIT! {counter}/{STABLE_HITS_NEEDED}")
+            else:
+                counter = 0
+
+            time.sleep(SAMPLE_DT)
+
+        print("CALIBRATE DONE")
+        self.motor.set_dps(0)
+        time.sleep(1)
+        self.motor.reset_encoder()
+        self.motor.offset_encoder(101)
+        self.motor.set_position(0)
+
 
     def _is_at_boundary(self, range: Literal["left", "right", "full"]) -> bool:
         """
@@ -98,9 +121,6 @@ class ColourSensorController (EV3ColorSensor):
         self.motor.set_limits(0, self.MOTOR_POWER_DPS)
         self.motor.set_position(angle)
         self.motor.wait_is_stopped(0.01)
-
-    def read_current_angle(self):
-        pass
 
 
     def sweep_start(self, colours: List[str] = [], range: Literal["left", "right", "full"] = "full",
@@ -257,16 +277,22 @@ class ColourSensorController (EV3ColorSensor):
 
     def read_black_white(self):
         """
-        Reads the current raw RGB and classifies as "b" or "w" by Euclidean
-        distance to calibrated raw RGB values. Uses cached data to avoid
-        filesystem I/O on every call.
-        Returns None if calibration data is missing.
+        Reads the current raw RGB, accumulates it into a rolling average,
+        then classifies as "b" or "w" by Euclidean distance to calibrated raw RGB
+        values in black_white.json. Raw values preserve brightness, which is the
+        key distinguishing feature between black and white.
+        Returns None if the file is missing or lacks both entries.
         """
-        bw = self._cached_bw
-        if bw is None or "b" not in bw or "w" not in bw:
+        raw = self.get_rgb()
+
+        try:
+            with open("data/black_white.json", "r") as f:
+                bw = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
             return None
 
-        raw = self.get_rgb()
+        if "b" not in bw or "w" not in bw:
+            return None
 
         def euclid(a, b):
             return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
@@ -303,7 +329,6 @@ class ColourSensorController (EV3ColorSensor):
         with open("data/black_white.json", "w") as f:
             json.dump(bw, f, indent=2)
 
-        self._cached_bw = bw
         print(f"Updated '{label}': {bw[label]}  magnitude={math.sqrt(r**2+g**2+b**2):.1f}")
 
     def ingest_colours(self, colour_name: str):
@@ -331,20 +356,17 @@ class ColourSensorController (EV3ColorSensor):
         with open("data/colours.json", "w") as f:
             json.dump(colours, f, indent=2)
 
-        self._cached_colours = colours
         print(f"Updated '{colour_name}': {colours[colour_name]}")
 
     def read_colour(self):
         '''
         Reads the current colour of the colour sensor (not black and white).
-        Uses cached colour data to avoid filesystem I/O on every call.
         '''
-        colours = self._cached_colours
-        if not colours:
-            return None
-
         cur_rgb = self.get_rgb()
         cur_r, cur_g, cur_b = normalize_colours(cur_rgb[0], cur_rgb[1], cur_rgb[2])
+
+        with open("data/colours.json", "r") as f:
+            colours = json.load(f)
 
         colour_to_distance = {}
         for colour, rgb in colours.items():
