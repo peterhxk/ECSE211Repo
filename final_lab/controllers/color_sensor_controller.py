@@ -441,9 +441,9 @@ class ColourSensorController (EV3ColorSensor):
     def read_rgb(self):
         return self.get_rgb()
 
-    def read_colour_interval(self, sliding_window=3):
+    def read_colour_interval(self):
         """
-        Reads the current colour and filters noise using a default sliding window of 3 readings.
+        Reads the current colour and filters noise using a sliding window of 3 readings.
         Returns the most common colour from the window when filled, otherwise returns the current reading.
         This helps ignore temporary noise by requiring majority agreement across 3 consecutive readings.
         """
@@ -451,7 +451,7 @@ class ColourSensorController (EV3ColorSensor):
         self._colour_window.append(current_colour)
         
         # If window is not yet full, return the current reading
-        if len(self._colour_window) < sliding_window:
+        if len(self._colour_window) < 3:
             return current_colour
         
         # Window is full, return the most common colour (majority vote)
