@@ -341,69 +341,69 @@ class RoomTraverser:
     Input:
     - room_type: The type of the room to traverse. This determines the path taken by the robot.
     """
+    def _approach_and_unload(self, bed_angle: float, bed_colour: str, approach_mm: int = 80) -> None:
+        """
+        Turn towards the detected bed, drive up to it, drop a block, then
+        reverse and restore the original heading — leaving the robot exactly
+        where it was before this call.
+
+        Args:
+            bed_angle:   Arm angle at detection (degrees). Positive = right.
+            bed_colour:  Detected colour string ("green" or "red").
+            approach_mm: How far to drive toward the bed (mm).
+        """
+        if bed_colour != "green":
+            print(f"Bed colour is '{bed_colour}' — skipping unload.")
+            return
+
+        robot_turn_mag = self.driving_controller.convert_sensor_angle_to_robot_angle(bed_angle)
+        turn_angle = math.copysign(robot_turn_mag, bed_angle) if bed_angle != 0 else 0
+
+        self.color_sensor_controller.set_arm_at_angle(math.copysign(90, -1 * bed_angle))
+
+        print(f"Turning {turn_angle:.1f}° towards green bed (arm was at {bed_angle:.1f}°)")
+        self.driving_controller.turn_in_place(turn_angle)
+        self.left_motor.wait_is_stopped()
+        self.right_motor.wait_is_stopped()
+
+        print(f"Driving {approach_mm}mm towards green bed")
+        self.driving_controller.move_distance(approach_mm)
+        self.left_motor.wait_is_stopped()
+        self.right_motor.wait_is_stopped()
+
+        print("Dropping block")
+        self.grabber_controller.start_unloading()
+        self._wait_for_unloading(expected_bloc_count=1, label="unload")
+
+        if self.sound_controller:
+            self.sound_controller.play_success()
+            self.sound_controller.wait_done()
+
+        print(f"Reversing {approach_mm}mm from green bed")
+        self.driving_controller.move_distance(-approach_mm)
+        self.left_motor.wait_is_stopped()
+        self.right_motor.wait_is_stopped()
+
+        print(f"Turning back {-turn_angle:.1f}° to restore heading")
+        self.driving_controller.turn_in_place(-turn_angle)
+        self.left_motor.wait_is_stopped()
+        self.right_motor.wait_is_stopped()
+
+        print("Restored original position and heading.")
+        time.sleep(0.1)
+
     def traverse_a_room(self, room_type: RoomType) -> None:
-        # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
         traverse_results = self.run(room_type, 45, detect_bed=True)
-        bed_found = traverse_results[0] is not None
-        bed_color_found = traverse_results[0]
+        bed_colour = traverse_results[0]
         distance_travelled = traverse_results[1]
         bed_angle = traverse_results[2]
-        
-        if bed_found:
-            print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm, Angle: {bed_angle}")
-            if bed_color_found == "green":
-                APPROACH_MM = 80
 
-                robot_turn_mag = self.driving_controller.convert_sensor_angle_to_robot_angle(bed_angle)
-                if bed_angle > 0:
-                    turn_angle = robot_turn_mag
-                elif bed_angle < 0:
-                    turn_angle = -robot_turn_mag
-                else:
-                    turn_angle = 0
-
-                self.color_sensor_controller.set_arm_at_angle(math.copysign(90, -1 * bed_angle))
-
-                # Turn towards green bed
-                print(f"Turning {turn_angle:.1f}° towards green bed (sensor arm was at {bed_angle:.1f}°)")
-                self.driving_controller.turn_in_place(turn_angle)
-                self.left_motor.wait_is_stopped()
-                self.right_motor.wait_is_stopped()
-
-                # Drive towards bed
-                print(f"Driving {APPROACH_MM}mm towards green bed")
-                self.driving_controller.move_distance(APPROACH_MM)
-                self.left_motor.wait_is_stopped()
-                self.right_motor.wait_is_stopped()
-
-                # Drop one block (2 -> 1)
-                print("Dropping block")
-
-                self.grabber_controller.start_unloading()
-                self._wait_for_unloading(expected_bloc_count=1, label="unload")
-
-                self.sound_controller.play_success()
-                self.sound_controller.wait_done()
-
-                # Drive back to where the bed was detected
-                print(f"Reversing {APPROACH_MM}mm from green bed")
-                self.driving_controller.move_distance(-APPROACH_MM)
-                self.left_motor.wait_is_stopped()
-                self.right_motor.wait_is_stopped()
-
-                # Turn back to original heading
-                print(f"Turning back {-turn_angle:.1f}° to restore heading")
-                self.driving_controller.turn_in_place(-turn_angle)
-                self.left_motor.wait_is_stopped()
-                self.right_motor.wait_is_stopped()
-
-                print("Back at original position, ready for backwards pass")
-            else:
-                print("Red bed detected, skipping unloading")
-            time.sleep(0.1)
+        if bed_colour is not None:
+            print(f"Detected bed colour: {bed_colour}, distance: {distance_travelled:.2f} cm, angle: {bed_angle}")
+            self._approach_and_unload(bed_angle, bed_colour)
         else:
-            print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
-        
+            print(f"No bed detected, distance travelled: {distance_travelled:.2f} cm")
+
         print("Going back.")
         back_result = self.run(room_type, -2 * distance_travelled, detect_bed=False, detect_start=True)
         if back_result[0] == "orange":
@@ -620,27 +620,55 @@ class RoomTraverser:
         POWER = 320
 
         print("MOVING FORWARD, SWEEPING")
-        self.color_sensor_controller.sweep_start(colours=[], range="full")
+        self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
 
         smaller_radius_deg = turn_angles[room_type]["smaller_radius_deg"]
         larger_radius_deg = turn_angles[room_type]["larger_radius_deg"]
 
-        self.move_differential(10, 10, POWER)
+        bed_result = None
 
-        self.move_differential(0, smaller_radius_deg / 2, POWER)
-        self.move_differential(larger_radius_deg / 2, 0, POWER)
+        def _check_sweep():
+            return self.color_sensor_controller.sweep_get_result()
+
+        moves = [
+            (10, 10),
+            (0, smaller_radius_deg / 2),
+            (larger_radius_deg / 2, 0),
+        ]
         for _ in range(NUM_ITERATIONS):
-            self.move_differential(smaller_radius_deg, 0, POWER)
-            self.move_differential(0, larger_radius_deg, POWER)
-            self.move_differential(0, smaller_radius_deg, POWER)
-            self.move_differential(larger_radius_deg, 0, POWER)
-        
-        self.move_differential(smaller_radius_deg / 2, 0, POWER)
-        self.move_differential(0, larger_radius_deg / 2, POWER)
+            moves += [
+                (smaller_radius_deg, 0),
+                (0, larger_radius_deg),
+                (0, smaller_radius_deg),
+                (larger_radius_deg, 0),
+            ]
+        moves += [
+            (smaller_radius_deg / 2, 0),
+            (0, larger_radius_deg / 2),
+        ]
+
+        for i, (left_mm, right_mm) in enumerate(moves):
+            self.move_differential(left_mm, right_mm, POWER)
+            bed_result = _check_sweep()
+            if bed_result:
+                print(f"Bed detected during sweep: {bed_result}")
+                break
 
         self.color_sensor_controller.sweep_stop()
         self.color_sensor_controller.set_arm_at_angle(0)
 
-        print("moving back")
+        if bed_result:
+            angle, colour, _ = bed_result[0]
+            print(f"  colour={colour}  arm_angle={angle:.1f}°")
+            self._approach_and_unload(angle, colour)
+
+            # Resume the moves that hadn't run yet when the bed was detected
+            remaining = moves[i + 1:]
+            if remaining:
+                print(f"Resuming {len(remaining)} remaining move(s) after bed handling.")
+                for left_mm, right_mm in remaining:
+                    self.move_differential(left_mm, right_mm, POWER)
+
+        print("Moving back.")
         self.run(room_type=room_type, detect_bed=False, detect_start=True)
     
