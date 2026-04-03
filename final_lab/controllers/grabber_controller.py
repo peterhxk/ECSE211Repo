@@ -1261,6 +1261,13 @@ class GrabberController:
         print(f"[DEBUG] Loading finished for {label} with status={final_status}")
         return True
 
+    def eject_existing_blocs(self,duration=5):
+        print("Ejecting all cubes inside the Grabber")
+        time.sleep(0.1)
+        self.motor.set_dps(-self.motor_calibration_dps)
+        time.sleep(duration)
+        self.motor.set_dps(0)
+        time.sleep(0.5)
 
 
 if __name__ == "__main__":
