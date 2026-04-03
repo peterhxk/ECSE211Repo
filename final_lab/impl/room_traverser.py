@@ -412,3 +412,52 @@ class RoomTraverser:
             print(f"Returned to starting point (orange detected) after {back_result[1]:.2f} cm.")
         else:
             print(f"Back run completed without detecting orange after {back_result[1]:.2f} cm.")
+
+    """
+    When at room entry, we may or may not be perpendicular to the entry.
+    This function is used to center the robot at the room entry.
+    """
+    def center_at_room_entry(self):
+        # 10 degrees.
+        ALPHA = 10
+
+        # 1. while loop turn 1-2 degrees in the same direction until distance-change changes sign
+        current_distance = self.ultrasonic_sensor.get_cm()
+        last_distance = current_distance
+        delta_distance = 0
+        last_delta_distance = 0
+        while True:
+            self.driving_controller.turn_in_place(2)
+            self.left_motor.wait_is_stopped()
+            self.right_motor.wait_is_stopped()
+
+            current_distance = self.ultrasonic_sensor.get_cm()
+            delta_distance = current_distance - last_distance
+            last_delta_distance = delta_distance
+            last_distance = current_distance
+
+            if delta_distance * last_delta_distance < 0:
+                break
+
+            iterations += 1
+
+        
+        # 2. Now read the current distance, and turn another alpha, and read again
+        d1 = self.ultrasonic_sensor.get_cm()
+        self.driving_controller.turn_in_place(ALPHA)
+        self.left_motor.wait_is_stopped()
+        self.right_motor.wait_is_stopped()
+
+        d2 = self.ultrasonic_sensor.get_cm()
+
+
+        # 3. Use d1, d2 alongside derived formula to get theta_1
+        theta_1 = math.atan2(d1 - d2 * math.cos(ALPHA), d1 * math.sin(ALPHA)) * 180 / math.pi
+
+        
+        # 4. Turn in place the other way by theta_1 + alpha degrees
+        self.driving_controller.turn_in_place(-(theta_1 + ALPHA))
+        self.left_motor.wait_is_stopped()
+        self.right_motor.wait_is_stopped()
+
+

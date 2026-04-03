@@ -20,7 +20,8 @@ driving_controller = DrivingController(left_motor, right_motor, 120)
 
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_motor)
 grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
-room_traverser = RoomTraverser(left_motor, right_motor, MOTOR_POWER, color_sensor_controller, grabber_controller, SoundController())
+sound_controller = SoundController()
+room_traverser = RoomTraverser(driving_controller, color_sensor_controller, grabber_controller, sound_controller)
 # grabber_controller = GrabberController(Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
 
@@ -37,9 +38,10 @@ if __name__ == "__main__":
     try:
         # Example usage: traverse a corner room while detecting for a bed
         # room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
-        room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE)
-        routing.room1_to_room2()
-        room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE)
+        # room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE)
+        # routing.room1_to_room2()
+        # room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE)
+        room_traverser.center_at_room_entry()
     except Exception as err:
         print(err)
     finally:
