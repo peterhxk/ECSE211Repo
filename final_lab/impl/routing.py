@@ -44,21 +44,18 @@ class Routing(SweepLineFollower):
 
         print('[DEBUG] routing: Beginning second left turn')
         self.turn_logic("left", "front")
-        self.move_forward(50, "orange")
     
     def room2_to_room3A(self):
         self._exit_room()
 
         self.turn_logic("right", "back")
         self.turn_logic("right", "front")
-        self.move_forward(50, "orange")
 
     def room3A_to_room3B(self):
         self._exit_room()
 
         self.turn_logic("left", "back")
         self.turn_logic("right", "front")
-        self.move_forward(50, "orange") 
 
     def room2_to_pharmacy(self):
         # UNTESTED
