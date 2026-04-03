@@ -44,8 +44,8 @@ if __name__ == "__main__":
         # room_traverser.align_to_wall()
         # room_traverser.run_double_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF)
 
-        routing.room2_to_room3A()
-        room_traverser.align_to_wall()
+        # routing.room2_to_room3A()
+        # room_traverser.align_to_wall()
         room_traverser.run_double_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF)
         routing.room3A_to_room3B()
         room_traverser.align_to_wall()
