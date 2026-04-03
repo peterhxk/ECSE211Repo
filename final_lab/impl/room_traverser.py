@@ -601,7 +601,7 @@ class RoomTraverser:
         self.right_motor.wait_is_stopped()
 
     def run_double_room(self, room_type: RoomType):
-        NUM_ITERATIONS = 2
+        NUM_ITERATIONS = 4
         turn_angles = {
             RoomType.CORNER_DOUBLE_FIRST_HALF: {
                 "smaller_radius_deg": -40,
