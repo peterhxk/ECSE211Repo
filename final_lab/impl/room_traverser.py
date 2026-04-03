@@ -262,84 +262,75 @@ class RoomTraverser:
     - grabber_controller: The grabber controller to use to load and unload blocks.
     """
     def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
-        try:
-            # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
-            traverse_results = self.run(room_type, 45, detect_bed=True)
-            bed_found = traverse_results[0] is not None
-            bed_color_found = traverse_results[0]
-            distance_travelled = traverse_results[1]
-            bed_angle = traverse_results[2]
-            
-            if bed_found:
-                print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm, Angle: {bed_angle}")
-                if bed_color_found == "green":
-                    APPROACH_MM = 80
+        # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
+        traverse_results = self.run(room_type, 45, detect_bed=True)
+        bed_found = traverse_results[0] is not None
+        bed_color_found = traverse_results[0]
+        distance_travelled = traverse_results[1]
+        bed_angle = traverse_results[2]
+        
+        if bed_found:
+            print(f"Detected bed color: {bed_color_found}, Distance travelled: {distance_travelled:.2f} cm, Angle: {bed_angle}")
+            if bed_color_found == "green":
+                APPROACH_MM = 80
 
-                    robot_turn_mag = self.driving_controller.convert_sensor_angle_to_robot_angle(bed_angle)
-                    if bed_angle > 0:
-                        turn_angle = robot_turn_mag
-                    elif bed_angle < 0:
-                        turn_angle = -robot_turn_mag
-                    else:
-                        turn_angle = 0
-
-                    self.color_sensor_controller.set_arm_at_angle(math.copysign(90, -1 * bed_angle))
-
-                    # Turn towards green bed
-                    print(f"Turning {turn_angle:.1f}° towards green bed (sensor arm was at {bed_angle:.1f}°)")
-                    self.driving_controller.turn_in_place(turn_angle)
-                    self.left_motor.wait_is_stopped()
-                    self.right_motor.wait_is_stopped()
-                    time.sleep(0.5)
-
-                    # Drive towards bed
-                    print(f"Driving {APPROACH_MM}mm towards green bed")
-                    self.driving_controller.move_distance(APPROACH_MM)
-                    self.left_motor.wait_is_stopped()
-                    self.right_motor.wait_is_stopped()
-                    time.sleep(0.5)
-
-                    # Drop one block (2 -> 1)
-                    print("Dropping block")
-
-                    grabber_controller.start_unloading()
-                    self._wait_for_unloading(grabber_controller, expected_bloc_count=1, label="unload")
-
-                    self.sound_controller.play_success()
-                    time.sleep(2)
-
-                    # Drive back to where the bed was detected
-                    print(f"Reversing {APPROACH_MM}mm from green bed")
-                    self.driving_controller.move_distance(-APPROACH_MM)
-                    self.left_motor.wait_is_stopped()
-                    self.right_motor.wait_is_stopped()
-                    time.sleep(0.5)
-
-                    # Turn back to original heading
-                    print(f"Turning back {-turn_angle:.1f}° to restore heading")
-                    self.driving_controller.turn_in_place(-turn_angle)
-                    self.left_motor.wait_is_stopped()
-                    self.right_motor.wait_is_stopped()
-                    time.sleep(0.5)
-
-                    print("Back at original position, ready for backwards pass")
+                robot_turn_mag = self.driving_controller.convert_sensor_angle_to_robot_angle(bed_angle)
+                if bed_angle > 0:
+                    turn_angle = robot_turn_mag
+                elif bed_angle < 0:
+                    turn_angle = -robot_turn_mag
                 else:
-                    print("Red bed detected, skipping unloading")
+                    turn_angle = 0
+
+                self.color_sensor_controller.set_arm_at_angle(math.copysign(90, -1 * bed_angle))
+
+                # Turn towards green bed
+                print(f"Turning {turn_angle:.1f}° towards green bed (sensor arm was at {bed_angle:.1f}°)")
+                self.driving_controller.turn_in_place(turn_angle)
+                self.left_motor.wait_is_stopped()
+                self.right_motor.wait_is_stopped()
+                time.sleep(0.5)
+
+                # Drive towards bed
+                print(f"Driving {APPROACH_MM}mm towards green bed")
+                self.driving_controller.move_distance(APPROACH_MM)
+                self.left_motor.wait_is_stopped()
+                self.right_motor.wait_is_stopped()
+                time.sleep(0.5)
+
+                # Drop one block (2 -> 1)
+                print("Dropping block")
+
+                grabber_controller.start_unloading()
+                self._wait_for_unloading(grabber_controller, expected_bloc_count=1, label="unload")
+
+                self.sound_controller.play_success()
                 time.sleep(2)
+
+                # Drive back to where the bed was detected
+                print(f"Reversing {APPROACH_MM}mm from green bed")
+                self.driving_controller.move_distance(-APPROACH_MM)
+                self.left_motor.wait_is_stopped()
+                self.right_motor.wait_is_stopped()
+                time.sleep(0.5)
+
+                # Turn back to original heading
+                print(f"Turning back {-turn_angle:.1f}° to restore heading")
+                self.driving_controller.turn_in_place(-turn_angle)
+                self.left_motor.wait_is_stopped()
+                self.right_motor.wait_is_stopped()
+                time.sleep(0.5)
+
+                print("Back at original position, ready for backwards pass")
             else:
-                print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
-            
-            print("Going back.")
-            back_result = self.run(room_type, -2 * distance_travelled, detect_bed=False, detect_start=True)
-            if back_result[0] == "orange":
-                print(f"Returned to starting point (orange detected) after {back_result[1]:.2f} cm.")
-            else:
-                print(f"Back run completed without detecting orange after {back_result[1]:.2f} cm.")
-            
-        except KeyboardInterrupt:
-            print("Interrupted via keyboard...")
-        except Exception as err:
-            print(err)  
-        finally:
-            grabber_controller.stop_gyro_monitor()
-            reset_brick()
+                print("Red bed detected, skipping unloading")
+            time.sleep(2)
+        else:
+            print(f"No bed detected, Distance travelled: {distance_travelled:.2f} cm")
+        
+        print("Going back.")
+        back_result = self.run(room_type, -2 * distance_travelled, detect_bed=False, detect_start=True)
+        if back_result[0] == "orange":
+            print(f"Returned to starting point (orange detected) after {back_result[1]:.2f} cm.")
+        else:
+            print(f"Back run completed without detecting orange after {back_result[1]:.2f} cm.")
