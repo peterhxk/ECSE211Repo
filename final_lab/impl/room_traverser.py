@@ -605,8 +605,8 @@ class RoomTraverser:
         NUM_ITERATIONS = 4
         turn_angles = {
             RoomType.CORNER_DOUBLE_FIRST_HALF: {
-                "smaller_radius_deg": -40,
-                "larger_radius_deg": 120,
+                "smaller_radius_deg": -50,
+                "larger_radius_deg": 130,
             },
             RoomType.CORNER_DOUBLE_SECOND_HALF: {
                 "smaller_radius_deg": -30,
@@ -648,8 +648,11 @@ class RoomTraverser:
             (0, larger_radius_deg / 2),
         ]
 
+        cumulative_heading = 0.0
+
         for left_mm, right_mm in moves:
             self.move_differential(left_mm, right_mm, POWER)
+            cumulative_heading += (left_mm - right_mm) * 180.0 / (math.pi * self.WHEEL_BASE_MM)
             bed_result = _check_sweep()
             if bed_result:
                 print(f"Bed detected during sweep: {bed_result}")
@@ -662,6 +665,14 @@ class RoomTraverser:
             angle, colour, _ = bed_result[0]
             print(f"  colour={colour}  arm_angle={angle:.1f}°")
             self._approach_and_unload(angle, colour)
+
+        # Dead-reckon back to the original heading before the wall follower runs.
+        # cumulative_heading is the total rotation since we started straight;
+        # turning by its negative restores the original forward-facing orientation.
+        print(f"Restoring heading: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
+        self.driving_controller.turn_in_place(-cumulative_heading)
+        self.left_motor.wait_is_stopped()
+        self.right_motor.wait_is_stopped()
 
         print("Moving back.")
         self.run(room_type=room_type, detect_bed=False, detect_start=True)
