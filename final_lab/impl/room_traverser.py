@@ -426,7 +426,7 @@ class RoomTraverser:
         for _ in range(5):
             current_distance += self.ultrasonic_sensor.get_cm()
         current_distance /= 5
-        
+        print(f"Initial distance: {current_distance} cm")
         last_distance = current_distance
         delta_distance = 0
         last_delta_distance = 0
@@ -441,7 +441,7 @@ class RoomTraverser:
             delta_distance = current_distance - last_distance
             last_delta_distance = delta_distance
             last_distance = current_distance
-
+            print(f"Current distance: {current_distance} cm, Delta distance: {delta_distance} cm")
             if delta_distance * last_delta_distance < 0:
                 break
 
