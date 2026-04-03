@@ -489,7 +489,7 @@ class RoomTraverser:
     # if it now undershoots, raise toward 1.0.
     ALIGN_CORRECTION_GAIN = 0.88
 
-    def align_to_wall(self, search_range_deg: float = 50.0, step_deg: float = 4.0):
+    def align_to_wall(self, search_range_deg: float = 40.0, step_deg: float = 4.0):
         """
         Align the robot so the ultrasonic sensor is pointing directly at the
         wall (minimum reading = robot parallel to the wall).
