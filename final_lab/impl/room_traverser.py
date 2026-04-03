@@ -422,16 +422,22 @@ class RoomTraverser:
         ALPHA = 10
 
         # 1. while loop turn 1-2 degrees in the same direction until distance-change changes sign
-        current_distance = self.ultrasonic_sensor.get_cm()
+        current_distance = 0
+        for _ in range(5):
+            current_distance += self.ultrasonic_sensor.get_cm()
+        current_distance /= 5
+        
         last_distance = current_distance
         delta_distance = 0
         last_delta_distance = 0
         while True:
-            self.driving_controller.turn_in_place(2)
+            self.driving_controller.turn_in_place(4)
             self.left_motor.wait_is_stopped()
             self.right_motor.wait_is_stopped()
 
-            current_distance = self.ultrasonic_sensor.get_cm()
+            for _ in range(5):
+                current_distance += self.ultrasonic_sensor.get_cm()
+            current_distance /= 5
             delta_distance = current_distance - last_distance
             last_delta_distance = delta_distance
             last_distance = current_distance
