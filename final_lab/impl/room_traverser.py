@@ -570,6 +570,22 @@ class RoomTraverser:
 
         print(f"[align] done — min reading {readings[min_idx]:.1f} cm at sweep angle {angles[min_idx]:+.1f}°")
 
+    def move_differential(self, left_dist_mm: float, right_dist_mm: float):
+        left_deg  = left_dist_mm  * 360 / self.WHEEL_DIAMETER_MM / math.pi
+        right_deg = right_dist_mm * 360 / self.WHEEL_DIAMETER_MM / math.pi
+
+        max_deg = max(abs(left_deg), abs(right_deg))
+        if max_deg == 0:
+            return
+
+        left_dps  = int(self.base_power * abs(left_deg)  / max_deg)
+        right_dps = int(self.base_power * abs(right_deg) / max_deg)
+
+        self.left_motor.set_limits(left_dps,  100)
+        self.right_motor.set_limits(right_dps, 100)
+
+        self.left_motor.set_position_relative(left_deg)
+        self.right_motor.set_position_relative(right_deg)
 
     def run_double_room(self, room_type: RoomType):
         NUM_ITERATIONS = 2
@@ -589,25 +605,10 @@ class RoomTraverser:
         self.right_motor.reset_encoder()
 
         for _ in range(NUM_ITERATIONS):
-            self.left_motor.set_position(turn_angles[room_type]["smaller_radius_deg"])
-            self.right_motor.set_position(turn_angles[room_type]["larger_radius_deg"])
-            self.left_motor.wait_is_stopped()
-            self.right_motor.wait_is_stopped()
+            self.move_differential(10, 50)
+            self.move_differential(50, 10)
 
-            self.left_motor.reset_encoder()
-            self.right_motor.reset_encoder()
-
-            self.left_motor.set_position(turn_angles[room_type]["larger_radius_deg"])
-            self.right_motor.set_position(turn_angles[room_type]["smaller_radius_deg"])
-            self.left_motor.wait_is_stopped()
-            self.right_motor.wait_is_stopped()
-
-            self.left_motor.reset_encoder()
-            self.right_motor.reset_encoder()
-
-        self.right_motor.set_position(turn_angles[room_type]["larger_radius_deg"] - turn_angles[room_type]["smaller_radius_deg"])
-        self.left_motor.wait_is_stopped()
-        self.right_motor.wait_is_stopped()
+        self.move_differential(0, 40)
 
         self.run(room_type=room_type, detect_bed=False, detect_start=True)
     
