@@ -49,6 +49,7 @@ if __name__ == "__main__":
         room_traverser.run_double_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF)
         routing.room3A_to_room3B()
         print("running double room 2")
+        room_traverser.align_to_wall()
         room_traverser.run_double_room(room_type=RoomType.CORNER_DOUBLE_SECOND_HALF)
         print("going back to pharmacy")
         routing.room3B_to_pharmacy()
