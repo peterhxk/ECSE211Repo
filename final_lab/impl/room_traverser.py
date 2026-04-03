@@ -446,57 +446,101 @@ class RoomTraverser:
             return buf[mid]
         return (buf[mid - 1] + buf[mid]) / 2.0
 
-    """
-    When at room entry, we may or may not be perpendicular to the entry.
-    This function is used to center the robot at the room entry.
-    """
-    def center_at_room_entry(self):
-        # 10 degrees.
-        ALPHA = 10
-        alpha_rad = math.radians(ALPHA)
+    # Sweep alignment: how many samples to take at each step (fewer than _US_ENTRY_SAMPLES
+    # is fine — noise averages out across all the sweep steps).
+    _US_SWEEP_SETTLE_S = 0.08
+    _US_SWEEP_SAMPLES = 5
 
-        # 1. while loop turn 1-2 degrees in the same direction until distance-change changes sign
-        current_distance = 0
-        current_distance = self._ultrasonic_cm_robust()
-        print(f"Initial distance: {current_distance} cm")
+    def _ultrasonic_cm_sweep(self) -> float:
+        """Faster variant of _ultrasonic_cm_robust for use in alignment sweeps.
+        Uses fewer samples; individual noise is tolerable since the whole sweep
+        curve is evaluated and only the argmin matters."""
+        time.sleep(self._US_SWEEP_SETTLE_S)
+        buf: list[float] = []
+        for _ in range(self._US_SWEEP_SAMPLES):
+            v = self.ultrasonic_sensor.get_cm()
+            if v is not None:
+                try:
+                    fv = float(v)
+                    if self._US_CM_MIN <= fv <= self._US_CM_MAX:
+                        buf.append(fv)
+                except (TypeError, ValueError):
+                    pass
+            time.sleep(self._US_ENTRY_INTERVAL_S)
+        if not buf:
+            v = self.ultrasonic_sensor.get_cm()
+            return float(v) if v is not None else 0.0
+        buf.sort()
+        mid = len(buf) // 2
+        return buf[mid] if len(buf) % 2 else (buf[mid - 1] + buf[mid]) / 2.0
 
-        last_distance = current_distance
-        delta_distance = 0
-        last_delta_distance = 0
-        while True:
-            self.driving_controller.turn_in_place(-10)
-            self.left_motor.wait_is_stopped()
-            self.right_motor.wait_is_stopped()
+    def align_to_wall(self, search_range_deg: float = 30.0, step_deg: float = 4.0):
+        """
+        Align the robot so the ultrasonic sensor is pointing directly at the
+        wall (minimum reading = perpendicular to the wall = robot parallel to it).
 
-            current_distance = self._ultrasonic_cm_robust()
-            print(f"Current distance: {current_distance} cm")
-            delta_distance = current_distance - last_distance
-            last_delta_distance = delta_distance
-            last_distance = current_distance
-            
-            if delta_distance < 0 and last_delta_distance < 0:
-                break
+        Strategy: sweep through a fixed arc, take a filtered reading at each
+        step, then turn to the angle that gave the minimum.  A 3-point parabolic
+        fit around the minimum index gives sub-step angular precision without
+        any extra sensor reads.
 
-        
-        # 2. Now read the current distance, and turn another alpha, and read again
-        d1 = self._ultrasonic_cm_robust()
-        print(f"d1: {d1} cm")
-        self.driving_controller.turn_in_place(ALPHA)
+        This is far more robust than the two-point analytic formula because:
+        - No single noisy reading can corrupt the result.
+        - Does not depend on an accurate delta-sign test to find a start point.
+        - Sub-step refinement improves accuracy beyond the step resolution.
+
+        Args:
+            search_range_deg: Total arc to sweep, centred on the current heading (default ±15°).
+            step_deg:         Angular increment between readings (default 4°).
+        """
+        half = search_range_deg / 2.0
+        n_steps = max(3, int(round(search_range_deg / step_deg)) + 1)
+
+        # --- Step 1: move to the start of the sweep arc ---
+        self.driving_controller.turn_in_place(-half)
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
 
-        d2 = self._ultrasonic_cm_robust()
-        print(f"d2: {d2} cm")
-        # 3. Use d1, d2 alongside derived formula to get theta_1
-        theta_1 = math.atan2(
-            d1 - d2 * math.cos(alpha_rad),
-            d1 * math.sin(alpha_rad),
-        ) * 180 / math.pi
+        # --- Step 2: sweep forward, recording one reading per step ---
+        angles: list[float] = []
+        readings: list[float] = []
+        cumulative = -half
 
-        
-        # 4. Turn in place the other way by theta_1 + alpha degrees
-        self.driving_controller.turn_in_place((theta_1 + ALPHA))
+        for i in range(n_steps):
+            r = self._ultrasonic_cm_sweep()
+            angles.append(cumulative)
+            readings.append(r)
+            print(f"[align] {cumulative:+.1f}°  →  {r:.1f} cm")
+            if i < n_steps - 1:
+                self.driving_controller.turn_in_place(step_deg)
+                self.left_motor.wait_is_stopped()
+                self.right_motor.wait_is_stopped()
+                cumulative += step_deg
+
+        # --- Step 3: coarse minimum ---
+        min_idx = readings.index(min(readings))
+        best_angle = angles[min_idx]
+
+        # --- Step 4: parabolic refinement (uses the three points around the minimum) ---
+        # Vertex of y = ax²+bx+c fitted to (i-1, i, i+1) is at x = -b/2a,
+        # which simplifies to: offset = -0.5 * (r[i+1] - r[i-1]) / (2*r[i] - r[i-1] - r[i+1])
+        if 0 < min_idx < len(readings) - 1:
+            yl = readings[min_idx - 1]
+            ym = readings[min_idx]
+            yr = readings[min_idx + 1]
+            denom = 2 * ym - yl - yr
+            if abs(denom) > 1e-6:
+                sub_step_offset = -0.5 * (yr - yl) / denom  # in units of step_deg
+                best_angle += sub_step_offset * step_deg
+                print(f"[align] parabolic refinement: sub-step offset {sub_step_offset:+.2f} steps")
+
+        # --- Step 5: turn from current position (end of sweep) to best_angle ---
+        correction = best_angle - cumulative
+        self.driving_controller.turn_in_place(correction)
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
+
+        print(f"[align] done — best angle {best_angle:+.1f}°, "
+              f"min reading {readings[min_idx]:.1f} cm (coarse), correction {correction:+.1f}°")
 
 

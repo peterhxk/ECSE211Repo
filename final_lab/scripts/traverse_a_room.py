@@ -41,7 +41,7 @@ if __name__ == "__main__":
         # room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE)
         # routing.room1_to_room2()
         # room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE)
-        room_traverser.center_at_room_entry()
+        room_traverser.align_to_wall()
     except Exception as err:
         print(err)
     finally:
