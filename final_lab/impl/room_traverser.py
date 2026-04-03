@@ -579,8 +579,8 @@ class RoomTraverser:
         left_dps  = int(self.base_power * abs(left_deg)  / max_deg)
         right_dps = int(self.base_power * abs(right_deg) / max_deg)
 
-        self.left_motor.set_limits(70, left_dps)
-        self.right_motor.set_limits(70, right_dps)
+        self.left_motor.set_limits(100, left_dps)
+        self.right_motor.set_limits(100, right_dps)
 
         self.left_motor.set_position_relative(left_deg)
         self.right_motor.set_position_relative(right_deg)
