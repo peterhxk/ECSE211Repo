@@ -372,12 +372,13 @@ class RoomTraverser:
         self.right_motor.wait_is_stopped()
 
         print("Dropping block")
-        self.grabber_controller.start_unloading()
-        self._wait_for_unloading(expected_bloc_count=1, label="unload")
+        # TODO: UNCOMMENT WHEN NEEDED
+        # self.grabber_controller.start_unloading()
+        # self._wait_for_unloading(expected_bloc_count=1, label="unload")
 
-        if self.sound_controller:
-            self.sound_controller.play_success()
-            self.sound_controller.wait_done()
+        # if self.sound_controller:
+        #     self.sound_controller.play_success()
+        #     self.sound_controller.wait_done()
 
         print(f"Reversing {approach_mm}mm from green bed")
         self.driving_controller.move_distance(-approach_mm)
