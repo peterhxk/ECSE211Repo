@@ -51,7 +51,7 @@ class ColourSensorController (EV3ColorSensor):
         self._bw_history = deque(maxlen=8)
         self.BW_DROP_THRESHOLD = 1.5   # drop from baseline → black
         self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
-        self._colour_window = deque(maxlen=3)  # Sliding window for color filtering
+        self._colour_window = deque(maxlen=5)  # Sliding window for color filtering
 
         # Reset the value of the motor encoder.
         if calibrate:
@@ -443,15 +443,15 @@ class ColourSensorController (EV3ColorSensor):
 
     def read_colour_interval(self):
         """
-        Reads the current colour and filters noise using a sliding window of 3 readings.
+        Reads the current colour and filters noise using a sliding window of 5 readings.
         Returns the most common colour from the window when filled, otherwise returns the current reading.
-        This helps ignore temporary noise by requiring majority agreement across 3 consecutive readings.
+        This helps ignore temporary noise by requiring majority agreement across 5 consecutive readings.
         """
         current_colour = self.read_colour()
         self._colour_window.append(current_colour)
         
         # If window is not yet full, return None
-        if len(self._colour_window) < 3:
+        if len(self._colour_window) < 5:
             return None
         
         # Window is full, return the most common colour (majority vote)
