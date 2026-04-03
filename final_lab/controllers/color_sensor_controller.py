@@ -51,6 +51,7 @@ class ColourSensorController (EV3ColorSensor):
         self._bw_history = deque(maxlen=8)
         self.BW_DROP_THRESHOLD = 1.5   # drop from baseline → black
         self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
+        self._colour_window = deque(maxlen=3)  # Sliding window for color filtering
 
         # Reset the value of the motor encoder.
         if calibrate:
@@ -439,3 +440,22 @@ class ColourSensorController (EV3ColorSensor):
     
     def read_rgb(self):
         return self.get_rgb()
+
+    def read_colour_interval(self, sliding_window=3):
+        """
+        Reads the current colour and filters noise using a default sliding window of 3 readings.
+        Returns the most common colour from the window when filled, otherwise returns the current reading.
+        This helps ignore temporary noise by requiring majority agreement across 3 consecutive readings.
+        """
+        current_colour = self.read_colour()
+        self._colour_window.append(current_colour)
+        
+        # If window is not yet full, return the current reading
+        if len(self._colour_window) < sliding_window:
+            return current_colour
+        
+        # Window is full, return the most common colour (majority vote)
+        from collections import Counter
+        colour_counts = Counter(self._colour_window)
+        most_common_colour = colour_counts.most_common(1)[0][0]
+        return most_common_colour
