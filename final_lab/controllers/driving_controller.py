@@ -70,7 +70,7 @@ class DrivingController:
         """ 
         self.left_motor.set_limits(0, self.base_power)
         self.right_motor.set_limits(0, self.base_power)
-        time.sleep(1)
+
         self.left_motor.set_position_relative(dist*360/consts.dia_wheel_mm/math.pi)
         self.right_motor.set_position_relative(dist*360/consts.dia_wheel_mm/math.pi)
         print(f"turning {dist*360/consts.dia_wheel_mm/math.pi} degrees on wheels")
@@ -170,21 +170,7 @@ class DrivingController:
         negative -> turn right?
         
         """ 
-        '''
-        if (angle > 0):
-            self.right_motor.set_dps(-self.base_power)
-            self.left_motor.set_dps(self.base_power)
-        else:
-            self.right_motor.set_dps(self.base_power)
-            self.left_motor.set_dps(-self.base_power)
-        new_angle = abs(angle)
-        time.sleep(self.base_power/new_angle)
-        self.right_motor.set_dps(0)
-        self.left_motor.set_dps(0)
-        time.sleep(2)
         
-        print("start of other 2nd test")
-'''
         self.left_motor.set_limits(0, self.base_power)
         self.right_motor.set_limits(0, self.base_power)
         self.left_motor.set_position_relative(angle*self.ORIENTTODEG)
