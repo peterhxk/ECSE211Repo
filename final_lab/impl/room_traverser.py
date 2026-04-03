@@ -639,5 +639,5 @@ class RoomTraverser:
         self.color_sensor_controller.sweep_stop()
         self.color_sensor_controller.set_arm_at_angle(0)
 
-        # self.run(room_type=room_type, detect_bed=False, detect_start=True)
+        self.run(room_type=room_type, detect_bed=False, detect_start=True)
     
