@@ -482,7 +482,14 @@ class RoomTraverser:
         """
         return (dl - dr) / (2.0 * self.driving_controller.ORIENTTODEG)
 
-    def align_to_wall(self, search_range_deg: float = 50.0, step_deg: float = 2.0):
+    # Fraction of the computed correction to actually command.
+    # < 1.0 deliberately under-turns to compensate for motor coast that carries
+    # the chassis a few degrees past wait_is_stopped().
+    # Tune empirically: if the robot still overshoots slightly, lower toward 0.80;
+    # if it now undershoots, raise toward 1.0.
+    ALIGN_CORRECTION_GAIN = 0.88
+
+    def align_to_wall(self, search_range_deg: float = 50.0, step_deg: float = 4.0):
         """
         Align the robot so the ultrasonic sensor is pointing directly at the
         wall (minimum reading = robot parallel to the wall).
@@ -490,12 +497,11 @@ class RoomTraverser:
         Strategy: sweep through a fixed arc, take a filtered reading at each
         step, find the angle that gave the minimum, then turn to it.
 
-        Fixes vs. the two-point analytic approach:
-        - A single noisy reading cannot corrupt the result.
         - Encoder feedback tracks *actual* rotation at every step, eliminating
           dead-reckoning drift that builds up over many small commanded turns.
         - Parabolic sub-step refinement uses the corrected vertex formula.
         - 3-point moving average smooths the curve before argmin.
+        - ALIGN_CORRECTION_GAIN < 1 compensates for motor coast past stop.
 
         Args:
             search_range_deg: Total arc to sweep, centred on the current heading (default ±25°).
@@ -553,13 +559,14 @@ class RoomTraverser:
                 best_angle += sub_step * actual_step
                 print(f"[align] parabolic: sub-step {sub_step:+.3f} × {actual_step:.1f}° = {sub_step * actual_step:+.2f}°")
 
-        # --- Step 5: turn from end of sweep to best_angle ---
-        correction = best_angle - cumulative
-        print(f"[align] correction {correction:+.1f}°  (sweep ended at {cumulative:+.1f}°, target {best_angle:+.1f}°)")
+        # --- Step 5: turn from end of sweep to best_angle, dampened by gain ---
+        raw_correction = best_angle - cumulative
+        correction = raw_correction * self.ALIGN_CORRECTION_GAIN
+        print(f"[align] raw correction {raw_correction:+.1f}°  ×  gain {self.ALIGN_CORRECTION_GAIN} = commanded {correction:+.1f}°")
         self.driving_controller.turn_in_place(correction)
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
-        time.sleep(0.1)  # let chassis fully settle before any subsequent move
+        time.sleep(0.05)  # let chassis fully settle
 
         print(f"[align] done — min reading {readings[min_idx]:.1f} cm at sweep angle {angles[min_idx]:+.1f}°")
 
