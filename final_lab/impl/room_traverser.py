@@ -458,6 +458,7 @@ class RoomTraverser:
         # 1. while loop turn 1-2 degrees in the same direction until distance-change changes sign
         current_distance = 0
         current_distance = self._ultrasonic_cm_robust()
+        print(f"Initial distance: {current_distance} cm")
 
         last_distance = current_distance
         delta_distance = 0
@@ -468,6 +469,7 @@ class RoomTraverser:
             self.right_motor.wait_is_stopped()
 
             current_distance = self._ultrasonic_cm_robust()
+            print(f"Current distance: {current_distance} cm")
             delta_distance = current_distance - last_distance
             last_delta_distance = delta_distance
             last_distance = current_distance
