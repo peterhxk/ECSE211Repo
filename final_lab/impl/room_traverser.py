@@ -625,6 +625,8 @@ class RoomTraverser:
         smaller_radius_deg = turn_angles[room_type]["smaller_radius_deg"]
         larger_radius_deg = turn_angles[room_type]["larger_radius_deg"]
 
+        self.move_differential(10, 10, POWER)
+
         self.move_differential(0, smaller_radius_deg / 2, POWER)
         self.move_differential(larger_radius_deg / 2, 0, POWER)
         for _ in range(NUM_ITERATIONS):
