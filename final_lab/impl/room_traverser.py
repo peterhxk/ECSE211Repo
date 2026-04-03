@@ -463,7 +463,7 @@ class RoomTraverser:
         delta_distance = 0
         last_delta_distance = 0
         while True:
-            self.driving_controller.turn_in_place(4)
+            self.driving_controller.turn_in_place(-4)
             self.left_motor.wait_is_stopped()
             self.right_motor.wait_is_stopped()
 
@@ -472,7 +472,7 @@ class RoomTraverser:
             last_delta_distance = delta_distance
             last_distance = current_distance
             
-            if delta_distance > 0 and last_delta_distance > 0:
+            if delta_distance < 0 and last_delta_distance < 0:
                 break
 
         
