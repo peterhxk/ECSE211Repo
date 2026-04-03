@@ -77,9 +77,9 @@ class RoomTraverser:
                 "straight_distance": -80,
             },
             RoomType.WALL_SINGLE: {
-                "Kp": 1,
+                "Kp": 2,
                 "Ki": 0,
-                "Kd": 180,
+                "Kd": 220,
                 "steer_scale": 0.7,
                 "ramp": 0.0,
                 "straight_distance": -80,
@@ -220,12 +220,10 @@ class RoomTraverser:
                 derivative = (error - prev_error) / dt
                 prev_error = error
 
-                g_p = self._wall_gain_scale(error, self.wall_gain_schedule_kp)
-                g_d = self._wall_gain_scale(error, self.wall_gain_schedule_kd)
                 raw_adjustment = (
-                    pid_cfg["Kp"] * g_p * error
+                    pid_cfg["Kp"] * error
                     + pid_cfg["Ki"] * integral
-                    + pid_cfg["Kd"] * g_d * derivative
+                    + pid_cfg["Kd"] * derivative
                 )
 
                 if pid_cfg["ramp"] > 0:
@@ -610,5 +608,5 @@ class RoomTraverser:
 
         self.move_differential(0, 40)
 
-        self.run(room_type=room_type, detect_bed=False, detect_start=True)
+        # self.run(room_type=room_type, detect_bed=False, detect_start=True)
     
