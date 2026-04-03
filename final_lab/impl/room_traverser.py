@@ -126,6 +126,7 @@ class RoomTraverser:
     - wall_distance: The left distance from the wall to maintain while moving (in CM).
     - straight_distance: The MAXIMUM straight distance that the robot moves until the method returns. Defaults to 25cm.
     - detect_bed: Whether the robot should be detecting a bed or not (indicates whether the color sensor arm should be looking for a bed)
+    - detect_start: Whether the robot should be detecting the starting point or not (indicates whether the color sensor arm should be looking for the starting point)
 
     Returns:
     - Tuple of (bed color detected or None, distance travelled in CM)
@@ -185,23 +186,23 @@ class RoomTraverser:
                         bed_detected = True
                         break
 
-            if detect_start:
-                detected = self.color_sensor_controller.read_colour_interval()
-                if detected == "orange":
-                    print("Orange detected — arrived back at starting point.")
-                    start_detected = True
-                    break
+                if detect_start:
+                    detected = self.color_sensor_controller.read_colour_interval()
+                    if detected == "orange":
+                        print("Orange detected — arrived back at starting point.")
+                        start_detected = True
+                        break
 
-                # check travelled distance
-                travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
+                    # check travelled distance
+                    travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
 
-                if target_degrees < 0 and travelled_deg <= target_degrees / 5.5:
-                    print(f"[ARM] Halfway reached ({travelled_deg:.0f}/{target_degrees:.0f} deg), resetting arm to 0°")
-                    self.color_sensor_controller.set_arm_at_angle(0)
-                if target_degrees > 0 and travelled_deg >= target_degrees:
-                    break
-                elif target_degrees < 0 and travelled_deg <= target_degrees:
-                    break
+                    if target_degrees < 0 and travelled_deg <= target_degrees / 5.5:
+                        print(f"[ARM] Halfway reached ({travelled_deg:.0f}/{target_degrees:.0f} deg), resetting arm to 0°")
+                        self.color_sensor_controller.set_arm_at_angle(0)
+                    if target_degrees > 0 and travelled_deg >= target_degrees:
+                        break
+                    elif target_degrees < 0 and travelled_deg <= target_degrees:
+                        break
 
                 now = time.time()
                 dt = max(now - prev_time, 0.001)
