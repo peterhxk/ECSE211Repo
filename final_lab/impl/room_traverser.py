@@ -610,6 +610,8 @@ class RoomTraverser:
             self.move_differential(60, 0)
             self.move_differential(-40, 0)
             self.move_differential(0, 120)
+            self.move_differential(-40, 0)
+            self.move_differential(0, -20)
 
         # self.run(room_type=room_type, detect_bed=False, detect_start=True)
     
