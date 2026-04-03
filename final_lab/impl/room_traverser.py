@@ -626,6 +626,8 @@ class RoomTraverser:
             self.move_differential(0, 120, POWER)
             self.move_differential(0, -40, POWER)
             self.move_differential(120, 0, POWER)
+        
+        print("DONE!!! MOVING BACK")
 
         self.move_differential(0, -20, POWER)
         self.move_differential(60, 0, POWER)
