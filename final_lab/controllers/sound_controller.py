@@ -91,3 +91,10 @@ class SoundController(Sound):
             s.stop()
         self.note_playing = False
         self.play_requested = False
+
+    def wait_done(self, polling_interval=0.05):
+        """Blocking function that waits until notes are done playing."""
+
+        time.sleep(polling_interval)
+        while self.note_playing:
+            time.sleep(polling_interval)
