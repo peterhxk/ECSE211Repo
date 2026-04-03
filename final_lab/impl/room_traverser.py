@@ -604,12 +604,12 @@ class RoomTraverser:
         NUM_ITERATIONS = 2
         turn_angles = {
             RoomType.CORNER_DOUBLE_FIRST_HALF: {
-                "smaller_radius_deg": -30,
-                "larger_radius_deg": 180,
+                "smaller_radius_deg": -40,
+                "larger_radius_deg": 120,
             },
             RoomType.CORNER_DOUBLE_SECOND_HALF: {
-                "smaller_radius_deg": -15,
-                "larger_radius_deg": 150,
+                "smaller_radius_deg": -30,
+                "larger_radius_deg": 100,
             },
         }
 
@@ -617,25 +617,25 @@ class RoomTraverser:
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
 
-        POWER = 300
+        POWER = 320
 
         print("MOVING FORWARD, SWEEPING")
         self.color_sensor_controller.sweep_start(colours=[], range="full")
 
-        self.move_differential(0, -20, POWER)
-        self.move_differential(60, 0, POWER)
+        smaller_radius_deg = turn_angles[room_type]["smaller_radius_deg"]
+        larger_radius_deg = turn_angles[room_type]["larger_radius_deg"]
+
+        self.move_differential(0, smaller_radius_deg / 2, POWER)
+        self.move_differential(larger_radius_deg / 2, 0, POWER)
         for _ in range(NUM_ITERATIONS):
-            self.move_differential(-40, 0, POWER)
-            self.move_differential(0, 120, POWER)
-            self.move_differential(0, -40, POWER)
-            self.move_differential(120, 0, POWER)
+            self.move_differential(smaller_radius_deg, 0, POWER)
+            self.move_differential(0, larger_radius_deg, POWER)
+            self.move_differential(0, smaller_radius_deg, POWER)
+            self.move_differential(larger_radius_deg, 0, POWER)
         
-        print("DONE!!! MOVING BACK")
+        self.move_differential(smaller_radius_deg / 2, 0, POWER)
+        self.move_differential(0, larger_radius_deg / 2, POWER)
 
-        self.move_differential(-20, 0, POWER)
-        self.move_differential(0, 60, POWER)
-
-        print("DONE!!! SWEEPING")
         self.color_sensor_controller.sweep_stop()
         self.color_sensor_controller.set_arm_at_angle(0)
 
