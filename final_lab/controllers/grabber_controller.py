@@ -6,8 +6,9 @@ from enum import Enum
 from collections import deque
 import sys
 from tqdm import tqdm
+
 sys.path.append("../utils")
-from brick import EV3GyroSensor, Motor
+from brick import EV3GyroSensor, Motor,reset_brick
 import os
 import glob
 import time
@@ -39,7 +40,7 @@ class GrabberController:
       5) Record gyro traces for empirical calibration
     """
 
-    def __init__(self, motor_port="A", gyro_port=3, calibration=True, debug=True):
+    def __init__(self, kill_switch_flag : threading.Event = None, motor_port="A", gyro_port=3, calibration=True, debug=True):
         # Internal state
         self.bloc_count = 0
         self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
@@ -97,7 +98,7 @@ class GrabberController:
             print("Warning: running power too high. Pick a lower value")
 
         # Empirical gyro trace recording
-        self.recordings_dir = "gyro_operation_recordings"
+        self.recordings_dir = "data/gyro_operation_recordings"
         os.makedirs(self.recordings_dir, exist_ok=True)
 
         self._current_record = None
@@ -112,7 +113,9 @@ class GrabberController:
         self._gyro_sample = None
         self._gyro_sample_lock = threading.Lock()
 
-        self._kill_event = threading.Event()
+        self._kill_event = kill_switch_flag if kill_switch_flag is not None else threading.Event()
+        self.kill_switch = False
+        self._kill_lock = threading.Lock()
         self._active_gyro_detector = None
         self._active_gyro_detector_lock = threading.Lock()
 
@@ -121,7 +124,6 @@ class GrabberController:
 
     def _gyro_worker(self):
         dt = 1.0 / float(self.sample_hz)
-        kill_hits = 0
         print("[GYRO] worker started")
 
         try:
@@ -130,12 +132,16 @@ class GrabberController:
                 now = time.time()
 
                 if raw is None:
-                    print("[GYRO] raw is None")
                     time.sleep(dt)
                     continue
 
                 dps = float(raw)
                 z = (dps - self.mu) / max(self.sigma, 1e-6)
+
+                # internal kill trigger
+                if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
+                    self.kill(reason=f"FAST_TILT_KILL detected: dps={dps:.3f}")
+                    return
 
                 with self._gyro_sample_cond:
                     self._gyro_sample = (now, dps, z)
@@ -143,6 +149,7 @@ class GrabberController:
                     self._gyro_sample_cond.notify_all()
 
                 time.sleep(dt)
+
         except Exception as e:
             print(f"[GYRO] worker crashed: {e}")
             raise
@@ -153,6 +160,9 @@ class GrabberController:
         self._gyro_stop.clear()
         self._gyro_thread = threading.Thread(target=self._gyro_worker, daemon=True)
         self._gyro_thread.start()
+
+        # only needed if you still want external event-setting to work too
+        threading.Thread(target=self.monitor_kill, daemon=True).start()
     # ----------------------------
     # Setup / calibration
     # ----------------------------
@@ -164,19 +174,13 @@ class GrabberController:
 
         self._gyro_thread = None
 
-    def _load_bloc_worker(self):
+    def _load_bloc_worker(self,timeout=5.0):
         try:
-            self._load_result = self.load_bloc(stop_event=self._load_cancel_event)
+            self._load_result = self.load_bloc(timeout=timeout,stop_event=self._load_cancel_event)
         finally:
             self._load_done_event.set()
 
-    def start_loading(self) -> bool:
-        """
-        Start load_bloc() in a background thread and return immediately.
-
-        Returns False if a loading operation is already in progress, or if
-        an unloading operation is currently running. True otherwise.
-        """
+    def start_loading(self, timeout=5.0) -> bool:
         if self._load_thread is not None and self._load_thread.is_alive():
             print("[INFO] Loading already in progress.")
             return False
@@ -190,7 +194,11 @@ class GrabberController:
         self._block_caught_event.clear()
         self._load_result = None
 
-        self._load_thread = threading.Thread(target=self._load_bloc_worker, daemon=True)
+        self._load_thread = threading.Thread(
+            target=self._load_bloc_worker,
+            kwargs={"timeout": timeout},
+            daemon=True,
+        )
         self._load_thread.start()
         return True
 
@@ -386,7 +394,7 @@ class GrabberController:
         If calibration=False:
             - Load most recent calibration
         """
-        calibration_dir = getattr(self, "gyro_calibration_dir", "gyro_calibrations")
+        calibration_dir = getattr(self, "gyro_calibration_dir", "data/gyro_calibrations")
         os.makedirs(calibration_dir, exist_ok=True)
 
         if calibration:
@@ -498,7 +506,7 @@ class GrabberController:
         If calibration=False:
             - Load the latest saved calibration
         """
-        calibration_dir = getattr(self, "motor_calibration_dir", "motor_calibrations")
+        calibration_dir = getattr(self, "motor_calibration_dir", "data/motor_calibrations")
         os.makedirs(calibration_dir, exist_ok=True)
 
         if calibration:
@@ -599,7 +607,7 @@ class GrabberController:
         if tilt == GyroTilt.SLOW_TILT:
             return 10.0
         elif tilt == GyroTilt.FAST_TILT_KILL :
-            return 25.0
+            return 20.0
         else:
             return 16.0
 
@@ -803,7 +811,7 @@ class GrabberController:
 
         try:
             while hits < needed:
-                if self.kill_switch or self._kill_event.is_set():
+                if self.kill_switch or (self._kill_event is not None and self._kill_event.is_set()):
                     if record_enabled:
                         self._end_operation_recording(outcome="killed")
                     return False
@@ -935,6 +943,10 @@ class GrabberController:
         )
         try :
             while True:
+                if self.kill_switch or (self._kill_event is not None and self._kill_event.is_set()):
+                        if record_enabled:
+                            self._end_operation_recording(outcome="killed")
+                        return False
                 if stop_event is not None and stop_event.is_set():
                     if record_enabled:
                         self._end_operation_recording(outcome="cancelled")
@@ -1011,7 +1023,7 @@ class GrabberController:
     # ----------------------------
     # High-level actions
     # ----------------------------
-    def load_bloc(self, stop_event=None) -> bool:
+    def load_bloc(self, timeout=5.0,stop_event=None) -> bool:
         """
         Returns True on success, False on failure.
 
@@ -1039,7 +1051,7 @@ class GrabberController:
                     detector_name="gyro_outwards_fast", #TODO fix the inconsistency
                     predicate_from_dps=lambda dps: self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT),
                     needed=1,
-                    timeout=5.0,
+                    timeout=timeout,
                     extra={
                         "bloc_count_before": self.bloc_count,
                         "running_dps": self.running_dps,
@@ -1114,15 +1126,11 @@ class GrabberController:
 
     def monitor_kill(self):
         self._kill_event.wait()
-        print("[INFO] KILL SWITCH ACTIVATED")
-        self.kill_switch = True
-        self.cancel_loading()
-        self.cancel_unloading()
-        self.motor.set_dps(0)
+        #self.kill(reason="event set") OPTIONAL ONLY FOR DEBUGGING
 
     def loop(self):
         self.start_gyro_monitor()
-        threading.Thread(target=self.monitor_kill, daemon=True).start()
+        #threading.Thread(target=self.monitor_kill, daemon=True).start()
         self.motor.set_dps(-self.running_dps)
         time.sleep(1)
         self.motor.set_dps(0)
@@ -1172,8 +1180,35 @@ class GrabberController:
             self.motor.set_dps(0)
             self._gyro_stop.set()
 
-    def kill(self):
-        raise NotImplementedError()
+    def kill(self, reason="internal trigger"):
+        with self._kill_lock:
+            if self.kill_switch:
+                return
+
+            print(f"[INFO] KILL SWITCH ACTIVATED: {reason}")
+            self.kill_switch = True
+
+            # publish the kill state to the shared event
+            self._kill_event.set()
+
+            # cancel cooperative operations
+            self.cancel_loading()
+            self.cancel_unloading()
+
+            # stop hardware
+            self.motor.set_dps(0)
+            self._gyro_stop.set()
+
+            """
+            try:
+                reset_brick()
+            except Exception as e:
+                print(f"[WARN] reset_brick failed during kill: {e}")
+            """
+
+    def monitor_kill(self):
+        self._kill_event.wait()
+        self.kill(reason="event set")
 
     def isBlockCaught(self) -> bool:
         return self._block_caught_event.is_set()
@@ -1203,16 +1238,14 @@ class GrabberController:
 
         return "IDLE"
 
-    def wait_for_loading(self,expected_bloc_count=0, timeout=15.0, label="block"):
+    def wait_for_loading(self,expected_bloc_count=0, label="block")->bool:
         start = time.time()
         last_log = start
-        initial_count = self.bloc_count
-
         while True:
             status = self.get_loading_status()
 
-            if status == "FAILED":
-                raise RuntimeError(f"Failed while loading {label}")
+            if status == "FAILED" or not status:
+                return False
 
             if (self.loading_finished() or status == "IDLE") and not self.is_loading():
                 break
@@ -1222,22 +1255,16 @@ class GrabberController:
                 print(f"[DEBUG] Waiting for loading of {label}... status={status}")
                 last_log = now
 
-            if now - start > timeout:
-                raise TimeoutError(f"Timeout while loading {label}")
-
             time.sleep(0.05)
 
         final_status = self.get_loading_status()
         print(f"[DEBUG] Loading finished for {label} with status={final_status}")
-
-        if self.bloc_count != initial_count+1:
-            raise RuntimeError(f"Failed while loading {label}. Block count wasn't incremented properly")
-
+        return True
 
 
 
 if __name__ == "__main__":
-    #controller = GrabberController("D", 4, False , True)
-    #controller.initialize_sensors()
-    #controller.loop()
-    pass
+    kill_event = threading.Event()
+    controller = GrabberController(kill_event, "D", 4, False, False)
+    controller.initialize_sensors()
+    controller.loop()
