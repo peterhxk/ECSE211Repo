@@ -442,7 +442,7 @@ class RoomTraverser:
             last_delta_distance = delta_distance
             last_distance = current_distance
             print(f"Current distance: {current_distance} cm, Delta distance: {delta_distance} cm")
-            if delta_distance * last_delta_distance < 0:
+            if delta_distance > 0 and last_delta_distance > 0:
                 break
 
         
