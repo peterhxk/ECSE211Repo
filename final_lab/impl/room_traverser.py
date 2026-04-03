@@ -568,7 +568,18 @@ class RoomTraverser:
 
         print(f"[align] done — min reading {readings[min_idx]:.1f} cm at sweep angle {angles[min_idx]:+.1f}°")
 
-    def move_differential(self, left_dist_mm: float, right_dist_mm: float):
+    def move_differential(self, left_dist_mm: float, right_dist_mm: float, power: int = None):
+        """
+        Move each wheel an independent distance (mm) at synchronized speeds so
+        both finish at the same time.
+
+        Args:
+            left_dist_mm:  Distance for the left wheel (negative = backward).
+            right_dist_mm: Distance for the right wheel (negative = backward).
+            power:         Peak DPS for the faster wheel. Defaults to self.base_power.
+                           Pass a higher value here to make the move execute faster
+                           without changing the global base_power.
+        """
         left_deg  = left_dist_mm  * 360 / self.WHEEL_DIAMETER_MM / math.pi
         right_deg = right_dist_mm * 360 / self.WHEEL_DIAMETER_MM / math.pi
 
@@ -576,8 +587,9 @@ class RoomTraverser:
         if max_deg == 0:
             return
 
-        left_dps  = int(self.base_power * abs(left_deg)  / max_deg)
-        right_dps = int(self.base_power * abs(right_deg) / max_deg)
+        peak = power if power is not None else self.base_power
+        left_dps  = int(peak * abs(left_deg)  / max_deg)
+        right_dps = int(peak * abs(right_deg) / max_deg)
 
         self.left_motor.set_limits(100, left_dps)
         self.right_motor.set_limits(100, right_dps)
@@ -605,16 +617,18 @@ class RoomTraverser:
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
 
-        self.move_differential(0, -20)
-        self.move_differential(60, 0)
-        for _ in range(NUM_ITERATIONS):
-            self.move_differential(-40, 0)
-            self.move_differential(0, 120)
-            self.move_differential(0, -40)
-            self.move_differential(120, 0)
+        POWER = 150
 
-        self.move_differential(0, -20)
-        self.move_differential(60, 0)
+        self.move_differential(0, -20, POWER)
+        self.move_differential(60, 0, POWER)
+        for _ in range(NUM_ITERATIONS):
+            self.move_differential(-40, 0, POWER)
+            self.move_differential(0, 120, POWER)
+            self.move_differential(0, -40, POWER)
+            self.move_differential(120, 0, POWER)
+
+        self.move_differential(0, -20, POWER)
+        self.move_differential(60, 0, POWER)
 
         # self.run(room_type=room_type, detect_bed=False, detect_start=True)
     
