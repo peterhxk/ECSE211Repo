@@ -107,14 +107,15 @@ class RoomTraverser:
     # Low-pass the *steering* command so motor DPS does not jump every loop
     adjustment_smooth_alpha = 0.7
 
-    def __init__(self, driving_controller: DrivingController, color_sensor_controller: ColourSensorController, sound_controller: SoundController = None):
+    def __init__(self, driving_controller: DrivingController, color_sensor_controller: ColourSensorController, grabber_controller: GrabberController, sound_controller: SoundController = None):
         self.left_motor = driving_controller.left_motor
         self.right_motor = driving_controller.right_motor
         self.base_power = driving_controller.base_power
-        self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
-        self.color_sensor_controller = color_sensor_controller
         self.driving_controller = driving_controller
+        self.color_sensor_controller = color_sensor_controller
+        self.grabber_controller = grabber_controller
         self.sound_controller = sound_controller
+        self.ultrasonic_sensor = EV3UltrasonicSensor(Ports.ULTRASONIC_SENSOR.value)
         wait_ready_sensors(True)
         print("Room Traverser ready.")
 
@@ -271,17 +272,17 @@ class RoomTraverser:
         else:
             return (None, dist_cm, None)
     
-    def _wait_for_loading(self, grabber_controller: GrabberController, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
+    def _wait_for_loading(self, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
         start = time.time()
         last_log = start
 
         while True:
-            status = grabber_controller.get_loading_status()
+            status = self.grabber_controller.get_loading_status()
 
             if status == "FAILED":
                 raise RuntimeError(f"Failed while loading {label}")
 
-            if grabber_controller.loading_finished():
+            if self.grabber_controller.loading_finished():
                 break
 
             now = time.time()
@@ -294,21 +295,21 @@ class RoomTraverser:
 
             time.sleep(0.05)
 
-        final_status = grabber_controller.get_loading_status()
+        final_status = self.grabber_controller.get_loading_status()
         print(f"[DEBUG] Loading finished for {label} with status={final_status}")
 
-        if grabber_controller.bloc_count != expected_bloc_count:
+        if self.grabber_controller.bloc_count != expected_bloc_count:
             raise RuntimeError(
                 f"Unexpected bloc_count after loading {label}: "
-                f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
+                f"expected {expected_bloc_count}, got {self.grabber_controller.bloc_count}"
             )
 
-    def _wait_for_unloading(self, grabber_controller: GrabberController, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
+    def _wait_for_unloading(self, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
         start = time.time()
         last_log = start
 
         while True:
-            status = grabber_controller.get_unloading_status()
+            status = self.grabber_controller.get_unloading_status()
 
             if status == "FAILED":
                 raise RuntimeError(f"Failed while unloading {label}")
@@ -326,13 +327,13 @@ class RoomTraverser:
 
             time.sleep(0.05)
 
-        final_status = grabber_controller.get_unloading_status()
+        final_status = self.grabber_controller.get_unloading_status()
         print(f"[DEBUG] Unloading finished for {label} with status={final_status}")
 
-        if grabber_controller.bloc_count != expected_bloc_count:
+        if self.grabber_controller.bloc_count != expected_bloc_count:
             raise RuntimeError(
                 f"Unexpected bloc_count after unloading {label}: "
-                f"expected {expected_bloc_count}, got {grabber_controller.bloc_count}"
+                f"expected {expected_bloc_count}, got {self.grabber_controller.bloc_count}"
             )
 
     """
@@ -341,9 +342,8 @@ class RoomTraverser:
 
     Input:
     - room_type: The type of the room to traverse. This determines the path taken by the robot.
-    - grabber_controller: The grabber controller to use to load and unload blocks.
     """
-    def traverse_a_room(self, room_type: RoomType, grabber_controller: GrabberController) -> None:
+    def traverse_a_room(self, room_type: RoomType) -> None:
         # here, we appear at the entry of the CORNER SINGLE ROOM, move straight up to 25CM or until detect bed.
         traverse_results = self.run(room_type, 45, detect_bed=True)
         bed_found = traverse_results[0] is not None
@@ -381,8 +381,8 @@ class RoomTraverser:
                 # Drop one block (2 -> 1)
                 print("Dropping block")
 
-                grabber_controller.start_unloading()
-                self._wait_for_unloading(grabber_controller, expected_bloc_count=1, label="unload")
+                self.grabber_controller.start_unloading()
+                self._wait_for_unloading(expected_bloc_count=1, label="unload")
 
                 self.sound_controller.play_success()
                 self.sound_controller.wait_done()
