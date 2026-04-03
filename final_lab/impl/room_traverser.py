@@ -341,22 +341,19 @@ class RoomTraverser:
     Input:
     - room_type: The type of the room to traverse. This determines the path taken by the robot.
     """
-    def _approach_and_unload(self, bed_angle: float, bed_colour: str,
-                             approach_mm: int = 80, current_heading: float = 0.0) -> None:
+    def _approach_and_unload(self, bed_angle: float, bed_colour: str, approach_mm: int = 80) -> None:
         """
         Turn towards the detected bed, drive up to it, drop a block, then
-        reverse and restore heading=0 in a single combined turn.
+        reverse and restore the original heading.
+
+        The robot MUST already be wall-parallel (heading 0°) before this is
+        called — callers are responsible for straightening first.
 
         Args:
-            bed_angle:       Arm angle at detection (degrees, relative to robot body).
-                             Positive = right.
-            bed_colour:      Detected colour string ("green" or "red").
-            approach_mm:     How far to drive toward the bed (mm).
-            current_heading: Robot's accumulated heading drift at the moment of
-                             detection (degrees, positive = left turn from wall-parallel).
-                             Used so the final restoration turn undoes BOTH the approach
-                             turn AND any pre-existing drift in one shot, rather than two
-                             sequential corrections that compound dead-reckoning error.
+            bed_angle:   Arm angle at detection (degrees, relative to robot body).
+                         Positive = right.
+            bed_colour:  Detected colour string ("green" or "red").
+            approach_mm: How far to drive toward the bed (mm).
         """
         if bed_colour != "green":
             print(f"Bed colour is '{bed_colour}' — skipping unload.")
@@ -367,9 +364,7 @@ class RoomTraverser:
 
         self.color_sensor_controller.set_arm_at_angle(math.copysign(90, -1 * bed_angle))
 
-        # Robot is currently at current_heading; turn toward bed adds turn_angle on top.
-        total_turn = current_heading + turn_angle
-        print(f"Turning {turn_angle:.1f}° towards bed (heading was {current_heading:.1f}°, arm at {bed_angle:.1f}°)")
+        print(f"Turning {turn_angle:.1f}° towards green bed (arm at {bed_angle:.1f}°)")
         self.driving_controller.turn_in_place(turn_angle)
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
@@ -380,22 +375,20 @@ class RoomTraverser:
         self.right_motor.wait_is_stopped()
 
         print("Dropping block")
-        # TODO: UNCOMMENT WHEN NEEDED
-        # self.grabber_controller.start_unloading()
-        # self._wait_for_unloading(expected_bloc_count=1, label="unload")
+        self.grabber_controller.start_unloading()
+        self._wait_for_unloading(expected_bloc_count=1, label="unload")
 
-        # if self.sound_controller:
-        #     self.sound_controller.play_success()
-        #     self.sound_controller.wait_done()
+        if self.sound_controller:
+            self.sound_controller.play_success()
+            self.sound_controller.wait_done()
 
         print(f"Reversing {approach_mm}mm from green bed")
         self.driving_controller.move_distance(-approach_mm)
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
 
-        # Single combined turn: undo approach turn AND pre-existing heading drift.
-        print(f"Restoring heading 0° with combined turn of {-total_turn:.1f}°")
-        self.driving_controller.turn_in_place(-total_turn)
+        print(f"Turning back {-turn_angle:.1f}° to restore heading")
+        self.driving_controller.turn_in_place(-turn_angle)
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
 
@@ -670,19 +663,20 @@ class RoomTraverser:
         self.color_sensor_controller.sweep_stop()
         self.color_sensor_controller.set_arm_at_angle(0)
 
+        # Dead-reckon back to wall-parallel before anything else.
+        print(f"Straightening: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
+        self.driving_controller.turn_in_place(-cumulative_heading)
+        self.left_motor.wait_is_stopped()
+        self.right_motor.wait_is_stopped()
+
         if bed_result:
             angle, colour, _ = bed_result[0]
-            print(f"  colour={colour}  arm_angle={angle:.1f}°  heading={cumulative_heading:.1f}°")
-            # Pass current_heading so the single restoration turn at the end of
-            # _approach_and_unload undoes both the approach turn AND the accumulated
-            # drift in one shot — robot exits at heading 0°.
-            self._approach_and_unload(angle, colour, current_heading=cumulative_heading)
-        else:
-            # No bed: just dead-reckon back to 0° before the wall follower starts.
-            print(f"Restoring heading: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
-            self.driving_controller.turn_in_place(-cumulative_heading)
-            self.left_motor.wait_is_stopped()
-            self.right_motor.wait_is_stopped()
+            # The arm angle was recorded while the robot was at cumulative_heading.
+            # After straightening by -cumulative_heading the bed sits at a different
+            # angle relative to the new forward direction: subtract the drift out.
+            adjusted_angle = angle - cumulative_heading
+            print(f"  colour={colour}  raw_arm={angle:.1f}°  heading_at_detection={cumulative_heading:.1f}°  adjusted_arm={adjusted_angle:.1f}°")
+            self._approach_and_unload(adjusted_angle, colour)
 
         print("Moving back.")
         self.run(room_type=room_type, detect_bed=False, detect_start=True)
