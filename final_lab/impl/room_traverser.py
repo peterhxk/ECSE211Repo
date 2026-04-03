@@ -495,7 +495,7 @@ class RoomTraverser:
 
         
         # 4. Turn in place the other way by theta_1 + alpha degrees
-        self.driving_controller.turn_in_place(-(theta_1 + ALPHA))
+        self.driving_controller.turn_in_place((theta_1 + ALPHA))
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
 
