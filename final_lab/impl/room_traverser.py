@@ -439,8 +439,6 @@ class RoomTraverser:
             if delta_distance * last_delta_distance < 0:
                 break
 
-            iterations += 1
-
         
         # 2. Now read the current distance, and turn another alpha, and read again
         d1 = self.ultrasonic_sensor.get_cm()
