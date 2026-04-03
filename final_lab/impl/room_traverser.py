@@ -474,37 +474,51 @@ class RoomTraverser:
         mid = len(buf) // 2
         return buf[mid] if len(buf) % 2 else (buf[mid - 1] + buf[mid]) / 2.0
 
-    def align_to_wall(self, search_range_deg: float = 50.0, step_deg: float = 2.0):
+    def _enc_to_robot_deg(self, dl: float, dr: float) -> float:
+        """Convert left/right encoder deltas (motor degrees) to robot heading change.
+
+        For turn_in_place(+θ): left goes +θ·ORIENTTODEG, right goes -θ·ORIENTTODEG.
+        So: robot_deg = (dl - dr) / (2 * ORIENTTODEG).
+        """
+        return (dl - dr) / (2.0 * self.driving_controller.ORIENTTODEG)
+
+    def align_to_wall(self, search_range_deg: float = 50.0, step_deg: float = 4.0):
         """
         Align the robot so the ultrasonic sensor is pointing directly at the
-        wall (minimum reading = perpendicular to the wall = robot parallel to it).
+        wall (minimum reading = robot parallel to the wall).
 
         Strategy: sweep through a fixed arc, take a filtered reading at each
-        step, then turn to the angle that gave the minimum.  A 3-point parabolic
-        fit around the minimum index gives sub-step angular precision without
-        any extra sensor reads.
+        step, find the angle that gave the minimum, then turn to it.
 
-        This is far more robust than the two-point analytic formula because:
-        - No single noisy reading can corrupt the result.
-        - Does not depend on an accurate delta-sign test to find a start point.
-        - Sub-step refinement improves accuracy beyond the step resolution.
+        Fixes vs. the two-point analytic approach:
+        - A single noisy reading cannot corrupt the result.
+        - Encoder feedback tracks *actual* rotation at every step, eliminating
+          dead-reckoning drift that builds up over many small commanded turns.
+        - Parabolic sub-step refinement uses the corrected vertex formula.
+        - 3-point moving average smooths the curve before argmin.
 
         Args:
             search_range_deg: Total arc to sweep, centred on the current heading (default ±25°).
-            step_deg:         Angular increment between readings (default 2°).
+            step_deg:         Angular increment between readings (default 4°).
         """
         half = search_range_deg / 2.0
         n_steps = max(3, int(round(search_range_deg / step_deg)) + 1)
 
-        # --- Step 1: move to the start of the sweep arc ---
+        def snap_enc():
+            return self.left_motor.get_encoder(), self.right_motor.get_encoder()
+
+        # --- Step 1: move to the start of the sweep arc, measure actual rotation ---
+        l0, r0 = snap_enc()
         self.driving_controller.turn_in_place(-half)
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
+        l1, r1 = snap_enc()
+        cumulative = self._enc_to_robot_deg(l1 - l0, r1 - r0)
+        print(f"[align] start turn: commanded {-half:.1f}°, actual {cumulative:.1f}°")
 
-        # --- Step 2: sweep forward, recording one reading per step ---
+        # --- Step 2: sweep forward, recording actual angle at each step ---
         angles: list[float] = []
         readings: list[float] = []
-        cumulative = -half
 
         for i in range(n_steps):
             r = self._ultrasonic_cm_sweep()
@@ -512,35 +526,81 @@ class RoomTraverser:
             readings.append(r)
             print(f"[align] {cumulative:+.1f}°  →  {r:.1f} cm")
             if i < n_steps - 1:
+                l0, r0 = snap_enc()
                 self.driving_controller.turn_in_place(step_deg)
                 self.left_motor.wait_is_stopped()
                 self.right_motor.wait_is_stopped()
-                cumulative += step_deg
+                l1, r1 = snap_enc()
+                cumulative += self._enc_to_robot_deg(l1 - l0, r1 - r0)
 
-        # --- Step 3: coarse minimum ---
-        min_idx = readings.index(min(readings))
+        # --- Step 3: smooth with a 3-point moving average, then find coarse minimum ---
+        smoothed = list(readings)
+        for i in range(1, len(readings) - 1):
+            smoothed[i] = (readings[i - 1] + readings[i] + readings[i + 1]) / 3.0
+
+        min_idx = smoothed.index(min(smoothed))
         best_angle = angles[min_idx]
 
-        # --- Step 4: parabolic refinement (uses the three points around the minimum) ---
-        # Vertex of y = ax²+bx+c fitted to (i-1, i, i+1) is at x = -b/2a,
-        # which simplifies to: offset = -0.5 * (r[i+1] - r[i-1]) / (2*r[i] - r[i-1] - r[i+1])
-        if 0 < min_idx < len(readings) - 1:
-            yl = readings[min_idx - 1]
-            ym = readings[min_idx]
-            yr = readings[min_idx + 1]
-            denom = 2 * ym - yl - yr
-            if abs(denom) > 1e-6:
-                sub_step_offset = -0.5 * (yr - yl) / denom  # in units of step_deg
-                best_angle += sub_step_offset * step_deg
-                print(f"[align] parabolic refinement: sub-step offset {sub_step_offset:+.2f} steps")
+        # --- Step 4: parabolic sub-step refinement ---
+        # Parabola through (−1, yl), (0, ym), (+1, yr): vertex at x = −(yr−yl) / (2*(yl+yr−2*ym))
+        if 0 < min_idx < len(smoothed) - 1:
+            yl, ym, yr = smoothed[min_idx - 1], smoothed[min_idx], smoothed[min_idx + 1]
+            denom = yl + yr - 2.0 * ym  # positive for a true minimum
+            # Require meaningful curvature to avoid amplifying noise on flat curves.
+            if denom > 0.3:
+                sub_step = -(yr - yl) / (2.0 * denom)  # in units of one step
+                actual_step = (angles[min_idx + 1] - angles[min_idx - 1]) / 2.0
+                best_angle += sub_step * actual_step
+                print(f"[align] parabolic: sub-step {sub_step:+.3f} × {actual_step:.1f}° = {sub_step * actual_step:+.2f}°")
 
-        # --- Step 5: turn from current position (end of sweep) to best_angle ---
+        # --- Step 5: turn from end of sweep to best_angle ---
         correction = best_angle - cumulative
+        print(f"[align] correction {correction:+.1f}°  (sweep ended at {cumulative:+.1f}°, target {best_angle:+.1f}°)")
         self.driving_controller.turn_in_place(correction)
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
+        time.sleep(0.1)  # let chassis fully settle before any subsequent move
 
-        print(f"[align] done — best angle {best_angle:+.1f}°, "
-              f"min reading {readings[min_idx]:.1f} cm (coarse), correction {correction:+.1f}°")
+        print(f"[align] done — min reading {readings[min_idx]:.1f} cm at sweep angle {angles[min_idx]:+.1f}°")
 
 
+    def run_double_room(self, room_type: RoomType):
+        NUM_ITERATIONS = 2
+        turn_angles = {
+            RoomType.CORNER_DOUBLE_FIRST_HALF: {
+                "smaller_radius_deg": -30,
+                "larger_radius_deg": 180,
+            },
+            RoomType.CORNER_DOUBLE_SECOND_HALF: {
+                "smaller_radius_deg": -15,
+                "larger_radius_deg": 150,
+            },
+        }
+
+
+        self.left_motor.reset_encoder()
+        self.right_motor.reset_encoder()
+
+        for _ in range(NUM_ITERATIONS):
+            self.left_motor.set_position(turn_angles[room_type]["smaller_radius_deg"])
+            self.right_motor.set_position(turn_angles[room_type]["larger_radius_deg"])
+            self.left_motor.wait_is_stopped()
+            self.right_motor.wait_is_stopped()
+
+            self.left_motor.reset_encoder()
+            self.right_motor.reset_encoder()
+
+            self.left_motor.set_position(turn_angles[room_type]["larger_radius_deg"])
+            self.right_motor.set_position(turn_angles[room_type]["smaller_radius_deg"])
+            self.left_motor.wait_is_stopped()
+            self.right_motor.wait_is_stopped()
+
+            self.left_motor.reset_encoder()
+            self.right_motor.reset_encoder()
+
+        self.right_motor.set_position(turn_angles[room_type]["larger_radius_deg"] - turn_angles[room_type]["smaller_radius_deg"])
+        self.left_motor.wait_is_stopped()
+        self.right_motor.wait_is_stopped()
+
+        self.run(room_type=room_type, detect_bed=False, detect_start=True)
+    
