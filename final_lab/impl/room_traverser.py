@@ -482,7 +482,7 @@ class RoomTraverser:
         """
         return (dl - dr) / (2.0 * self.driving_controller.ORIENTTODEG)
 
-    def align_to_wall(self, search_range_deg: float = 50.0, step_deg: float = 4.0):
+    def align_to_wall(self, search_range_deg: float = 50.0, step_deg: float = 2.0):
         """
         Align the robot so the ultrasonic sensor is pointing directly at the
         wall (minimum reading = robot parallel to the wall).
