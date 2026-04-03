@@ -28,7 +28,7 @@ color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color
 grabber_controller = GrabberController(kill_switch_flag,Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
 sound_controller = SoundController()
-room_traverser = RoomTraverser(left_motor, right_motor, 160, color_sensor_controller, sound_controller=sound_controller)
+room_traverser = RoomTraverser(driving_controller, color_sensor_controller, sound_controller=sound_controller)
 
 wait_ready_sensors(True)
 grabber_controller.initialize_sensors()
@@ -36,11 +36,7 @@ print("Initialized grabber sensors")
 
 try:
     def worker():
-        while True:
-            route = int(input("Which code (1-3): "))
-            if (route == 1): routing.room2_to_pharmacy()
-            elif (route == 2): routing.room3A_to_pharmacy()
-            elif (route == 3): routing.room3B_to_pharmacy()
+        routing.room2_to_room3A()
 
     main_worker = threading.Thread(target=worker, daemon=True)
 
