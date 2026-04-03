@@ -474,7 +474,7 @@ class RoomTraverser:
         mid = len(buf) // 2
         return buf[mid] if len(buf) % 2 else (buf[mid - 1] + buf[mid]) / 2.0
 
-    def align_to_wall(self, search_range_deg: float = 50.0, step_deg: float = 4.0):
+    def align_to_wall(self, search_range_deg: float = 50.0, step_deg: float = 2.0):
         """
         Align the robot so the ultrasonic sensor is pointing directly at the
         wall (minimum reading = perpendicular to the wall = robot parallel to it).
@@ -491,7 +491,7 @@ class RoomTraverser:
 
         Args:
             search_range_deg: Total arc to sweep, centred on the current heading (default ±25°).
-            step_deg:         Angular increment between readings (default 4°).
+            step_deg:         Angular increment between readings (default 2°).
         """
         half = search_range_deg / 2.0
         n_steps = max(3, int(round(search_range_deg / step_deg)) + 1)
