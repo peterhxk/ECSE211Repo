@@ -648,7 +648,7 @@ class RoomTraverser:
             (0, larger_radius_deg / 2),
         ]
 
-        for i, (left_mm, right_mm) in enumerate(moves):
+        for left_mm, right_mm in moves:
             self.move_differential(left_mm, right_mm, POWER)
             bed_result = _check_sweep()
             if bed_result:
@@ -662,13 +662,6 @@ class RoomTraverser:
             angle, colour, _ = bed_result[0]
             print(f"  colour={colour}  arm_angle={angle:.1f}°")
             self._approach_and_unload(angle, colour)
-
-            # Resume the moves that hadn't run yet when the bed was detected
-            remaining = moves[i + 1:]
-            if remaining:
-                print(f"Resuming {len(remaining)} remaining move(s) after bed handling.")
-                for left_mm, right_mm in remaining:
-                    self.move_differential(left_mm, right_mm, POWER)
 
         print("Moving back.")
         self.run(room_type=room_type, detect_bed=False, detect_start=True)
