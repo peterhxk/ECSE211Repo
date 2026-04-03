@@ -606,10 +606,10 @@ class RoomTraverser:
         self.right_motor.reset_encoder()
 
         for _ in range(NUM_ITERATIONS):
-            self.move_differential(-50, 120)
-            self.move_differential(120, -50)
-
-        self.move_differential(0, 70)
+            self.move_differential(0, -20)
+            self.move_differential(60, 0)
+            self.move_differential(-40, 0)
+            self.move_differential(0, 120)
 
         # self.run(room_type=room_type, detect_bed=False, detect_start=True)
     
