@@ -18,7 +18,7 @@ class RoomType(Enum):
 room_type_to_wall_distance_map = {
     RoomType.CORNER_SINGLE: 4.8,
     RoomType.WALL_SINGLE: 54.4,
-    RoomType.CORNER_DOUBLE_FIRST_HALF: 30,
+    RoomType.CORNER_DOUBLE_FIRST_HALF: 29,
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4
 }
 
@@ -85,7 +85,7 @@ class RoomTraverser:
                 "straight_distance": -80,
             },
             RoomType.CORNER_DOUBLE_FIRST_HALF: {
-                "Kp": 1,
+                "Kp": 4,
                 "Ki": 0,
                 "Kd": 180,
                 "steer_scale": 0.7,
