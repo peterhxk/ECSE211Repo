@@ -617,7 +617,7 @@ class RoomTraverser:
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
 
-        POWER = 250
+        POWER = 300
 
         print("MOVING FORWARD, SWEEPING")
         self.color_sensor_controller.sweep_start(colours=[], range="full")
