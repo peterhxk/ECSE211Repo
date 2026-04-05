@@ -8,6 +8,7 @@ from controllers.driving_controller import DrivingController
 from controllers.sound_controller import SoundController
 import math
 import threading
+from typing import Optional
 
 class RoomType(Enum):
     CORNER_SINGLE = 1
@@ -514,7 +515,7 @@ class RoomTraverser:
           consecutive ticks, indicating the robot is settled at the minimum.
         """
 
-        def _get_us() -> float | None:
+        def _get_us() -> Optional[float]:
             v = self.ultrasonic_sensor.get_cm()
             try:
                 fv = float(v)
