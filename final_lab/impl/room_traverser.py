@@ -498,7 +498,7 @@ class RoomTraverser:
         sample_dt: float = 0.08,
         reversal_limit: int = 3,
         max_iters: int = 300,
-        calib: int = 1.5,
+        calib: int = -1.5,
     ):
         """
         Align the robot to the wall using continuous closed-loop turning.
