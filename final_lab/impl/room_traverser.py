@@ -664,11 +664,6 @@ class RoomTraverser:
         self.color_sensor_controller.sweep_stop()
         self.color_sensor_controller.set_arm_at_angle(0)
 
-        # Dead-reckon back to wall-parallel before anything else.
-        print(f"Straightening: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
-        self.driving_controller.turn_in_place(-cumulative_heading)
-        self.left_motor.wait_is_stopped()
-        self.right_motor.wait_is_stopped()
 
         if bed_result:
             angle, colour, _ = bed_result[0]
@@ -678,6 +673,12 @@ class RoomTraverser:
             adjusted_angle = angle - cumulative_heading
             print(f"  colour={colour}  raw_arm={angle:.1f}°  heading_at_detection={cumulative_heading:.1f}°  adjusted_arm={adjusted_angle:.1f}°")
             self._approach_and_unload(adjusted_angle, colour)
+
+        # Dead-reckon back to wall-parallel before anything else.
+        print(f"Straightening: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
+        self.driving_controller.turn_in_place(-cumulative_heading)
+        self.left_motor.wait_is_stopped()
+        self.right_motor.wait_is_stopped()
 
         print("Moving back.")
         self.run(room_type=room_type, detect_bed=False, detect_start=True)
