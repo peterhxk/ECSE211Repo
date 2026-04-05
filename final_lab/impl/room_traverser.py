@@ -768,9 +768,8 @@ class RoomTraverser:
             # The arm angle was recorded while the robot was at cumulative_heading.
             # After straightening by -cumulative_heading the bed sits at a different
             # angle relative to the new forward direction: subtract the drift out.
-            adjusted_angle = angle - cumulative_heading
-            print(f"  colour={colour}  raw_arm={angle:.1f}°  heading_at_detection={cumulative_heading:.1f}°  adjusted_arm={adjusted_angle:.1f}°")
-            self._approach_and_unload(adjusted_angle, colour)
+            print(f"  colour={colour}  raw_arm={angle:.1f}°  heading_at_detection={cumulative_heading:.1f}°  adjusted_arm={angle:.1f}°")
+            self._approach_and_unload(angle, colour)
 
         # Dead-reckon back to wall-parallel before anything else.
         print(f"Straightening: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
