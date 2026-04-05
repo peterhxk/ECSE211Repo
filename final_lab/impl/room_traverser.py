@@ -189,6 +189,7 @@ class RoomTraverser:
 
                 if detect_start:
                     detected = self.color_sensor_controller.read_colour_interval()
+                    print(detected)
                     if detected == "orange":
                         print("Orange detected — arrived back at starting point.")
                         start_detected = True
