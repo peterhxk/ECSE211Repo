@@ -47,18 +47,18 @@ if __name__ == "__main__":
         # routing.room2_to_room3A()
         
 
-        #routing.grab_block(grabber_controller)
-
-        room_traverser.align_to_wall_continuous()
-        
-        # print("running double room 1")
-        # room_traverser.run_double_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF)
-        # routing.room3A_to_room3B()
-        # print("running double room 2")
-        # room_traverser.align_to_wall_continuous()
-        # room_traverser.run_double_room(room_type=RoomType.CORNER_DOUBLE_SECOND_HALF)
-        # print("going back to pharmacy")
-        # routing.room3B_to_pharmacy()
+        routing.grab_block(grabber_controller)
+        routing.move_forward(-100)
+        routing.move_forward(150,stop_on_colour="orange")
+        print("running double room 1")
+        room_traverser.run_double_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF)
+        routing.room3A_to_room3B()
+        print("running double room 2")
+        routing.move_forward(-100)
+        routing.move_forward(150,stop_on_colour="orange")
+        room_traverser.run_double_room(room_type=RoomType.CORNER_DOUBLE_SECOND_HALF)
+        print("going back to pharmacy")
+        routing.room3B_to_pharmacy()
 
     except Exception as err:
         print(err)
