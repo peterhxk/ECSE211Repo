@@ -491,6 +491,93 @@ class RoomTraverser:
     # if it now undershoots, raise toward 1.0.
     ALIGN_CORRECTION_GAIN = 0.88
 
+    def align_to_wall_continuous(
+        self,
+        turn_dps_max: int = 90,
+        turn_dps_min: int = 18,
+        speed_scale: float = 8.0,
+        sample_dt: float = 0.05,
+        stable_iters: int = 10,
+        max_iters: int = 400,
+    ):
+        """
+        Align the robot to the wall using continuous closed-loop turning.
+
+        Strategy:
+        - Spin slowly in one direction, reading the ultrasonic sensor each tick.
+        - Track the running minimum (best) reading seen so far.
+        - Speed = clamp(turn_dps_min + (current - best) * speed_scale, min, max):
+          fast when far from minimum, slow when near it.
+        - If the reading increases relative to the previous sample, flip direction
+          (we passed the minimum).
+        - Stop when the reading has been stable (|delta| < 0.3 cm) for stable_iters
+          consecutive ticks, indicating the robot is settled at the minimum.
+        """
+
+        def _get_us() -> float | None:
+            v = self.ultrasonic_sensor.get_cm()
+            try:
+                fv = float(v)
+                if self._US_CM_MIN <= fv <= self._US_CM_MAX:
+                    return fv
+            except (TypeError, ValueError):
+                pass
+            return None
+
+        prev = _get_us()
+        if prev is None:
+            print("[align_continuous] no US reading — aborting")
+            return
+
+        best = prev
+        direction = 1   # +1 = left (positive turn_in_place convention), -1 = right
+        stable_count = 0
+
+        dps = turn_dps_max
+        self.left_motor.set_dps(direction * dps)
+        self.right_motor.set_dps(-direction * dps)
+
+        print(f"[align_continuous] starting — initial US={prev:.1f} cm")
+
+        for _ in range(max_iters):
+            time.sleep(sample_dt)
+
+            cur = _get_us()
+            if cur is None:
+                continue
+
+            delta = cur - prev
+            prev = cur
+
+            if cur < best:
+                best = cur
+                stable_count = 0
+
+            if delta > 0:
+                # Reading increased — we moved away from minimum, reverse direction.
+                direction = -direction
+
+            # Speed scales down as we approach the running minimum.
+            dps = max(turn_dps_min, min(turn_dps_max,
+                                        int(turn_dps_min + (cur - best) * speed_scale)))
+
+            self.left_motor.set_dps(direction * dps)
+            self.right_motor.set_dps(-direction * dps)
+
+            if abs(delta) < 0.3:
+                stable_count += 1
+            else:
+                stable_count = 0
+
+            if stable_count >= stable_iters:
+                break
+
+        self.left_motor.set_dps(0)
+        self.right_motor.set_dps(0)
+        print(f"[align_continuous] done — best={best:.1f} cm  final={prev:.1f} cm")
+
+
+
     def align_to_wall(self, search_range_deg: float = 40.0, step_deg: float = 4.0):
         """
         Align the robot so the ultrasonic sensor is pointing directly at the
