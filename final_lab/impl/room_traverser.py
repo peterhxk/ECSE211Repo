@@ -496,6 +496,7 @@ class RoomTraverser:
         self,
         turn_dps: int = 50,
         sample_dt: float = 0.08,
+        sensor_delay: float = 0.1,
         reversal_limit: int = 3,
         max_iters: int = 300,
     ):
@@ -535,6 +536,7 @@ class RoomTraverser:
 
         for _ in range(max_iters):
             time.sleep(sample_dt)
+            time.sleep(sensor_delay)
 
             cur = _get_us()
             if cur is None:
