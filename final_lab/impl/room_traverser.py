@@ -499,14 +499,16 @@ class RoomTraverser:
         reversal_limit: int = 3,
         max_iters: int = 2000,
         offset: int = -1.5,
+        window_size: int = 5,
     ):
         """
         Align the robot to the wall using continuous closed-loop turning.
 
         Strategy:
         - Turn slowly in one direction, sampling the ultrasonic sensor each tick.
-        - As long as the reading keeps decreasing, continue in the same direction.
-        - The moment the reading increases (minimum was passed), reverse direction.
+        - Raw readings are smoothed with a sliding window median to remove noise.
+        - As long as the smoothed reading keeps decreasing, continue in the same direction.
+        - The moment the smoothed reading increases (minimum was passed), reverse direction.
         - Stop after reversal_limit reversals — the robot is oscillating around
           the minimum and is considered aligned.
         """
@@ -521,7 +523,26 @@ class RoomTraverser:
                 pass
             return None
 
-        prev = _get_us()
+        window = []
+
+        def _smoothed_us() -> Optional[float]:
+            v = _get_us()
+            if v is None:
+                return None
+            window.append(v)
+            if len(window) > window_size:
+                window.pop(0)
+            sorted_w = sorted(window)
+            mid = len(sorted_w) // 2
+            return sorted_w[mid] if len(sorted_w) % 2 else (sorted_w[mid - 1] + sorted_w[mid]) / 2.0
+
+        # Prime the window before starting to move.
+        prev = None
+        for _ in range(window_size):
+            v = _smoothed_us()
+            if v is not None:
+                prev = v
+            time.sleep(sample_dt)
         if prev is None:
             print("[align_continuous] no US reading — aborting")
             return
@@ -537,7 +558,7 @@ class RoomTraverser:
         for _ in range(max_iters):
             time.sleep(sample_dt)
 
-            cur = _get_us()
+            cur = _smoothed_us()
             if cur is None:
                 continue
 
