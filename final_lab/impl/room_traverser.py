@@ -764,6 +764,7 @@ class RoomTraverser:
 
 
         if bed_result:
+            self.driving_controller.stop_motors()
             angle, colour, _ = bed_result[0]
             # The arm angle was recorded while the robot was at cumulative_heading.
             # After straightening by -cumulative_heading the bed sits at a different
