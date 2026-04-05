@@ -377,8 +377,9 @@ class RoomTraverser:
         self.right_motor.wait_is_stopped()
 
         print("Dropping block")
+        expected_after_unload = self.grabber_controller.bloc_count - 1
         self.grabber_controller.start_unloading()
-        self._wait_for_unloading(expected_bloc_count=1, label="unload")
+        self._wait_for_unloading(expected_bloc_count=expected_after_unload, label="unload")
 
         if self.sound_controller:
             self.sound_controller.play_success()
