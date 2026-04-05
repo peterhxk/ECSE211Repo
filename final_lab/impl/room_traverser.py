@@ -498,7 +498,7 @@ class RoomTraverser:
         sample_dt: float = 0.08,
         reversal_limit: int = 3,
         max_iters: int = 300,
-        calib: int = -1.5,
+        offset: int = -1.5,
     ):
         """
         Align the robot to the wall using continuous closed-loop turning.
@@ -558,8 +558,8 @@ class RoomTraverser:
         self.right_motor.set_dps(0)
         print(f"[align_continuous] done — final US={prev:.1f} cm")
 
-        self.left_motor.set_dps(calib * turn_dps)
-        self.right_motor.set_dps(-calib * turn_dps)
+        self.left_motor.set_dps(offset * turn_dps)
+        self.right_motor.set_dps(-offset * turn_dps)
         time.sleep(0.5)
         self.left_motor.set_dps(0)
         self.right_motor.set_dps(0)
