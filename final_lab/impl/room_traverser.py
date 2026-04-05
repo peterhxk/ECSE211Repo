@@ -494,25 +494,20 @@ class RoomTraverser:
 
     def align_to_wall_continuous(
         self,
-        turn_dps_max: int = 50,
-        turn_dps_min: int = 25,
-        speed_scale: float = 1.2,
-        sample_dt: float = 0.5,
-        stable_iters: int = 10,
-        max_iters: int = 400,
+        turn_dps: int = 50,
+        sample_dt: float = 0.08,
+        reversal_limit: int = 3,
+        max_iters: int = 300,
     ):
         """
         Align the robot to the wall using continuous closed-loop turning.
 
         Strategy:
-        - Spin slowly in one direction, reading the ultrasonic sensor each tick.
-        - Track the running minimum (best) reading seen so far.
-        - Speed = clamp(turn_dps_min + (current - best) * speed_scale, min, max):
-          fast when far from minimum, slow when near it.
-        - If the reading increases relative to the previous sample, flip direction
-          (we passed the minimum).
-        - Stop when the reading has been stable (|delta| < 0.3 cm) for stable_iters
-          consecutive ticks, indicating the robot is settled at the minimum.
+        - Turn slowly in one direction, sampling the ultrasonic sensor each tick.
+        - As long as the reading keeps decreasing, continue in the same direction.
+        - The moment the reading increases (minimum was passed), reverse direction.
+        - Stop after reversal_limit reversals — the robot is oscillating around
+          the minimum and is considered aligned.
         """
 
         def _get_us() -> Optional[float]:
@@ -530,13 +525,11 @@ class RoomTraverser:
             print("[align_continuous] no US reading — aborting")
             return
 
-        best = prev
-        direction = 1   # +1 = left (positive turn_in_place convention), -1 = right
-        stable_count = 0
+        direction = 1   # +1 = left, -1 = right (matches turn_in_place sign convention)
+        reversals = 0
 
-        dps = turn_dps_max
-        self.left_motor.set_dps(direction * dps)
-        self.right_motor.set_dps(-direction * dps)
+        self.left_motor.set_dps(direction * turn_dps)
+        self.right_motor.set_dps(-direction * turn_dps)
 
         print(f"[align_continuous] starting — initial US={prev:.1f} cm")
 
@@ -547,35 +540,22 @@ class RoomTraverser:
             if cur is None:
                 continue
 
-            delta = cur - prev
-            prev = cur
+            print(f"[align_continuous] US={cur:.1f} cm  dir={'+' if direction > 0 else '-'}  reversals={reversals}")
 
-            if cur < best:
-                best = cur
-                stable_count = 0
-
-            if delta > 0:
-                # Reading increased — we moved away from minimum, reverse direction.
+            if cur > prev:
+                # Reading got bigger — we passed the minimum, reverse.
                 direction = -direction
+                reversals += 1
+                if reversals >= reversal_limit:
+                    break
+                self.left_motor.set_dps(direction * turn_dps)
+                self.right_motor.set_dps(-direction * turn_dps)
 
-            # Speed scales down as we approach the running minimum.
-            dps = max(turn_dps_min, min(turn_dps_max,
-                                        int(turn_dps_min + (cur - best) * speed_scale)))
-
-            self.left_motor.set_dps(direction * dps)
-            self.right_motor.set_dps(-direction * dps)
-
-            if abs(delta) < 0.3:
-                stable_count += 1
-            else:
-                stable_count = 0
-
-            if stable_count >= stable_iters:
-                break
+            prev = cur
 
         self.left_motor.set_dps(0)
         self.right_motor.set_dps(0)
-        print(f"[align_continuous] done — best={best:.1f} cm  final={prev:.1f} cm")
+        print(f"[align_continuous] done — final US={prev:.1f} cm")
 
 
 
