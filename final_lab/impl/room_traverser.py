@@ -753,6 +753,8 @@ class RoomTraverser:
         excluded_angles: list = []
         found_sides: set = set()
         cumulative_heading = 0.0
+        net_left_mm = 0.0
+        net_right_mm = 0.0
         move_idx = 0
 
         while move_idx < len(moves) and self.grabber_controller.bloc_count > 0:
@@ -769,7 +771,8 @@ class RoomTraverser:
 
             self.move_differential(left_mm, right_mm, POWER)
             cumulative_heading += (left_mm - right_mm) * 180.0 / (math.pi * self.WHEEL_BASE_MM)
-
+            net_left_mm += left_mm
+            net_right_mm += right_mm
 
             bed_result = None
             if should_sweep:
@@ -784,8 +787,10 @@ class RoomTraverser:
                 self.color_sensor_controller.set_arm_at_angle(0)
                 heading_when_detected = cumulative_heading
 
-                print(f"Reversing last move to return to center")
-                self.move_differential(-left_mm, -right_mm, POWER)
+                print(f"Reversing net displacement ({net_left_mm:.0f}mm, {net_right_mm:.0f}mm) to return to center")
+                self.move_differential(-net_left_mm, -net_right_mm, POWER)
+                net_left_mm = 0.0
+                net_right_mm = 0.0
                 cumulative_heading = 0.0
 
                 angle, colour, _ = bed_result[0]
