@@ -707,7 +707,7 @@ class RoomTraverser:
         turn_angles = {
             RoomType.CORNER_DOUBLE_FIRST_HALF: {
                 "smaller_radius_deg": -50,
-                "larger_radius_deg": 130,
+                "larger_radius_deg": 140,
             },
             RoomType.CORNER_DOUBLE_SECOND_HALF: {
                 "smaller_radius_deg": -30,
