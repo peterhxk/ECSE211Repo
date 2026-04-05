@@ -552,9 +552,9 @@ class RoomTraverser:
 
         self.left_motor.set_dps(direction * turn_dps)
         self.right_motor.set_dps(-direction * turn_dps)
-
         print(f"[align_continuous] starting — initial US={prev:.1f} cm")
 
+        time.sleep(0.1)  # brief initial delay to let the robot start moving before sampling
         for _ in range(max_iters):
             time.sleep(sample_dt)
 
