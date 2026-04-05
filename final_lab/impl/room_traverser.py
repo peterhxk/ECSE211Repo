@@ -762,6 +762,12 @@ class RoomTraverser:
             move_idx += 1
 
             if side in found_sides:
+                # Replace the zigzag move with a small straight advance to keep pace
+                straight_mm = (abs(left_mm) + abs(right_mm)) / 4
+                self.move_differential(straight_mm, straight_mm, POWER)
+                net_left_mm += straight_mm
+                net_right_mm += straight_mm
+                # cumulative_heading unchanged (straight move has no rotation)
                 continue
 
             should_sweep = side != "straight"
