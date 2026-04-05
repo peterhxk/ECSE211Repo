@@ -728,9 +728,16 @@ class RoomTraverser:
         larger_radius_deg = turn_angles[room_type]["larger_radius_deg"]
 
         bed_result = None
+        heading_at_detection = 0.0
 
         def _check_sweep():
-            return self.color_sensor_controller.sweep_get_result()
+            # Also captures cumulative_heading at the moment of detection so the
+            # robot rotation can be combined with the arm angle later.
+            result = self.color_sensor_controller.sweep_get_result()
+            if result:
+                nonlocal heading_at_detection
+                heading_at_detection = cumulative_heading
+            return result
 
         moves = [
             (10, 10),
@@ -762,21 +769,20 @@ class RoomTraverser:
         self.color_sensor_controller.sweep_stop()
         self.color_sensor_controller.set_arm_at_angle(0)
 
-
-        if bed_result:
-            self.driving_controller.stop_motors()
-            angle, colour, _ = bed_result[0]
-            # The arm angle was recorded while the robot was at cumulative_heading.
-            # After straightening by -cumulative_heading the bed sits at a different
-            # angle relative to the new forward direction: subtract the drift out.
-            print(f"  colour={colour}  raw_arm={angle:.1f}°  heading_at_detection={cumulative_heading:.1f}°  adjusted_arm={angle:.1f}°")
-            self._approach_and_unload(angle, colour)
-
-        # Dead-reckon back to wall-parallel before anything else.
+        # Straighten back to wall-parallel before any approach.
         print(f"Straightening: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
         self.driving_controller.turn_in_place(-cumulative_heading)
         self.left_motor.wait_is_stopped()
         self.right_motor.wait_is_stopped()
+
+        if bed_result:
+            angle, colour, _ = bed_result[0]
+            # Combined angle = arm angle at detection + robot heading at detection.
+            # After straightening the robot is wall-parallel (heading 0), so the
+            # bed sits at heading_at_detection + angle relative to forward.
+            combined_angle = angle + heading_at_detection
+            print(f"  colour={colour}  arm={angle:.1f}°  heading={heading_at_detection:.1f}°  combined={combined_angle:.1f}°")
+            self._approach_and_unload(combined_angle, colour)
 
         print("Moving back.")
         self.run(room_type=room_type, detect_bed=False, detect_start=True)
