@@ -770,6 +770,7 @@ class RoomTraverser:
             self.move_differential(left_mm, right_mm, POWER)
             cumulative_heading += (left_mm - right_mm) * 180.0 / (math.pi * self.WHEEL_BASE_MM)
 
+
             bed_result = None
             if should_sweep:
                 raw = self.color_sensor_controller.sweep_get_result()
@@ -782,10 +783,9 @@ class RoomTraverser:
             if bed_result:
                 self.color_sensor_controller.set_arm_at_angle(0)
                 heading_when_detected = cumulative_heading
-                print(f"Straightening: turning {-heading_when_detected:.1f}°")
-                self.driving_controller.turn_in_place(-heading_when_detected)
-                self.left_motor.wait_is_stopped()
-                self.right_motor.wait_is_stopped()
+
+                print(f"Reversing last move to return to center")
+                self.move_differential(-left_mm, -right_mm, POWER)
                 cumulative_heading = 0.0
 
                 angle, colour, _ = bed_result[0]
