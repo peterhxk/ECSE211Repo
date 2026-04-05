@@ -451,10 +451,10 @@ class ColourSensorController (EV3ColorSensor):
         self._colour_window.append(current_colour)
         
         # If window is not yet full, return None
-        if len(self._colour_window) < 10:
-            return None
-        
-        # Window is full, return the most common colour (majority vote)
-        colour_counts = Counter(self._colour_window)
-        most_common_colour = colour_counts.most_common(1)[0][0]
-        return most_common_colour
+        if len(self._colour_window) < 5:
+            return current_colour
+        else:
+            # Window is full, return the most common colour (majority vote)
+            colour_counts = Counter(self._colour_window)
+            most_common_colour = colour_counts.most_common(1)[0][0]
+            return most_common_colour
