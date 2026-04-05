@@ -749,6 +749,8 @@ class RoomTraverser:
             (0, larger_radius_deg / 2, _side(0, larger_radius_deg / 2)),
         ]
 
+        EXCLUSION_THRESHOLD = 15.0
+        excluded_angles: list = []
         found_sides: set = set()
         cumulative_heading = 0.0
         move_idx = 0
@@ -773,7 +775,9 @@ class RoomTraverser:
                 raw = self.color_sensor_controller.sweep_get_result()
                 self.color_sensor_controller.sweep_stop()
                 if raw and raw[0][1] in ["red", "green"]:
-                    bed_result = raw
+                    potential_combined = raw[0][0] + cumulative_heading
+                    if not any(abs(potential_combined - ea) < EXCLUSION_THRESHOLD for ea in excluded_angles):
+                        bed_result = raw
 
             if bed_result:
                 self.color_sensor_controller.set_arm_at_angle(0)
@@ -788,6 +792,7 @@ class RoomTraverser:
                 combined_angle = angle + heading_when_detected
                 print(f"  colour={colour}  arm={angle:.1f}°  heading={heading_when_detected:.1f}°  combined={combined_angle:.1f}°")
                 self._approach_and_unload(combined_angle, colour)
+                excluded_angles.append(combined_angle)
                 found_sides.add(side)
 
         if abs(cumulative_heading) > 0.5:
