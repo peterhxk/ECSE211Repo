@@ -716,7 +716,6 @@ class RoomTraverser:
             },
         }
 
-
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
 
@@ -727,74 +726,75 @@ class RoomTraverser:
         smaller_radius_deg = turn_angles[room_type]["smaller_radius_deg"]
         larger_radius_deg = turn_angles[room_type]["larger_radius_deg"]
 
-        EXCLUSION_THRESHOLD = 15.0  # degrees — beds within this angle are considered the same bed
-        excluded_angles: list = []
-        heading_at_detection = 0.0
-        cumulative_heading = 0.0
-
-        def _check_sweep():
-            result = self.color_sensor_controller.sweep_get_result()
-            if result:
-                potential_combined = result[0][0] + cumulative_heading
-                if any(abs(potential_combined - ea) < EXCLUSION_THRESHOLD for ea in excluded_angles):
-                    # Already visited this bed — restart sweep and ignore
-                    self.color_sensor_controller.sweep_stop()
-                    self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
-                    return None
-                nonlocal heading_at_detection
-                heading_at_detection = cumulative_heading
-            return result
+        def _side(left_mm, right_mm):
+            diff = left_mm - right_mm
+            if diff > 0: return "right"
+            if diff < 0: return "left"
+            return "straight"
 
         moves = [
-            (10, 10),
-            (0, smaller_radius_deg / 2),
-            (larger_radius_deg / 2, 0),
+            (10, 10, "straight"),
+            (0, smaller_radius_deg / 2, _side(0, smaller_radius_deg / 2)),
+            (larger_radius_deg / 2, 0, _side(larger_radius_deg / 2, 0)),
         ]
         for _ in range(NUM_ITERATIONS):
             moves += [
-                (smaller_radius_deg, 0),
-                (0, larger_radius_deg),
-                (0, smaller_radius_deg),
-                (larger_radius_deg, 0),
+                (smaller_radius_deg, 0, _side(smaller_radius_deg, 0)),
+                (0, larger_radius_deg, _side(0, larger_radius_deg)),
+                (0, smaller_radius_deg, _side(0, smaller_radius_deg)),
+                (larger_radius_deg, 0, _side(larger_radius_deg, 0)),
             ]
         moves += [
-            (smaller_radius_deg / 2, 0),
-            (0, larger_radius_deg / 2),
+            (smaller_radius_deg / 2, 0, _side(smaller_radius_deg / 2, 0)),
+            (0, larger_radius_deg / 2, _side(0, larger_radius_deg / 2)),
         ]
 
+        found_sides: set = set()
+        cumulative_heading = 0.0
         move_idx = 0
 
         while move_idx < len(moves) and self.grabber_controller.bloc_count > 0:
-            self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
+            left_mm, right_mm, side = moves[move_idx]
+            move_idx += 1
+
+            if side in found_sides:
+                continue
+
+            should_sweep = side != "straight"
+
+            if should_sweep:
+                self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
+
+            self.move_differential(left_mm, right_mm, POWER)
+            cumulative_heading += (left_mm - right_mm) * 180.0 / (math.pi * self.WHEEL_BASE_MM)
+
             bed_result = None
+            if should_sweep:
+                raw = self.color_sensor_controller.sweep_get_result()
+                self.color_sensor_controller.sweep_stop()
+                if raw and raw[0][1] in ["red", "green"]:
+                    bed_result = raw
 
-            while move_idx < len(moves):
-                left_mm, right_mm = moves[move_idx]
-                self.move_differential(left_mm, right_mm, POWER)
-                cumulative_heading += (left_mm - right_mm) * 180.0 / (math.pi * self.WHEEL_BASE_MM)
-                move_idx += 1
-                bed_result = _check_sweep()
-                if bed_result:
-                    print(f"Bed detected during sweep: {bed_result}")
-                    break
+            if bed_result:
+                self.color_sensor_controller.set_arm_at_angle(0)
+                heading_when_detected = cumulative_heading
+                print(f"Straightening: turning {-heading_when_detected:.1f}°")
+                self.driving_controller.turn_in_place(-heading_when_detected)
+                self.left_motor.wait_is_stopped()
+                self.right_motor.wait_is_stopped()
+                cumulative_heading = 0.0
 
-            self.color_sensor_controller.sweep_stop()
+                angle, colour, _ = bed_result[0]
+                combined_angle = angle + heading_when_detected
+                print(f"  colour={colour}  arm={angle:.1f}°  heading={heading_when_detected:.1f}°  combined={combined_angle:.1f}°")
+                self._approach_and_unload(combined_angle, colour)
+                found_sides.add(side)
+
+        if abs(cumulative_heading) > 0.5:
             self.color_sensor_controller.set_arm_at_angle(0)
-
-            # Straighten back to wall-parallel before any approach.
-            print(f"Straightening: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
             self.driving_controller.turn_in_place(-cumulative_heading)
             self.left_motor.wait_is_stopped()
             self.right_motor.wait_is_stopped()
-            cumulative_heading = 0.0
-
-            if bed_result:
-                angle, colour, _ = bed_result[0]
-                combined_angle = angle + heading_at_detection
-                print(f"  colour={colour}  arm={angle:.1f}°  heading={heading_at_detection:.1f}°  combined={combined_angle:.1f}°")
-                self._approach_and_unload(combined_angle, colour)
-                excluded_angles.append(combined_angle)
-                heading_at_detection = 0.0
 
         print("Moving back.")
         self.run(room_type=room_type, detect_bed=False, detect_start=True)
