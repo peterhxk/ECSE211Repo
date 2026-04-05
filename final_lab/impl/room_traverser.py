@@ -494,9 +494,9 @@ class RoomTraverser:
 
     def align_to_wall_continuous(
         self,
-        turn_dps_max: int = 180,
+        turn_dps_max: int = 50,
         turn_dps_min: int = 20,
-        speed_scale: float = 2.0,
+        speed_scale: float = 1.2,
         sample_dt: float = 1,
         stable_iters: int = 10,
         max_iters: int = 400,
