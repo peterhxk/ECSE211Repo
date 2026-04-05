@@ -723,19 +723,24 @@ class RoomTraverser:
         POWER = 320
 
         print("MOVING FORWARD, SWEEPING")
-        self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
 
         smaller_radius_deg = turn_angles[room_type]["smaller_radius_deg"]
         larger_radius_deg = turn_angles[room_type]["larger_radius_deg"]
 
-        bed_result = None
+        EXCLUSION_THRESHOLD = 15.0  # degrees — beds within this angle are considered the same bed
+        excluded_angles: list = []
         heading_at_detection = 0.0
+        cumulative_heading = 0.0
 
         def _check_sweep():
-            # Also captures cumulative_heading at the moment of detection so the
-            # robot rotation can be combined with the arm angle later.
             result = self.color_sensor_controller.sweep_get_result()
             if result:
+                potential_combined = result[0][0] + cumulative_heading
+                if any(abs(potential_combined - ea) < EXCLUSION_THRESHOLD for ea in excluded_angles):
+                    # Already visited this bed — restart sweep and ignore
+                    self.color_sensor_controller.sweep_stop()
+                    self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
+                    return None
                 nonlocal heading_at_detection
                 heading_at_detection = cumulative_heading
             return result
@@ -757,33 +762,39 @@ class RoomTraverser:
             (0, larger_radius_deg / 2),
         ]
 
-        cumulative_heading = 0.0
+        move_idx = 0
 
-        for left_mm, right_mm in moves:
-            self.move_differential(left_mm, right_mm, POWER)
-            cumulative_heading += (left_mm - right_mm) * 180.0 / (math.pi * self.WHEEL_BASE_MM)
-            bed_result = _check_sweep()
+        while move_idx < len(moves) and self.grabber_controller.bloc_count > 0:
+            self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
+            bed_result = None
+
+            while move_idx < len(moves):
+                left_mm, right_mm = moves[move_idx]
+                self.move_differential(left_mm, right_mm, POWER)
+                cumulative_heading += (left_mm - right_mm) * 180.0 / (math.pi * self.WHEEL_BASE_MM)
+                move_idx += 1
+                bed_result = _check_sweep()
+                if bed_result:
+                    print(f"Bed detected during sweep: {bed_result}")
+                    break
+
+            self.color_sensor_controller.sweep_stop()
+            self.color_sensor_controller.set_arm_at_angle(0)
+
+            # Straighten back to wall-parallel before any approach.
+            print(f"Straightening: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
+            self.driving_controller.turn_in_place(-cumulative_heading)
+            self.left_motor.wait_is_stopped()
+            self.right_motor.wait_is_stopped()
+            cumulative_heading = 0.0
+
             if bed_result:
-                print(f"Bed detected during sweep: {bed_result}")
-                break
-
-        self.color_sensor_controller.sweep_stop()
-        self.color_sensor_controller.set_arm_at_angle(0)
-
-        # Straighten back to wall-parallel before any approach.
-        print(f"Straightening: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
-        self.driving_controller.turn_in_place(-cumulative_heading)
-        self.left_motor.wait_is_stopped()
-        self.right_motor.wait_is_stopped()
-
-        if bed_result:
-            angle, colour, _ = bed_result[0]
-            # Combined angle = arm angle at detection + robot heading at detection.
-            # After straightening the robot is wall-parallel (heading 0), so the
-            # bed sits at heading_at_detection + angle relative to forward.
-            combined_angle = angle + heading_at_detection
-            print(f"  colour={colour}  arm={angle:.1f}°  heading={heading_at_detection:.1f}°  combined={combined_angle:.1f}°")
-            self._approach_and_unload(combined_angle, colour)
+                angle, colour, _ = bed_result[0]
+                combined_angle = angle + heading_at_detection
+                print(f"  colour={colour}  arm={angle:.1f}°  heading={heading_at_detection:.1f}°  combined={combined_angle:.1f}°")
+                self._approach_and_unload(combined_angle, colour)
+                excluded_angles.append(combined_angle)
+                heading_at_detection = 0.0
 
         print("Moving back.")
         self.run(room_type=room_type, detect_bed=False, detect_start=True)
