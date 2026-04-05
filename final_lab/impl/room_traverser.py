@@ -495,9 +495,9 @@ class RoomTraverser:
     def align_to_wall_continuous(
         self,
         turn_dps: int = 50,
-        sample_dt: float = 1,
+        sample_dt: float = 0.01,
         reversal_limit: int = 3,
-        max_iters: int = 300,
+        max_iters: int = 2000,
         offset: int = -1.5,
     ):
         """
