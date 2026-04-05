@@ -64,6 +64,7 @@ if __name__ == "__main__":
         room_traverser.run_double_room(room_type=RoomType.CORNER_DOUBLE_SECOND_HALF)
         print("going back to pharmacy")
         routing.room3B_to_pharmacy()
+        sound_controller.play_mission_complete()
 
     except Exception as err:
         print(err)
