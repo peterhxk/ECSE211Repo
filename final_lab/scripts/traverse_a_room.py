@@ -51,7 +51,7 @@ if __name__ == "__main__":
         driving_controller.move_distance(-50)
         left_motor.wait_is_stopped()
         routing.move_forward(60,stop_on_colour="orange")
-        left_motor.wait_is_stopped()
+
         print("running double room 1")
         room_traverser.run_double_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF)
         routing.room3A_to_room3B()
