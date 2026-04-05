@@ -24,7 +24,8 @@ wait_ready_sensors(True)
 
 try:
     while True:
-        color_sensor_controller.ingest_bw("w")
+        color_sensor_controller.ingest_colours("yellow")
+        # color_sensor_controller.ingest_bw("orange")
         # print(color_sensor_controller.read_black_white())
         # print(color_sensor_controller.read_rgb())
         time.sleep(0.1)
