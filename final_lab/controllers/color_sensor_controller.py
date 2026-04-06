@@ -434,7 +434,7 @@ class ColourSensorController (EV3ColorSensor):
                 time.sleep(0.1)
 
     def read_colour_print(self):
-        print(self.get_rgb())
+        print(self.get_colour())
 
     def read_ambient(self):
         return self.get_ambient()
