@@ -63,7 +63,7 @@ class Routing(SweepLineFollower):
         self._exit_room()
 
         self.turn_logic("right", "back")
-        self.move_forward(130)
+        self.move_forward(13)
         self.pilot.turn_90("left")
 
         self.pilot.right_motor.wait_is_stopped()

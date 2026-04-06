@@ -183,9 +183,9 @@ class DrivingController:
         """
         Turns in place to the right or left"""
         if direction == "left":
-            self.turn_in_place(90)
-        else:
             self.turn_in_place(-90)
+        else:
+            self.turn_in_place(90)
         
     def set_left_motor(self, power: int):
         """Sets the left motor to a specific power."""
