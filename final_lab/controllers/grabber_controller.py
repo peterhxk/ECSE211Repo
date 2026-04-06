@@ -142,6 +142,8 @@ class GrabberController:
         self._gyro_sample_seq = 0
         self._gyro_sample_cond = threading.Condition(self._gyro_sample_lock)
 
+
+
     def _gyro_worker(self):
         """
         Threaded loop to poll Gyro DPS and publish dps to the kill switch monitor and to any gyro event detection event
@@ -164,14 +166,19 @@ class GrabberController:
 
                 # internal kill trigger
                 if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
-                    # wait for the "spring back" : the kill switch will move to rest position which is equivalent to inwards motion
-                    # maybe wait for some consecutive triggers
                     print("[KILL SWITCH] Initial outwards press detected")
+
+                    threading.Thread(
+                        target=self._record_after_kill_trigger,
+                        args=(5.0,),
+                        daemon=True
+                    ).start()
+                    """
                     if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT):
                         print("[KILL SWITCH] Secondary inwards press detected")
                         self.kill(reason=f"FAST_TILT_KILL detected: dps={dps:.3f}")
                         return
-                # maybe look for a fast inwards movement as well !
+                    """
 
                 with self._gyro_sample_cond:
                     self._gyro_sample = (now, dps, z)
@@ -1348,9 +1355,41 @@ class GrabberController:
         return True
 
 
+    def _record_after_kill_trigger(self, duration=5.0):
+        """
+        Records gyro data for a fixed duration after kill trigger
+        """
+        print("[RECORD] Starting post-kill recording")
+
+        self._begin_operation_recording(
+            operation_name="kill_switch_post_record",
+            timeout=duration,
+            extra={"type": "post_kill"}
+        )
+
+        start = time.time()
+        last_seq = None
+
+        while time.time() - start < duration:
+            sample = self._read_gyro_dps(last_seq=last_seq, timeout=0.1)
+            if sample is None:
+                continue
+
+            last_seq, ts, dps, z = sample
+            elapsed = ts - start
+
+            self._append_gyro_sample_to_record(
+                elapsed_s=elapsed,
+                dps=dps,
+                z=z,
+                detectors={"post_kill": True},
+            )
+
+        self._end_operation_recording(outcome="completed")
+        print("[RECORD] Finished post-kill recording")
 
 if __name__ == "__main__":
     kill_event = threading.Event()
-    controller = GrabberController(kill_event, "D", 4, False, False)
+    controller = GrabberController(kill_event, "D", 4, False, True)
     controller.initialize_sensors()
     controller.loop()
