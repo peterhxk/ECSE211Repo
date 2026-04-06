@@ -132,7 +132,11 @@ try:
         routing.room1_to_room2()
         room_traverser.traverse_a_room(RoomType.WALL_SINGLE, grabber_controller)
 
-        routing.room2_to_room3A()
+        # Check if we got lucky and found the 2 green beds right away
+        if grabber_controller.bloc_count == 0:
+            routing.room2_to_pharmacy()
+        else:
+            routing.room2_to_room3A()
 
         sound_controller.play_mission_complete()
         sound_controller.wait_done()
