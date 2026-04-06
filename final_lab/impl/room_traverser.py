@@ -59,7 +59,7 @@ class RoomTraverser:
                 "Kd": 140,
                 "steer_scale": 1.3,
                 "ramp": 0.0,
-                "straight_distance": 40,
+                "straight_distance": 37,
             },
             RoomType.CORNER_DOUBLE_SECOND_HALF: {
                 "Kp": 100,
@@ -67,7 +67,7 @@ class RoomTraverser:
                 "Kd": 140,
                 "steer_scale": 1.3,
                 "ramp": 0.0,
-                "straight_distance": 40,
+                "straight_distance": 37,
             },
             RoomType.CORNER_DOUBLE_MIDDLE: {
                 "Kp": 100,
@@ -75,7 +75,7 @@ class RoomTraverser:
                 "Kd": 140,
                 "steer_scale": 1.3,
                 "ramp": 0.0,
-                "straight_distance": 40,
+                "straight_distance": 37,
             },
         }, 
         "backward": {
