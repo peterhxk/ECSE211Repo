@@ -47,7 +47,7 @@ if __name__ == "__main__":
         # routing.room2_to_room3A()
         
 
-        routing.grab_block(grabber_controller)
+        # routing.grab_block(grabber_controller)
         # # driving_controller.move_distance(-200)
         # # left_motor.wait_is_stopped()
         # # routing.move_forward(200,stop_on_colour="orange")

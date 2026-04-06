@@ -513,7 +513,8 @@ class RoomTraverser:
                     f"Bed detected: {first_color} at {first_dist:.2f} cm,"
                     f" angle {first_angle:.1f}°"
                 )
-                self._approach_and_unload(first_angle, first_color)
+                # self._approach_and_unload(first_angle, first_color)
+                print("UNLOADING")
             else:
                 print(f"No bed detected. Distance travelled: {total_dist:.2f} cm")
 
@@ -536,7 +537,8 @@ class RoomTraverser:
                     f" angle {second_angle:.1f}°"
                 )
                 if second_color == "green":
-                    self._approach_and_unload(second_angle, second_color)
+                    # self._approach_and_unload(second_angle, second_color)
+                    print("UNLOADING")
                 else:
                     print("Second bed is red — skipping unload.")
             else:
@@ -560,7 +562,8 @@ class RoomTraverser:
                     f" angle {first_angle:.1f}°"
                 )
                 if first_color == "green":
-                    self._approach_and_unload(first_angle, first_color)
+                    # self._approach_and_unload(first_angle, first_color)
+                    print("UNLOADING")
                 else:
                     print("First bed is red — skipping unload.")
             else:
