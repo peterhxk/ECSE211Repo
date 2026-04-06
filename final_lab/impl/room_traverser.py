@@ -22,7 +22,7 @@ room_type_to_wall_distance_map = {
     RoomType.WALL_SINGLE: 54.4,
     RoomType.CORNER_DOUBLE_FIRST_HALF: 29.7,
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4.7,
-    RoomType.CORNER_DOUBLE_MIDDLE: 18.8
+    RoomType.CORNER_DOUBLE_MIDDLE: 21.5
 }
 
 def _kill_switch_callback():
@@ -585,6 +585,8 @@ class RoomTraverser:
                 )
                 # self._approach_and_unload(first_angle, first_color)
                 print("UNLOADING")
+                self.sound_controller.play_success()
+                self.sound_controller.wait_done()
                 time.sleep(1)
             else:
                 print(f"No bed detected. Distance travelled: {total_dist:.2f} cm")
@@ -620,6 +622,8 @@ class RoomTraverser:
                         print(f"  Bed {i + 1} at mean angle {ang:.1f}°")
                         # self._approach_and_unload(ang, "green")
                         print("UNLOADING")
+                        self.sound_controller.play_success()
+                        self.sound_controller.wait_done()
                         time.sleep(1)
                 elif len(bed_angles) == 1:
                     print(
@@ -628,6 +632,8 @@ class RoomTraverser:
                     )
                     # self._approach_and_unload(bed_angles[0], "green")
                     print("UNLOADING")
+                    self.sound_controller.play_success()
+                    self.sound_controller.wait_done()
                     time.sleep(1)
                 else:
                     print(
@@ -635,6 +641,8 @@ class RoomTraverser:
                     )
                     # self._approach_and_unload(first_angle, "green")
                     print("UNLOADING")
+                    self.sound_controller.play_success()
+                    self.sound_controller.wait_done()
                     time.sleep(1)
             elif first_color is not None:
                 # Should not occur (double pass sweeps green only).
