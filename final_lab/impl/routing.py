@@ -65,7 +65,7 @@ class Routing(SweepLineFollower):
         self.turn_logic("right", "back")
         self.pilot.pivot_90("left")
 
-        self.right_motor.wait_is_stopped()
+        self.pilot.right_motor.wait_is_stopped()
 
     def room2_to_pharmacy(self):
         self._exit_room()
