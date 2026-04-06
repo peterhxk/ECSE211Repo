@@ -18,8 +18,8 @@ class RoomType(Enum):
 room_type_to_wall_distance_map = {
     RoomType.CORNER_SINGLE: 4.8,
     RoomType.WALL_SINGLE: 54.4,
-    RoomType.CORNER_DOUBLE_FIRST_HALF: 29,
-    RoomType.CORNER_DOUBLE_SECOND_HALF: 4
+    RoomType.CORNER_DOUBLE_FIRST_HALF: 29.7,
+    RoomType.CORNER_DOUBLE_SECOND_HALF: 4.7
 }
 
 def _kill_switch_callback():
