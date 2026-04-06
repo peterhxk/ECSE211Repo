@@ -123,8 +123,10 @@ class GrabberController:
         self._recording_lock = threading.Lock()
 
         self._command_queue = deque()
-        #self._input_thread = threading.Thread(target=self._input_worker, daemon=True)
-        #self._input_thread.start()
+        if __name__ == "__main__":
+            print("Starting Gyro controller input thread")
+            self._input_thread = threading.Thread(target=self._input_worker, daemon=True)
+            self._input_thread.start()
 
         self._gyro_thread = None
         self._gyro_stop = threading.Event()
