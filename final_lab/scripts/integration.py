@@ -126,13 +126,13 @@ try:
         # routing.pharmacy_to_grab_block_position()
         # routing.grab_block(grabber_controller)
 
-        routing.pharmacy_to_room1()
-        room_traverser.traverse_a_room(RoomType.CORNER_SINGLE)
+        # routing.pharmacy_to_room1()
+        # room_traverser.traverse_a_room(RoomType.CORNER_SINGLE)
 
-        routing.room1_to_room2()
-        room_traverser.traverse_a_room(RoomType.WALL_SINGLE)
+        # routing.room1_to_room2()
+        # room_traverser.traverse_a_room(RoomType.WALL_SINGLE)
 
-        routing.room2_to_room3A()
+        # routing.room2_to_room3A()
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
 
         routing.room3A_to_room3C()
