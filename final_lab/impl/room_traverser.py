@@ -284,13 +284,16 @@ class RoomTraverser:
                     if detected == "orange":
                         self.left_motor.set_dps(-motor_base_power)
                         self.right_motor.set_dps(-motor_base_power)
+                        print("Moving back to starting point")
                         
                         detected = self.color_sensor_controller.read_colour_interval()
                         while detected != "white/black" and detected != "yellow":
                             detected = self.color_sensor_controller.read_colour_interval()
                             time.sleep(0.01)
+                            print("waiting to detect white/black")
 
                         if detected == "yellow":
+                            print("Yellow detected — continuing")
                             continue
 
                         print("Orange detected — arrived back at starting point.")
