@@ -583,11 +583,15 @@ class RoomTraverser:
                     f"Bed detected: {first_color} at {first_dist:.2f} cm,"
                     f" angle {first_angle:.1f}°"
                 )
-                # self._approach_and_unload(first_angle, first_color)
-                print("UNLOADING")
-                self.sound_controller.play_success()
-                self.sound_controller.wait_done()
-                time.sleep(1)
+                if first_color == "green":
+                    # self._approach_and_unload(first_angle, first_color)
+                    print("UNLOADING")
+                    if self.sound_controller:
+                        self.sound_controller.play_success()
+                        self.sound_controller.wait_done()
+                    time.sleep(1)
+                else:
+                    print("Red bed — skipping unload (no sound).")
             else:
                 print(f"No bed detected. Distance travelled: {total_dist:.2f} cm")
 
@@ -607,11 +611,14 @@ class RoomTraverser:
                     f"Green bed hit while sweeping forward at {first_dist:.2f} cm,"
                     f" arm ~{first_angle:.1f}° — running full sweep for adjacent second bed"
                 )
+                arm_pos = float(self.color_sensor_controller.motor.get_position())
+                # Start sweeping away from wherever the arm stopped (right → go left first, etc.).
+                starting_on_right = arm_pos <= 0
                 raw_hits = self.color_sensor_controller.sweep(
                     colours=["green", "yellow"],
                     range="full",
                     stop_on_match=False,
-                    starting_on_right=True,
+                    starting_on_right=starting_on_right,
                 )
                 bed_angles = self._double_room_full_sweep_bed_angles(raw_hits)
                 if len(bed_angles) >= 2:
@@ -622,7 +629,7 @@ class RoomTraverser:
                         print(f"  Bed {i + 1} at mean angle {ang:.1f}°")
                         # self._approach_and_unload(ang, "green")
                         print("UNLOADING")
-                        if first_color == "green":
+                        if self.sound_controller:
                             self.sound_controller.play_success()
                             self.sound_controller.wait_done()
                         time.sleep(1)
@@ -633,7 +640,7 @@ class RoomTraverser:
                     )
                     # self._approach_and_unload(bed_angles[0], "green")
                     print("UNLOADING")
-                    if first_color == "green":
+                    if self.sound_controller:
                         self.sound_controller.play_success()
                         self.sound_controller.wait_done()
                     time.sleep(1)
@@ -643,7 +650,7 @@ class RoomTraverser:
                     )
                     # self._approach_and_unload(first_angle, "green")
                     print("UNLOADING")
-                    if first_color == "green":
+                    if self.sound_controller:
                         self.sound_controller.play_success()
                         self.sound_controller.wait_done()
                     time.sleep(1)
