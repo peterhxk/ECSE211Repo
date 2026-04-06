@@ -169,7 +169,7 @@ class GrabberController:
                     if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT_KILL):
                         print("[KILL SWITCH] Secondary inwards press detected")
                         self.kill(reason=f"FAST_TILT_KILL detected: dps={dps:.3f}")
-                    return
+                        return
                 # maybe look for a fast inwards movement as well !
 
                 with self._gyro_sample_cond:
