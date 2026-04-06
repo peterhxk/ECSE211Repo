@@ -133,7 +133,7 @@ try:
         # room_traverser.traverse_a_room(RoomType.WALL_SINGLE)
 
         # routing.room2_to_room3A()
-        # room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
+        room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
 
         routing.room3A_to_room3C()
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_SECOND_HALF)
