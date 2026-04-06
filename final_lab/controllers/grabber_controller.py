@@ -1410,7 +1410,7 @@ class GrabberController:
 
             last_seq, ts, dps, z = sample
 
-            if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT):
+            if self._is_tilted_inwards_sample(dps, GyroTilt.SLOW_TILT):
                 hits += 1
                 if hits >= needed:
                     return True
