@@ -165,8 +165,9 @@ class GrabberController:
                 # internal kill trigger
                 if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
                     # wait for the "spring back" : the kill switch will move to rest position which is equivalent to inwards motion
+                    # maybe wait for some consecutive triggers
                     print("[KILL SWITCH] Initial outwards press detected")
-                    if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT_KILL):
+                    if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT):
                         print("[KILL SWITCH] Secondary inwards press detected")
                         self.kill(reason=f"FAST_TILT_KILL detected: dps={dps:.3f}")
                         return
