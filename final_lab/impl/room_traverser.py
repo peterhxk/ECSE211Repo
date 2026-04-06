@@ -22,7 +22,7 @@ room_type_to_wall_distance_map = {
     RoomType.WALL_SINGLE: 54.4,
     RoomType.CORNER_DOUBLE_FIRST_HALF: 29.7,
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4.7,
-    RoomType.CORNER_DOUBLE_MIDDLE: 21.5
+    RoomType.CORNER_DOUBLE_MIDDLE: 23.3
 }
 
 def _kill_switch_callback():
@@ -485,7 +485,7 @@ class RoomTraverser:
 
     def _double_room_full_sweep_bed_angles(self, ordered_detections: list) -> list[float]:
         """
-        Parse a full sweep that recorded green and yellow in time order.
+        Parse hits from a single max-left → max-right arm pass (time order).
 
         Two separate green beds are only assumed if the sequence contains a yellow
         detection between the first contiguous green region and a later green region.
@@ -556,9 +556,9 @@ class RoomTraverser:
 
     Double room  (all other RoomType values) — one straight pass per call:
       1. Wall-follow forward while sweeping for green only (red ignored).
-      2. If green is seen, stop, run one full sweep logging green and yellow. Two
-         beds only if yellow appears between the first and second green region in
-         sweep order; then unload twice, else once.
+      2. If green is seen, stop, move arm to max left, sweep once left→max right
+         logging green and yellow. Two beds only if yellow lies between green
+         regions in that pass; then unload twice, else once.
       3. Wall-follow backward to start (orange detection).
 
     Input:
@@ -609,21 +609,15 @@ class RoomTraverser:
             if first_color == "green":
                 print(
                     f"Green bed hit while sweeping forward at {first_dist:.2f} cm,"
-                    f" arm ~{first_angle:.1f}° — running full sweep for adjacent second bed"
+                    f" arm ~{first_angle:.1f}° — max-left then left→right sweep for beds"
                 )
-                arm_pos = float(self.color_sensor_controller.motor.get_position())
-                # Start sweeping away from wherever the arm stopped (right → go left first, etc.).
-                starting_on_right = arm_pos <= 0
-                raw_hits = self.color_sensor_controller.sweep(
-                    colours=["green", "yellow"],
-                    range="full",
-                    stop_on_match=False,
-                    starting_on_right=starting_on_right,
+                raw_hits = self.color_sensor_controller.sweep_colours_max_left_to_right(
+                    ["green", "yellow"],
                 )
                 bed_angles = self._double_room_full_sweep_bed_angles(raw_hits)
                 if len(bed_angles) >= 2:
                     print(
-                        "Full sweep: yellow between greens — two beds, unloading twice"
+                        "Left→right sweep: yellow between greens — two beds, unloading twice"
                     )
                     for i, ang in enumerate(bed_angles):
                         print(f"  Bed {i + 1} at mean angle {ang:.1f}°")
@@ -635,7 +629,7 @@ class RoomTraverser:
                         time.sleep(1)
                 elif len(bed_angles) == 1:
                     print(
-                        f"Full sweep: single green region (no yellow between beds) "
+                        f"Left→right sweep: single green region (no yellow between beds) "
                         f"at {bed_angles[0]:.1f}°"
                     )
                     # self._approach_and_unload(bed_angles[0], "green")
@@ -646,7 +640,7 @@ class RoomTraverser:
                     time.sleep(1)
                 else:
                     print(
-                        "Full sweep found no green/yellow — using initial hit angle"
+                        "Left→right sweep found no green/yellow — using initial hit angle"
                     )
                     # self._approach_and_unload(first_angle, "green")
                     print("UNLOADING")

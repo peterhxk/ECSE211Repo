@@ -195,6 +195,60 @@ class ColourSensorController (EV3ColorSensor):
             self._sweep_thread.join(timeout=2.0)
         self.motor.set_dps(0)
 
+    def sweep_colours_max_left_to_right(
+        self,
+        colours: List[str],
+        *,
+        black_white: bool = False,
+    ) -> List[Tuple[int, str, int]]:
+        """
+        Park at the full-left stop (-60°), then drive the arm once toward full
+        right (+60°), logging colour hits along the way. Does not sweep back,
+        so the same bed is not seen twice on the return pass.
+        """
+        self.motor.set_dps(0)
+        init_position = 0.0
+        left_lim = float(self.MAX_SWEEP_ANGLE["full"][SweepDirection.LEFT])
+        self.set_arm_at_angle(left_lim)
+
+        self.sweep_dir = SweepDirection.RIGHT
+        duration = 0
+        consecutive_count = 0
+        consecutive_positions: List[float] = []
+        self.colours_found = []
+
+        while True:
+            if self.motor.get_speed() * self.sweep_dir.value <= 0:
+                self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
+
+            if black_white:
+                detected_colour = self.read_black_white()
+            else:
+                detected_colour = self.read_colour()
+
+            if detected_colour in colours:
+                consecutive_count += 1
+                consecutive_positions.append(self.motor.get_position())
+                if consecutive_count >= 3:
+                    avg_pos = sum(consecutive_positions) / len(consecutive_positions)
+                    self.colours_found.append((avg_pos, detected_colour, duration))
+                    print(self.colours_found)
+                    consecutive_count = 0
+                    consecutive_positions = []
+            else:
+                consecutive_count = 0
+                consecutive_positions = []
+
+            if self._is_at_boundary("full"):
+                results = list(self.colours_found)
+                self.colours_found = []
+                self.motor.set_dps(0)
+                self.set_arm_at_angle(init_position)
+                return results
+
+            time.sleep(0.01)
+            duration += 0.1
+
     def sweep(self, colours=[], range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True, black_white = False) -> List[Tuple[int, str, int]]:
         """Sweeps the colour sensor arm and checks the colour.
 
