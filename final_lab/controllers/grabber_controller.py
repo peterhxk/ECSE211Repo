@@ -1348,6 +1348,6 @@ class GrabberController:
 
 if __name__ == "__main__":
     kill_event = threading.Event()
-    controller = GrabberController(kill_event, "D", 4, True, False)
+    controller = GrabberController(kill_event, "D", 4, False, False)
     controller.initialize_sensors()
     controller.loop()
