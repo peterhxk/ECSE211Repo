@@ -14,12 +14,14 @@ class RoomType(Enum):
     WALL_SINGLE = 2
     CORNER_DOUBLE_FIRST_HALF = 3
     CORNER_DOUBLE_SECOND_HALF = 4
+    CORNER_DOUBLE_MIDDLE = 5
 
 room_type_to_wall_distance_map = {
     RoomType.CORNER_SINGLE: 4.8,
     RoomType.WALL_SINGLE: 54.4,
     RoomType.CORNER_DOUBLE_FIRST_HALF: 29.7,
-    RoomType.CORNER_DOUBLE_SECOND_HALF: 4.7
+    RoomType.CORNER_DOUBLE_SECOND_HALF: 4.7,
+    RoomType.CORNER_DOUBLE_MIDDLE: 17.2
 }
 
 def _kill_switch_callback():
@@ -66,6 +68,14 @@ class RoomTraverser:
                 "ramp": 0.0,
                 "straight_distance": 40,
             },
+            RoomType.CORNER_DOUBLE_MIDDLE: {
+                "Kp": 100,
+                "Ki": 0,
+                "Kd": 140,
+                "steer_scale": 1.3,
+                "ramp": 0.0,
+                "straight_distance": 40,
+            },
         }, 
         "backward": {
             RoomType.CORNER_SINGLE: {
@@ -101,6 +111,14 @@ class RoomTraverser:
                 "straight_distance": -80,
             },
         },
+        RoomType.CORNER_DOUBLE_MIDDLE: {
+            "Kp": 100,
+            "Ki": 0,
+            "Kd": 140,
+            "steer_scale": 1.3,
+            "ramp": 0.0,
+            "straight_distance": 40,
+        },
         }
     
 
@@ -122,27 +140,23 @@ class RoomTraverser:
     """ 
     Designed to make a robot move in a straight line until it detects a bed OR until it reaches a certain distance.
     Every call to the run() method is responsible for one straight forward or backwards path.
+    This function is not to be called directly. Use traverse_a_room() instead.
     
     Inputs:
-    - wall_distance: The left distance from the wall to maintain while moving (in CM).
-    - straight_distance: The MAXIMUM straight distance that the robot moves until the method returns. Defaults to 25cm.
+    - room_type: The type of the room to traverse. This determines the path taken by the robot.
     - detect_bed: Whether the robot should be detecting a bed or not (indicates whether the color sensor arm should be looking for a bed)
     - detect_start: Whether the robot should be detecting the starting point or not (indicates whether the color sensor arm should be looking for the starting point)
 
     Returns:
     - Tuple of (bed color detected or None, distance travelled in CM)
     """
-    def run(self, room_type: RoomType = RoomType.CORNER_SINGLE, detect_bed: bool = False, detect_start: bool = False):
+    def _run(self, room_type: RoomType, detect_bed: bool = False, detect_start: bool = False):
         # Reset encoders first, then immediately float so the BrickPi3 position
         # controller (briefly engaged by reset_encoder) cannot lock the wheels
         # before set_dps takes over.
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
 
-        # BrickPi3 reset_all() sets every port's SensorType to NONE. Without
-        # re-applying modes, get_sensor raises "Sensor not configured or not supported."
-        # (e.g. second run() after reset_brick, or any prior reset_all).
-        self.ultrasonic_sensor.set_mode(self.ultrasonic_sensor.Mode.CM)
         self.ultrasonic_sensor.wait_ready()
         self.color_sensor_controller.set_mode("component")
         self.color_sensor_controller.wait_ready()
@@ -393,8 +407,15 @@ class RoomTraverser:
         print("Restored to wall-parallel heading.")
         time.sleep(0.1)
 
+    """
+    The main function to traverse a room depending on the room type. Everything is self contained here.
+    This is the only function to call when you are in front of a room.
+
+    Input:
+    - room_type: The type of the room to traverse. This determines the path taken by the robot.
+    """
     def traverse_a_room(self, room_type: RoomType) -> None:
-        traverse_results = self.run(room_type, 45, detect_bed=True)
+        traverse_results = self._run(room_type, 45, detect_bed=True)
         bed_colour = traverse_results[0]
         distance_travelled = traverse_results[1]
         bed_angle = traverse_results[2]
@@ -406,44 +427,15 @@ class RoomTraverser:
             print(f"No bed detected, distance travelled: {distance_travelled:.2f} cm")
 
         print("Going back.")
-        back_result = self.run(room_type, -2 * distance_travelled, detect_bed=False, detect_start=True)
+        back_result = self._run(room_type, -2 * distance_travelled, detect_bed=False, detect_start=True)
         if back_result[0] == "orange":
             print(f"Returned to starting point (orange detected) after {back_result[1]:.2f} cm.")
         else:
             print(f"Back run completed without detecting orange after {back_result[1]:.2f} cm.")
 
-    # Ultrasonic: settle after motion, then median over samples (spike-resistant).
-    _US_ENTRY_SETTLE_S = 0.15
-    _US_ENTRY_SAMPLES = 9
-    _US_ENTRY_INTERVAL_S = 0.04
-    _US_CM_MIN = 2.0
-    _US_CM_MAX = 250.0
-
-    def _ultrasonic_cm_robust(self) -> float:
-        """
-        One stable reading in cm after the robot has stopped: brief settle, then
-        median of several samples (EV3 ultrasonic often throws outliers).
-        """
-        time.sleep(self._US_ENTRY_SETTLE_S)
-        buf: list[float] = []
-        for _ in range(self._US_ENTRY_SAMPLES):
-            v = self.ultrasonic_sensor.get_cm()
-            if v is not None:
-                try:
-                    fv = float(v)
-                    if self._US_CM_MIN <= fv <= self._US_CM_MAX:
-                        buf.append(fv)
-                except (TypeError, ValueError):
-                    pass
-            time.sleep(self._US_ENTRY_INTERVAL_S)
-        if not buf:
-            v = self.ultrasonic_sensor.get_cm()
-            return float(v) if v is not None else 0.0
-        buf.sort()
-        mid = len(buf) // 2
-        if len(buf) % 2:
-            return buf[mid]
-        return (buf[mid - 1] + buf[mid]) / 2.0
+    """
+    --- UNDER THIS LINE IS LEGACY DOUBLE ROOM TRAVERSAL CODE ---
+    """
 
     # Sweep alignment: how many samples to take at each step (fewer than _US_ENTRY_SAMPLES
     # is fine — noise averages out across all the sweep steps).
@@ -677,5 +669,5 @@ class RoomTraverser:
             self._approach_and_unload(adjusted_angle, colour)
 
         print("Moving back.")
-        self.run(room_type=room_type, detect_bed=False, detect_start=True)
+        self._run(room_type=room_type, detect_bed=False, detect_start=True)
     
