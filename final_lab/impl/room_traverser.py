@@ -250,24 +250,53 @@ class RoomTraverser:
                             # Double room: note first bed and keep going; stop
                             # only when a second distinct bed is found.
                             if not first_bed_detected:
-                                print("DOUBLE ROOM: noting first bed")
-                                first_bed_detected = True
-                                first_bed_color = detected_color
-                                first_bed_angle = detected_angle
-                                first_bed_dist_cm = current_dist_cm
-                                # Restart the sweep so the stale result is cleared
-                                # before we look for a second bed.
-                                self.color_sensor_controller.sweep_stop()
-                                self.color_sensor_controller.sweep_start(
-                                    colours=["red", "green"], range="full"
-                                )
+                                min_valid_dist_cm = abs(straight_distance) * 0.8
+                                if current_dist_cm < min_valid_dist_cm:
+                                    # Too early in the traversal — likely a false
+                                    # positive or an out-of-room detection.  Restart
+                                    # the sweep and keep going.
+                                    print(
+                                        f"DOUBLE ROOM: ignoring early detection at"
+                                        f" {current_dist_cm:.1f} cm"
+                                        f" (< {min_valid_dist_cm:.1f} cm threshold)"
+                                    )
+                                    self.color_sensor_controller.sweep_stop()
+                                    self.color_sensor_controller.sweep_start(
+                                        colours=["red", "green"], range="full"
+                                    )
+                                else:
+                                    print("DOUBLE ROOM: noting first bed")
+                                    first_bed_detected = True
+                                    first_bed_color = detected_color
+                                    first_bed_angle = detected_angle
+                                    first_bed_dist_cm = current_dist_cm
+                                    # Restart the sweep so the stale result is cleared
+                                    # before we look for a second bed.
+                                    self.color_sensor_controller.sweep_stop()
+                                    self.color_sensor_controller.sweep_start(
+                                        colours=["red", "green"], range="full"
+                                    )
                             elif not second_bed_detected:
-                                print("DOUBLE ROOM: noting second bed")
-                                second_bed_detected = True
-                                second_bed_color = detected_color
-                                second_bed_angle = detected_angle
-                                second_bed_dist_cm = current_dist_cm
-                                break  # Handle second bed immediately after this run.
+                                # Reject if the arm is still parked near the first
+                                # bed — the new sweep re-detected the same target.
+                                SAME_BED_ANGLE_TOLERANCE = 20  # degrees
+                                if abs(detected_angle - first_bed_angle) < SAME_BED_ANGLE_TOLERANCE:
+                                    print(
+                                        f"DOUBLE ROOM: ignoring re-detection of first bed"
+                                        f" (angle {detected_angle:.1f}° ≈ first"
+                                        f" {first_bed_angle:.1f}°)"
+                                    )
+                                    self.color_sensor_controller.sweep_stop()
+                                    self.color_sensor_controller.sweep_start(
+                                        colours=["red", "green"], range="full"
+                                    )
+                                else:
+                                    print("DOUBLE ROOM: noting second bed")
+                                    second_bed_detected = True
+                                    second_bed_color = detected_color
+                                    second_bed_angle = detected_angle
+                                    second_bed_dist_cm = current_dist_cm
+                                    break  # Handle second bed immediately after this run.
 
                 if detect_start:
                     detected = self.color_sensor_controller.read_colour_interval()
