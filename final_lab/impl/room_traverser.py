@@ -266,7 +266,7 @@ class RoomTraverser:
                 self.left_motor.set_dps(left_dps)
                 self.right_motor.set_dps(right_dps)
 
-                time.sleep(0.04)
+                time.sleep(0.01)
         finally:
             self.driving_controller.stop_motors()
             if detect_bed:
