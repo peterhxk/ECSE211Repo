@@ -33,7 +33,7 @@ color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color
 grabber_controller = GrabberController(kill_switch_flag, Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
 sound_controller = SoundController()
-room_traverser = RoomTraverser(driving_controller, color_sensor_controller, sound_controller=sound_controller)
+room_traverser = RoomTraverser(driving_controller, color_sensor_controller, grabber_controller, sound_controller)
 
 wait_ready_sensors(True)
 grabber_controller.initialize_sensors()
@@ -127,16 +127,24 @@ try:
         routing.grab_block(grabber_controller)
 
         routing.pharmacy_to_room1()
-        room_traverser.traverse_a_room(RoomType.CORNER_SINGLE, grabber_controller)
+        room_traverser.traverse_a_room(RoomType.CORNER_SINGLE)
 
         routing.room1_to_room2()
-        room_traverser.traverse_a_room(RoomType.WALL_SINGLE, grabber_controller)
+        room_traverser.traverse_a_room(RoomType.WALL_SINGLE)
 
         # Check if we got lucky and found the 2 green beds right away
         if grabber_controller.bloc_count == 0:
             routing.room2_to_pharmacy()
         else:
             routing.room2_to_room3A()
+            room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
+
+            if grabber_controller.bloc_count == 0:
+                routing.room3A_to_pharmacy()
+            else:
+                routing.room3A_to_room3B()
+                room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_SECOND_HALF)
+                routing.room3B_to_pharmacy()
 
         sound_controller.play_mission_complete()
         sound_controller.wait_done()
