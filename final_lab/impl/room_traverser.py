@@ -22,7 +22,7 @@ room_type_to_wall_distance_map = {
     RoomType.WALL_SINGLE: 54.4,
     RoomType.CORNER_DOUBLE_FIRST_HALF: 29.7,
     RoomType.CORNER_DOUBLE_SECOND_HALF: 4.7,
-    RoomType.CORNER_DOUBLE_MIDDLE: 19.2
+    RoomType.CORNER_DOUBLE_MIDDLE: 18.8
 }
 
 def _kill_switch_callback():
