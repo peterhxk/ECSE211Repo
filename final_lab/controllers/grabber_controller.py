@@ -209,7 +209,7 @@ class GrabberController:
 
     def _load_cube_worker(self,timeout=5.0):
         try:
-            self._load_result = self._load_cube(timeout=timeout,stop_event=self._load_cancel_event)
+            self._load_result = self.load_cube(timeout=timeout,stop_event=self._load_cancel_event)
         finally:
             self._load_done_event.set()
 
