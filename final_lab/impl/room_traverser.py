@@ -279,16 +279,16 @@ class RoomTraverser:
                                 break  # Handle second bed immediately after this run.
 
                 if detect_start:
-                    detected = self.color_sensor_controller.read_colour_interval()
+                    detected = self.color_sensor_controller.read_colour()
                     print(detected)
                     if detected == "orange":
                         self.left_motor.set_dps(-motor_base_power)
                         self.right_motor.set_dps(-motor_base_power)
                         print("Moving back to starting point")
                         
-                        detected = self.color_sensor_controller.read_colour_interval()
+                        detected = self.color_sensor_controller.read_colour()
                         while detected != "white/black" and detected != "yellow":
-                            detected = self.color_sensor_controller.read_colour_interval()
+                            detected = self.color_sensor_controller.read_colour()
                             time.sleep(0.01)
                             print("waiting to detect white/black")
 
