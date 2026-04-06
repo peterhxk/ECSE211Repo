@@ -142,9 +142,9 @@ class RoomTraverser:
     Wall-follow in a straight line, optionally detecting beds or the start marker.
 
     For single room types the loop stops as soon as a bed is found (or max distance
-    is reached). For double room types the loop always travels the full max distance so
-    both possible beds can be found; it only stops early when a *second* bed is
-    detected (so that bed can be handled immediately).
+    is reached). For double room types the sweep looks for green only; the loop runs
+    until max distance or until the first green bed is seen, then stops so the caller
+    can run a full sweep to distinguish one bed from two adjacent greens.
 
     An optional override_distance_cm parameter replaces the straight_distance that
     would normally come from the PID config table. Pass a negative value to travel
@@ -215,8 +215,9 @@ class RoomTraverser:
 
         travelled_deg = 0.0
         try:
+            bed_colours = ["green"] if is_double else ["red", "green"]
             if detect_bed:
-                self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
+                self.color_sensor_controller.sweep_start(colours=bed_colours, range="full")
 
             while True:
                 travelled_deg = (
@@ -234,7 +235,7 @@ class RoomTraverser:
 
                 if detect_bed:
                     sweep_result = self.color_sensor_controller.sweep_get_result()
-                    if sweep_result and sweep_result[0][1] in ["green", "red"]:
+                    if sweep_result and sweep_result[0][1] in bed_colours:
                         detected_color = sweep_result[0][1]
                         detected_angle = sweep_result[0][0]
 
@@ -247,36 +248,14 @@ class RoomTraverser:
                             first_bed_dist_cm = current_dist_cm
                             break
                         else:
-                            # Double room: note first bed and keep going; stop
-                            # only when a second distinct bed is found.
-                            if not first_bed_detected:
-                                print("DOUBLE ROOM: noting first bed")
-                                first_bed_detected = True
-                                first_bed_color = detected_color
-                                first_bed_angle = detected_angle
-                                first_bed_dist_cm = current_dist_cm
-                                # Restart the sweep so the stale result is cleared
-                                # before we look for a second bed.
-                                self.color_sensor_controller.sweep_stop()
-                                # drive straight until bed color not detected
-                                while self.color_sensor_controller.read_colour() in ["red", "green"]:
-                                    self.left_motor.set_dps(motor_base_power)
-                                    self.right_motor.set_dps(motor_base_power)
-                                self.left_motor.set_dps(0)
-                                self.right_motor.set_dps(0)
-
-                                self.color_sensor_controller.sweep_start(
-                                    colours=["red", "green"], range="full"
-                                )
-                            elif not second_bed_detected:
-                                # Reject if the arm is still parked near the first
-                                # bed — the new sweep re-detected the same target.
-                                print("DOUBLE ROOM: noting second bed")
-                                second_bed_detected = True
-                                second_bed_color = detected_color
-                                second_bed_angle = detected_angle
-                                second_bed_dist_cm = current_dist_cm
-                                break  # Handle second bed immediately after this run.
+                            # Double room: green only — stop forward pass; caller
+                            # runs a full sweep to see one vs two adjacent beds.
+                            print("DOUBLE ROOM: green seen — end forward pass for full sweep")
+                            first_bed_detected = True
+                            first_bed_color = detected_color
+                            first_bed_angle = detected_angle
+                            first_bed_dist_cm = current_dist_cm
+                            break
 
                 if detect_start:
                     detected = self.color_sensor_controller.read_colour()
@@ -504,6 +483,67 @@ class RoomTraverser:
         print("Restored to wall-parallel heading.")
         time.sleep(0.1)
 
+    def _double_room_full_sweep_bed_angles(self, ordered_detections: list) -> list[float]:
+        """
+        Parse a full sweep that recorded green and yellow in time order.
+
+        Two separate green beds are only assumed if the sequence contains a yellow
+        detection between the first contiguous green region and a later green region.
+        Otherwise all greens in the sweep are treated as one bed (mean arm angle).
+        """
+        seq: list[tuple[float, str]] = []
+        for t in ordered_detections:
+            if len(t) < 2 or t[1] not in ("green", "yellow"):
+                continue
+            try:
+                seq.append((float(t[0]), t[1]))
+            except (TypeError, ValueError):
+                continue
+        if not seq:
+            return []
+
+        i = 0
+        while i < len(seq) and seq[i][1] != "green":
+            i += 1
+        if i >= len(seq):
+            return []
+
+        j = i
+        while j < len(seq) and seq[j][1] == "green":
+            j += 1
+        first_run_angles = [seq[k][0] for k in range(i, j)]
+
+        k = j
+        while k < len(seq):
+            if seq[k][1] == "yellow":
+                break
+            if seq[k][1] == "green":
+                # More green before any yellow — still the first bed (e.g. sweep re-hit).
+                start_g = k
+                while k < len(seq) and seq[k][1] == "green":
+                    k += 1
+                first_run_angles.extend(seq[t][0] for t in range(start_g, k))
+                continue
+            k += 1
+
+        bed1 = sum(first_run_angles) / len(first_run_angles)
+
+        if k >= len(seq) or seq[k][1] != "yellow":
+            return [bed1]
+
+        k += 1
+        while k < len(seq) and seq[k][1] != "green":
+            k += 1
+        if k >= len(seq):
+            return [bed1]
+
+        m = k
+        while m < len(seq) and seq[m][1] == "green":
+            m += 1
+        second_run_angles = [seq[t][0] for t in range(k, m)]
+        bed2 = sum(second_run_angles) / len(second_run_angles)
+        return [bed1, bed2]
+
     """
     The main function to traverse a room depending on the room type. Everything is
     self-contained here. This is the only function to call when you are in front of
@@ -514,16 +554,12 @@ class RoomTraverser:
       2. If green bed: unload. If red bed: skip.
       3. Wall-follow backward to start (orange detection).
 
-    Double room  (all other RoomType values):
-      1. Wall-follow forward to max distance ALWAYS, noting both beds if present.
-      2. If a second bed was found, handle it immediately:
-           - Green → unload.
-           - Red   → skip (do not unload).
-      3. If a first bed was found, wall-follow backward from the current position
-         to the first bed's location, then handle it:
-           - Green → unload.
-           - Red   → skip (do not unload).
-      4. Wall-follow backward to start (orange detection).
+    Double room  (all other RoomType values) — one straight pass per call:
+      1. Wall-follow forward while sweeping for green only (red ignored).
+      2. If green is seen, stop, run one full sweep logging green and yellow. Two
+         beds only if yellow appears between the first and second green region in
+         sweep order; then unload twice, else once.
+      3. Wall-follow backward to start (orange detection).
 
     Input:
     - room_type: The type of the room to traverse.
@@ -562,51 +598,50 @@ class RoomTraverser:
 
         else:
             # ------------------------------------------------------------------
-            # Double room
+            # Double room — green only while driving; full sweep after first hit.
             # ------------------------------------------------------------------
-
-            # Step 1: handle second bed immediately (if any).
-            if second_color is not None:
+            if first_color == "green":
                 print(
-                    f"Second bed detected: {second_color} at {second_dist:.2f} cm,"
-                    f" angle {second_angle:.1f}°"
+                    f"Green bed hit while sweeping forward at {first_dist:.2f} cm,"
+                    f" arm ~{first_angle:.1f}° — running full sweep for adjacent second bed"
                 )
-                if second_color == "green":
-                    # self._approach_and_unload(second_angle, second_color)
-                    print("UNLOADING")
-                    time.sleep(1)
-                else:
-                    print("Second bed is red — skipping unload.")
-            else:
-                print("No second bed found.")
-
-            # Step 2: navigate back to first bed (if any) and handle it.
-            if first_color is not None:
-                dist_to_first_bed_cm = total_dist - first_dist
-                if dist_to_first_bed_cm > 0.5:
+                raw_hits = self.color_sensor_controller.sweep(
+                    colours=["green", "yellow"],
+                    range="full",
+                    stop_on_match=False,
+                    starting_on_right=True,
+                )
+                bed_angles = self._double_room_full_sweep_bed_angles(raw_hits)
+                if len(bed_angles) >= 2:
                     print(
-                        f"Navigating {dist_to_first_bed_cm:.2f} cm back to first bed"
-                        f" (wall-following)."
+                        "Full sweep: yellow between greens — two beds, unloading twice"
                     )
-                    self._run(
-                        room_type,
-                        override_distance_cm=-dist_to_first_bed_cm,
+                    for i, ang in enumerate(bed_angles):
+                        print(f"  Bed {i + 1} at mean angle {ang:.1f}°")
+                        # self._approach_and_unload(ang, "green")
+                        print("UNLOADING")
+                        time.sleep(1)
+                elif len(bed_angles) == 1:
+                    print(
+                        f"Full sweep: single green region (no yellow between beds) "
+                        f"at {bed_angles[0]:.1f}°"
                     )
-
-                print(
-                    f"First bed: {first_color} at {first_dist:.2f} cm,"
-                    f" angle {first_angle:.1f}°"
-                )
-                if first_color == "green":
-                    # self._approach_and_unload(first_angle, first_color)
+                    # self._approach_and_unload(bed_angles[0], "green")
                     print("UNLOADING")
                     time.sleep(1)
                 else:
-                    print("First bed is red — skipping unload.")
+                    print(
+                        "Full sweep found no green/yellow — using initial hit angle"
+                    )
+                    # self._approach_and_unload(first_angle, "green")
+                    print("UNLOADING")
+                    time.sleep(1)
+            elif first_color is not None:
+                # Should not occur (double pass sweeps green only).
+                print(f"Unexpected bed colour in double pass: {first_color}")
             else:
-                print("No first bed found either.")
+                print(f"No green bed on this pass. Travelled {total_dist:.2f} cm")
 
-            # Step 3: wall-follow all the way back to start.
             print("Going back to start.")
             back = self._run(room_type, detect_start=True)
             if back[0] == "orange":
