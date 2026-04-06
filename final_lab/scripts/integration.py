@@ -112,12 +112,12 @@ try:
             exit()
 
         # Room 3B
-        routing.room3A_to_room3B() # Week Demo
+        routing.room3A_to_room3C() # Week Demo
         room_traverser.traverse_a_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF, grabber_controller=grabber_controller)
         robot_state = 5
         # UPDATE BLOCK_STORED 
         blocks_stored = grabber_controller.cube_count
-        routing.room3B_to_pharmacy()
+        routing.room3C_to_pharmacy()
 
         sound_controller.play_mission_complete()
         time.sleep(1)
@@ -135,10 +135,10 @@ try:
         routing.room2_to_room3A()
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
 
-        routing.room3A_to_room3B()
+        routing.room3A_to_room3C()
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_SECOND_HALF)
 
-        routing.room3B_to_pharmacy()
+        routing.room3C_to_pharmacy()
 
         sound_controller.play_mission_complete()
         sound_controller.wait_done()

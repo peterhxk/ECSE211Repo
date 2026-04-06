@@ -53,11 +53,17 @@ class Routing(SweepLineFollower):
         self.turn_logic("right", "back")
         self.turn_logic("right", "front")
 
-    def room3A_to_room3B(self):
+    def room3A_to_room3C(self):
         self._exit_room()
 
         self.turn_logic("left", "back")
         self.turn_logic("right", "front")
+
+    def room3C_to_room3B(self):
+        self._exit_room()
+
+        self.turn_logic("right", "back")
+        self.pilot.pivot_90("left")
 
     def room2_to_pharmacy(self):
         self._exit_room()
@@ -68,7 +74,6 @@ class Routing(SweepLineFollower):
         self._advance_into_pharmacy()
 
     def room3A_to_pharmacy(self):
-        # UNTESTED
         self._exit_room()
 
         self.turn_logic("right", "back")
@@ -77,7 +82,7 @@ class Routing(SweepLineFollower):
 
         self._advance_into_pharmacy()
 
-    def room3B_to_pharmacy(self):
+    def room3C_to_pharmacy(self):
         self._exit_room()
 
         self.turn_logic("right", "back")
