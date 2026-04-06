@@ -51,7 +51,7 @@ class ColourSensorController (EV3ColorSensor):
         self._bw_history = deque(maxlen=8)
         self.BW_DROP_THRESHOLD = 1.5   # drop from baseline → black
         self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
-        self._colour_window = deque(maxlen=5)  # Sliding window for color filtering
+        self._colour_window = deque(maxlen=10)  # Sliding window for color filtering
         self.motor.reset_encoder()
 
         # Reset the value of the motor encoder.
