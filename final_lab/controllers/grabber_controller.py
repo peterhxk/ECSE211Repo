@@ -167,18 +167,21 @@ class GrabberController:
                 # internal kill trigger
                 if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
                     print("[KILL SWITCH] Initial outwards press detected")
-
+                    """
                     threading.Thread(
                         target=self._record_after_kill_trigger,
                         args=(5.0,),
                         daemon=True
                     ).start()
-                    """
                     if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT):
                         print("[KILL SWITCH] Secondary inwards press detected")
                         self.kill(reason=f"FAST_TILT_KILL detected: dps={dps:.3f}")
                         return
                     """
+                    if self._wait_for_inwards_after_kill(window_s=2.0, needed=2):
+                        print("[KILL SWITCH] Secondary inwards press detected")
+                        self.kill(reason="FAST_TILT_KILL: 2 consecutive fast inwards within 2s")
+                        return
 
                 with self._gyro_sample_cond:
                     self._gyro_sample = (now, dps, z)
@@ -1387,6 +1390,34 @@ class GrabberController:
 
         self._end_operation_recording(outcome="completed")
         print("[RECORD] Finished post-kill recording")
+
+    def _wait_for_inwards_after_kill(self, window_s=2.0, needed=2) -> bool:
+        """
+        After the initial outward kill-switch trigger, listen for up to window_s
+        seconds and return True only if we observe `needed` consecutive
+        FAST_TILT inwards samples.
+        """
+        start = time.time()
+        hits = 0
+        last_seq = None
+
+        while time.time() - start < window_s:
+            remaining = max(0.0, window_s - (time.time() - start))
+            sample = self._read_gyro_dps(last_seq=last_seq, timeout=remaining)
+
+            if sample is None:
+                return False
+
+            last_seq, ts, dps, z = sample
+
+            if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT):
+                hits += 1
+                if hits >= needed:
+                    return True
+            else:
+                hits = 0
+
+        return False
 
 if __name__ == "__main__":
     kill_event = threading.Event()
