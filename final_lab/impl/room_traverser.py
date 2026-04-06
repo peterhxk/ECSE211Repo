@@ -252,7 +252,12 @@ class RoomTraverser:
                                 first_bed_color = detected_color
                                 first_bed_angle = detected_angle
                                 first_bed_dist_cm = current_dist_cm
-                                # Do NOT break — continue wall-following to max distance.
+                                # Restart the sweep so the stale result is cleared
+                                # before we look for a second bed.
+                                self.color_sensor_controller.sweep_stop()
+                                self.color_sensor_controller.sweep_start(
+                                    colours=["red", "green"], range="full"
+                                )
                             elif not second_bed_detected:
                                 second_bed_detected = True
                                 second_bed_color = detected_color
