@@ -190,6 +190,7 @@ class RoomTraverser:
         start_detected = False
 
         is_double = room_type not in [RoomType.CORNER_SINGLE, RoomType.WALL_SINGLE]
+        print(f"is_double: {is_double}")
 
         # Choose PID direction: backward when detect_start or when an explicit
         # negative distance override is given.
@@ -239,6 +240,7 @@ class RoomTraverser:
 
                         if not is_double:
                             # Single room: stop immediately at the first bed.
+                            print("SINGLE ROOM: stopping at first bed")
                             first_bed_detected = True
                             first_bed_color = detected_color
                             first_bed_angle = detected_angle
@@ -248,6 +250,7 @@ class RoomTraverser:
                             # Double room: note first bed and keep going; stop
                             # only when a second distinct bed is found.
                             if not first_bed_detected:
+                                print("DOUBLE ROOM: noting first bed")
                                 first_bed_detected = True
                                 first_bed_color = detected_color
                                 first_bed_angle = detected_angle
@@ -259,6 +262,7 @@ class RoomTraverser:
                                     colours=["red", "green"], range="full"
                                 )
                             elif not second_bed_detected:
+                                print("DOUBLE ROOM: noting second bed")
                                 second_bed_detected = True
                                 second_bed_color = detected_color
                                 second_bed_angle = detected_angle
