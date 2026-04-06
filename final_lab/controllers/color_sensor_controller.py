@@ -52,6 +52,7 @@ class ColourSensorController (EV3ColorSensor):
         self.BW_DROP_THRESHOLD = 1.5   # drop from baseline → black
         self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
         self._colour_window = deque(maxlen=5)  # Sliding window for color filtering
+        self.motor.reset_encoder()
 
         # Reset the value of the motor encoder.
         if calibrate:
@@ -451,10 +452,10 @@ class ColourSensorController (EV3ColorSensor):
         self._colour_window.append(current_colour)
         
         # If window is not yet full, return None
-        if len(self._colour_window) < 10:
-            return None
-        
-        # Window is full, return the most common colour (majority vote)
-        colour_counts = Counter(self._colour_window)
-        most_common_colour = colour_counts.most_common(1)[0][0]
-        return most_common_colour
+        if len(self._colour_window) < 5:
+            return current_colour
+        else:
+            # Window is full, return the most common colour (majority vote)
+            colour_counts = Counter(self._colour_window)
+            most_common_colour = colour_counts.most_common(1)[0][0]
+            return most_common_colour
