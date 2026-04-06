@@ -1,9 +1,6 @@
-from controllers.color_sensor_controller import ColourSensorController
-from controllers.driving_controller import DrivingController
 from impl.sweep_line_follower import SweepLineFollower
 import data.measurements as consts
 from controllers.grabber_controller import GrabberController
-import threading
 
 import time
 
@@ -19,6 +16,12 @@ class Routing(SweepLineFollower):
         self.pilot.move_distance(self.ROOM_EXIT_DST)
         self.pilot.right_motor.wait_is_stopped()
 
+    def _advance_into_pharmacy(self):
+        """From the main horizontal black line, advances into the pharmacy"""
+        res = self.move_forward(300, "orange") 
+        if res == "colour":
+            self.pilot.move_distance(150)
+
     def pharmacy_to_room1(self):
         self.pilot.move_distance(-50)
         self.pilot.right_motor.wait_is_stopped()
@@ -29,7 +32,6 @@ class Routing(SweepLineFollower):
     def room1_to_pharmacy(self):
         self.pilot.move_distance(-435)
         self.pilot.right_motor.wait_is_stopped()
-
     
     def room1_to_room2(self):
         # Back off of orange line
@@ -58,36 +60,31 @@ class Routing(SweepLineFollower):
         self.turn_logic("right", "front")
 
     def room2_to_pharmacy(self):
-        # UNTESTED
         self._exit_room()
 
         self.turn_logic("left", "back")
-        # add move forward?
         self.turn_logic("left", "front")
-        print("move forward to pharma")
-        self.move_forward(100, "orange") # change color/dist?
+
+        self._advance_into_pharmacy()
 
     def room3A_to_pharmacy(self):
         # UNTESTED
         self._exit_room()
 
         self.turn_logic("right", "back")
-        self.move_forward(50) # change dist?
+        self.move_forward(220)
         self.turn_logic("left", "front")
-        print("move forward to pharma")
-        self.move_forward(100, "blue") # change color/dist?
 
+        self._advance_into_pharmacy()
 
     def room3B_to_pharmacy(self):
         self._exit_room()
 
         self.turn_logic("right", "back")
-        self.move_forward(300)
+        self.move_forward(500)
         self.turn_logic("left", "front")
-        print("move forward to pharma")
-        self.move_forward(300, "orange")
-        self.pilot.move_distance(200)
-        self.pilot.right_motor.wait_is_stopped(0.1)
+
+        self._advance_into_pharmacy()
 
     def pharmacy_to_grab_block_position(self):
         self.pilot.move_distance(50)
