@@ -18,6 +18,12 @@ from collections import deque
 
 
 class BlocLocation(Enum):
+    """
+    An Enum object to describe the cube locations inside the Grabber subsystem
+    BACK_STORAGE : When the cube is at the rear of the grabber
+    UNDER_GYRO : When the cube has tilted the gyro inwards / outwards, it remains under the gyro
+    AT_GATE : When the cube is just at the entrance of the grabber
+    """
     BACK_STORAGE = 1      # in the back storage area
     UNDER_GYRO = 2        # under the gyro arm
     AT_GATE = 3           # closest to the end of the conveyor belts
@@ -25,6 +31,10 @@ class BlocLocation(Enum):
 
 
 class GyroTilt(Enum):
+    """
+    An Enum object to describe the gyro tilt thresholds used in k-sigma normalization
+    The following values are used as our ks for comparing the dps of the gyro against mu - k * sigma
+    """
     SLOW_TILT = 1
     FAST_TILT = 2
     FAST_TILT_KILL = 3
@@ -35,22 +45,30 @@ class GrabberController:
     Responsibilities:
       1) Run the conveyor belt inwards / outwards
       2) Detect events with the gyroscope using calibrated mu/sigma
-      3) Detect second-bloc loading by motor velocity drop
+      3) Detect second-cube loading by motor velocity drop
       4) Update internal state
       5) Record gyro traces for empirical calibration
     """
 
     def __init__(self, kill_switch_flag : threading.Event = None, motor_port="A", gyro_port=3, calibration=True, debug=True):
-        # Internal state
-        self.bloc_count = 0
-        self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
+        """
+
+        :param kill_switch_flag: The kill switch flag passed on from main code which will be set by _gyro_worker once kill switch is activated
+        :param motor_port:
+        :param gyro_port:
+        :param calibration: if set to True, the GrabberController will proceed to calibrating both the Gyro sensor and the Belt motor. It will take approximately 20 seconds, and calibration data will be saved to working directory
+        Note : if the grabber starts acting weird (trigger events missed or not inexistent) set calibration to True.
+        :param debug: Activates verbose logging
+        """
+        self.cube_count = 0
+        self.cube_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
         self.calibration = calibration
         self.debug = debug
 
         # Thread-safe state / async-like control
         self.state_lock = threading.Lock()
 
-        self._block_caught_event = threading.Event()
+        self._cube_caught_event = threading.Event()
 
         self._load_thread = None
         self._load_done_event = threading.Event()
@@ -123,6 +141,10 @@ class GrabberController:
         self._gyro_sample_cond = threading.Condition(self._gyro_sample_lock)
 
     def _gyro_worker(self):
+        """
+        Threaded loop to poll Gyro DPS and publish dps to the kill switch monitor and to any gyro event detection event
+        :return:
+        """
         dt = 1.0 / float(self.sample_hz)
         print("[GYRO] worker started")
 
@@ -160,6 +182,10 @@ class GrabberController:
             raise
 
     def start_gyro_monitor(self):
+        """
+        Starts gyro monitor : MUST be called
+        :return:
+        """
         if self._gyro_thread and self._gyro_thread.is_alive():
             return
         self._gyro_stop.clear()
@@ -179,13 +205,18 @@ class GrabberController:
 
         self._gyro_thread = None
 
-    def _load_bloc_worker(self,timeout=5.0):
+    def _load_cube_worker(self,timeout=5.0):
         try:
-            self._load_result = self.load_bloc(timeout=timeout,stop_event=self._load_cancel_event)
+            self._load_result = self._load_cube(timeout=timeout,stop_event=self._load_cancel_event)
         finally:
             self._load_done_event.set()
 
     def start_loading(self, timeout=5.0) -> bool:
+        """
+        Starts loading a cube (regardless of current count)
+        :param timeout: past this timeout the function returns False
+        :return: the status of loading (true/false)
+        """
         if self._load_thread is not None and self._load_thread.is_alive():
             print("[INFO] Loading already in progress.")
             return False
@@ -196,11 +227,11 @@ class GrabberController:
 
         self._load_done_event.clear()
         self._load_cancel_event.clear()
-        self._block_caught_event.clear()
+        self._cube_caught_event.clear()
         self._load_result = None
 
         self._load_thread = threading.Thread(
-            target=self._load_bloc_worker,
+            target=self._load_cube_worker,
             kwargs={"timeout": timeout},
             daemon=True,
         )
@@ -219,18 +250,19 @@ class GrabberController:
     def cancel_loading(self):
         self._load_cancel_event.set()
 
-    def unload_bloc(self, stop_event=None) -> bool:
+    def _unload_cube(self, stop_event=None) -> bool:
         """
+        This function is meant to be used INTERNALLY only
         Unload logic:
 
-        If 2 blocs loaded:
+        If 2 cubes loaded:
           - Run outward until slow outward gyro tilt is detected
 
-        If 1 bloc remaining:
+        If 1 cube remaining:
           - Use motor velocity drop detection
         """
-        if self.bloc_count <= 0:
-            print("No blocs to unload.")
+        if self.cube_count <= 0:
+            print("No cubes to unload.")
             return False
 
         try:
@@ -238,9 +270,9 @@ class GrabberController:
                 print("[INFO] Unloading cancelled before start.")
                 return False
 
-            if self.bloc_count == 2:
+            if self.cube_count == 2:
                 self.motor.set_dps(-1.3 * self.running_dps)
-                print("[INFO] Unloading first bloc")
+                print("[INFO] Unloading first cube")
                 unloaded = self._consecutive_gyro_trigger(
                     operation_name="unload_from_2_to_1",
                     detector_name="gyro_inwards_slow",
@@ -248,7 +280,7 @@ class GrabberController:
                     needed=1,
                     timeout=5.0,
                     extra={
-                        "bloc_count_before": self.bloc_count,
+                        "bloc_count_before": self.cube_count,
                         "running_dps": self.running_dps,
                         "direction": "outward",
                     },
@@ -266,16 +298,16 @@ class GrabberController:
                     return False
 
                 with self.state_lock:
-                    self.bloc_positions[0] = BlocLocation.AT_GATE
-                    self.bloc_positions[1] = BlocLocation.UNLOADED
-                    self.bloc_count = max(0, self.bloc_count - 1)
+                    self.cube_positions[0] = BlocLocation.AT_GATE
+                    self.cube_positions[1] = BlocLocation.UNLOADED
+                    self.cube_count = max(0, self.cube_count - 1)
 
-                print("Unloaded one bloc (2->1).")
+                print("Unloaded one cube (2->1).")
                 return True
 
-            # only one bloc left
+            # only one cube left
             self.motor.set_dps(-self.running_dps)
-            print("Unloading last bloc: using motor velocity drop detection...")
+            print("Unloading last cube: using motor velocity drop detection...")
 
             ok = self._is_motor_drop_detected(
                 timeout=5.0,
@@ -283,14 +315,14 @@ class GrabberController:
                 stop_event=stop_event,
                 operation_name="unload_last_bloc",
                 extra={
-                    "bloc_count_before": self.bloc_count,
+                    "bloc_count_before": self.cube_count,
                     "running_dps": self.running_dps,
                     "direction": "outward",
                 },
             )
 
             if not ok:
-                print("Timed out or cancelled waiting for motor velocity drop while unloading last bloc.")
+                print("Timed out or cancelled waiting for motor velocity drop while unloading last cube.")
                 return False
 
             if stop_event is not None and stop_event.is_set():
@@ -302,24 +334,24 @@ class GrabberController:
             self.motor.set_dps(0)
 
             with self.state_lock:
-                self.bloc_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
-                self.bloc_count = 0
+                self.cube_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
+                self.cube_count = 0
 
-            print("Unloaded last bloc (1->0).")
+            print("Unloaded last cube (1->0).")
             return True
 
         finally:
             self.motor.set_dps(0)
 
-    def _unload_bloc_worker(self):
+    def _unload_cube_worker(self):
         try:
-            self._unload_result = self.unload_bloc(stop_event=self._unload_cancel_event)
+            self._unload_result = self._unload_cube(stop_event=self._unload_cancel_event)
         finally:
             self._unload_done_event.set()
 
     def start_unloading(self) -> bool:
         """
-        Start unload_bloc() in a background thread and return immediately.
+        Start unload_cube() in a background thread and return immediately.
 
         Returns False if an unloading operation is already in progress, or if
         a loading operation is currently running. True otherwise.
@@ -336,7 +368,7 @@ class GrabberController:
         self._unload_cancel_event.clear()
         self._unload_result = None
 
-        self._unload_thread = threading.Thread(target=self._unload_bloc_worker, daemon=True)
+        self._unload_thread = threading.Thread(target=self._unload_cube_worker, daemon=True)
         self._unload_thread.start()
         return True
 
@@ -609,30 +641,61 @@ class GrabberController:
     # Gyro thresholds / predicates
     # ----------------------------
     def _k_for_tilt(self, tilt: GyroTilt) -> float:
+        """
+        Returns the k value for different GyroTilt events
+        :param tilt:
+        :return: float
+
+        Note : in general the higher the K, the lower the sensitivity (and vice versa)
+        """
         if tilt == GyroTilt.SLOW_TILT:
             return 10.0
         elif tilt == GyroTilt.FAST_TILT_KILL :
             return 40.0
+            # change this value if needed for kill switch
         else:
             return 16.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
+        """
+        Floor for inwards detection
+        :param tilt:
+        :return:
+        """
         return -self.sigma*2 if tilt == GyroTilt.SLOW_TILT else -self.sigma*3
 
     def _floor_for_outwards(self, tilt: GyroTilt) -> float:
+        """
+        Floor for outwards detection
+        :param tilt:
+        :return:
+        """
         return self.sigma*2 if tilt == GyroTilt.SLOW_TILT else self.sigma*3
 
     def _gyro_threshold_inwards(self, tilt: GyroTilt) -> float:
+        """
+        Returns the MINIMUM between 1) mu-ksigma and 2) the floor preset
+        :param tilt:
+        :return:
+        """
         k = self._k_for_tilt(tilt)
         thr = self.mu - k * self.sigma
         return min(thr, self._floor_for_inwards(tilt))
 
     def _gyro_threshold_outwards(self, tilt: GyroTilt) -> float:
+        """
+        Returns the MINIMUM between 1) mu-ksigma and 2) the floor preset
+        :param tilt:
+        :return:
+        """
         k = self._k_for_tilt(tilt)
         thr = self.mu + k * self.sigma
         return max(thr, self._floor_for_outwards(tilt))
 
     def _is_tilted_inwards_sample(self, dps: float, tilt: GyroTilt) -> bool:
+        """
+        performs statistical threshold detection k-mu*sigma
+        """
         return dps < self._gyro_threshold_inwards(tilt)
 
     def _is_tilted_outwards_sample(self, dps: float, tilt: GyroTilt) -> bool:
@@ -768,6 +831,21 @@ class GrabberController:
             extra=None,
             stop_event=None,
     ) -> bool:
+        """
+            Listen to gyro samples and apply the given predicate to detect events. Return True if the predicate is satisfied for 'needed' consecutive samples, False if timeout or stop_event is set.
+        :param operation_name:
+        :param detector_name:
+        :param predicate_from_dps:
+        :param needed:
+        :param sample_hz:
+        :param timeout:
+        :param extra:
+        :param stop_event:
+        :return:
+        """
+        if not self._gyro_thread or not self._gyro_thread.is_alive():
+            raise RuntimeError("You must start the gyro thread before listening for gyro events")
+
         needed = self.consecutive_needed if needed is None else int(needed)
         record_enabled = self.debug and bool(detector_name) and bool(operation_name)
 
@@ -890,7 +968,7 @@ class GrabberController:
 
         while (time.time() - start) < timeout:
             # stop thread if loading finished
-            if self.bloc_count != 0:
+            if self.cube_count != 0:
                 return
 
             if (time.time() - cooldown) < duration:
@@ -898,7 +976,7 @@ class GrabberController:
                 continue
 
             if self.motor.get_dps() < self.running_dps * 2 / 3:
-                print(f"[Motor drop detected] Temporarily increasing velocity to prevent blocking. Speed set to {self.running_dps * 5}")
+                print(f"[Motor drop detected] Temporarily increasing velocity to prevent cubeking. Speed set to {self.running_dps * 5}")
 
                 cooldown = time.time()
 
@@ -1014,7 +1092,7 @@ class GrabberController:
                         f"threshold={threshold:.3f}"
                     )
                     print("Setting BLOCK CAUGHT flag")
-                    self._block_caught_event.set()
+                    self._cube_caught_event.set()
                     if record_enabled:
                         self._end_operation_recording(outcome="success")
                     return True
@@ -1028,16 +1106,16 @@ class GrabberController:
     # ----------------------------
     # High-level actions
     # ----------------------------
-    def load_bloc(self, timeout=5.0,stop_event=None) -> bool:
+    def load_cube(self, timeout=5.0,stop_event=None) -> bool:
         """
         Returns True on success, False on failure.
 
         Logic:
-        - First bloc: use gyro inward detection
-        - Second bloc: use motor-speed drop detection
+        - First cube: use gyro inward detection
+        - Second cube: use motor-speed drop detection
         """
-        if self.bloc_count >= 2:
-            print("Already loaded 2 blocs, aborting.")
+        if self.cube_count >= 2:
+            print("Already loaded 2 cubes, aborting.")
             return False
 
         self.motor.set_dps(self.running_dps)
@@ -1047,8 +1125,8 @@ class GrabberController:
                 print("[INFO] Loading cancelled before start.")
                 return False
 
-            # First bloc: gyro-based detection with unified sample stream
-            if self.bloc_count == 0:
+            # First cube: gyro-based detection with unified sample stream
+            if self.cube_count == 0:
                 print("[INFO] Started velocity drop detection thread")
 
                 ok = self._consecutive_gyro_trigger(
@@ -1058,7 +1136,7 @@ class GrabberController:
                     needed=1,
                     timeout=timeout,
                     extra={
-                        "bloc_count_before": self.bloc_count,
+                        "bloc_count_before": self.cube_count,
                         "running_dps": self.running_dps,
                         "direction": "outwards",
                     },
@@ -1066,35 +1144,35 @@ class GrabberController:
                 )
 
                 if not ok:
-                    print("Timeout or cancellation waiting for first bloc to arrive.")
+                    print("Timeout or cancellation waiting for first cube to arrive.")
                     return False
 
                 if stop_event is not None and stop_event.is_set():
                     print("[INFO] Loading cancelled after detection.")
                     return False
 
-                print("[INFO] First bloc gyro event triggered")
-                #time.sleep(2) # make sure bloc goes to back
+                print("[INFO] First cube gyro event triggered")
+                #time.sleep(2) # make sure cube goes to back
                 time.sleep(0.5)
                 self.motor.set_dps(0)
                 with self.state_lock:
-                    self.bloc_positions[0] = BlocLocation.UNDER_GYRO
-                    self.bloc_count = 1
+                    self.cube_positions[0] = BlocLocation.UNDER_GYRO
+                    self.cube_count = 1
 
-                print("Successfully loaded first bloc.")
+                print("Successfully loaded first cube.")
                 return True
 
-            # Second bloc: motor-drop detection
-            if self.bloc_positions[0] == BlocLocation.UNLOADED:
-                print("Error: internal state inconsistency: bloc count is 1 but no bloc is loaded.")
+            # Second cube: motor-drop detection
+            if self.cube_positions[0] == BlocLocation.UNLOADED:
+                print("Error: internal state inconsistency: cube count is 1 but no cube is loaded.")
                 return False
 
             self.motor.set_dps(self.running_dps)
-            print("Loading second bloc: using motor velocity drop detection...")
+            print("Loading second cube: using motor velocity drop detection...")
             #time.sleep(self.motor_drop_warm_up_delay)
 
             if stop_event is not None and stop_event.is_set():
-                print("[INFO] Loading cancelled during second-bloc warm-up.")
+                print("[INFO] Loading cancelled during second-cube warm-up.")
                 return False
 
             ok = self._is_motor_drop_detected(
@@ -1103,7 +1181,7 @@ class GrabberController:
                 stop_event=stop_event,
                 operation_name="load_second_bloc",
                 extra={
-                    "bloc_count_before": self.bloc_count,
+                    "bloc_count_before": self.cube_count,
                     "running_dps": self.running_dps,
                     "direction": "inward",
                 },
@@ -1114,11 +1192,11 @@ class GrabberController:
                 return False
 
             with self.state_lock:
-                self.bloc_positions[0] = BlocLocation.BACK_STORAGE
-                self.bloc_positions[1] = BlocLocation.AT_GATE
-                self.bloc_count = 2
+                self.cube_positions[0] = BlocLocation.BACK_STORAGE
+                self.cube_positions[1] = BlocLocation.AT_GATE
+                self.cube_count = 2
 
-            print("Successfully loaded second bloc.")
+            print("Successfully loaded second cube.")
             return True
 
         finally:
@@ -1139,7 +1217,7 @@ class GrabberController:
         self.motor.set_dps(-self.running_dps)
         time.sleep(1)
         self.motor.set_dps(0)
-        print("Ejected all blocs")
+        print("Ejected all cubes")
 
         try:
             while True:
@@ -1215,11 +1293,11 @@ class GrabberController:
         self._kill_event.wait()
         self.kill(reason="event set")
 
-    def isBlockCaught(self) -> bool:
-        return self._block_caught_event.is_set()
+    def isCubeCaught(self) -> bool:
+        return self._cube_caught_event.is_set()
 
-    def clearBlockCaught(self):
-        self._block_caught_event.clear()
+    def clearCubeCaught(self):
+        self._cube_caught_event.clear()
 
     def _input_worker(self):
         while True:
@@ -1231,7 +1309,7 @@ class GrabberController:
 
     def get_loading_status(self) -> str:
         if self._load_thread is not None and self._load_thread.is_alive():
-            if self._block_caught_event.is_set():
+            if self._cube_caught_event.is_set():
 
                 return "BLOCK_CAUGHT"
             return "LOADING"
