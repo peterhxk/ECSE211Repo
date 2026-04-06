@@ -138,7 +138,10 @@ try:
         routing.room3A_to_room3C()
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_SECOND_HALF)
 
-        routing.room3C_to_pharmacy()
+        routing.room3C_to_room3B()
+        room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_MIDDLE)
+
+        routing.room3A_to_pharmacy()
 
         sound_controller.play_mission_complete()
         sound_controller.wait_done()
