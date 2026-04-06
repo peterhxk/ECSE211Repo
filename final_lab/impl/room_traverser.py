@@ -622,8 +622,9 @@ class RoomTraverser:
                         print(f"  Bed {i + 1} at mean angle {ang:.1f}°")
                         # self._approach_and_unload(ang, "green")
                         print("UNLOADING")
-                        self.sound_controller.play_success()
-                        self.sound_controller.wait_done()
+                        if first_color == "green":
+                            self.sound_controller.play_success()
+                            self.sound_controller.wait_done()
                         time.sleep(1)
                 elif len(bed_angles) == 1:
                     print(
@@ -632,8 +633,9 @@ class RoomTraverser:
                     )
                     # self._approach_and_unload(bed_angles[0], "green")
                     print("UNLOADING")
-                    self.sound_controller.play_success()
-                    self.sound_controller.wait_done()
+                    if first_color == "green":
+                        self.sound_controller.play_success()
+                        self.sound_controller.wait_done()
                     time.sleep(1)
                 else:
                     print(
@@ -641,8 +643,9 @@ class RoomTraverser:
                     )
                     # self._approach_and_unload(first_angle, "green")
                     print("UNLOADING")
-                    self.sound_controller.play_success()
-                    self.sound_controller.wait_done()
+                    if first_color == "green":
+                        self.sound_controller.play_success()
+                        self.sound_controller.wait_done()
                     time.sleep(1)
             elif first_color is not None:
                 # Should not occur (double pass sweeps green only).
