@@ -153,6 +153,8 @@ class GrabberController:
         print("[GYRO] worker started")
 
         try:
+            kill_hits = 0
+            kill_needed = 5
             while not self._gyro_stop.is_set():
                 raw = self.gyro.get_dps_measure()
                 now = time.time()
@@ -544,6 +546,14 @@ class GrabberController:
             self.motor.set_dps(0)
 
         return samples
+
+    def eject_existing_blocs(self,duration=5):
+        print("[Eject] Ejecting any existing blocs...")
+        self.motor.set_dps(-self.motor_calibration_dps)
+        time.sleep(duration)
+        self.motor.set_dps(0)
+        time.sleep(0.5)
+
 
     def calibrate_motor_drop_detection(self, calibration=True):
         """
@@ -1357,6 +1367,13 @@ class GrabberController:
         print(f"[DEBUG] Loading finished for {label} with status={final_status}")
         return True
 
+    def eject_existing_blocs(self,duration=5):
+        print("Ejecting all cubes inside the Grabber")
+        time.sleep(0.1)
+        self.motor.set_dps(-self.motor_calibration_dps)
+        time.sleep(duration)
+        self.motor.set_dps(0)
+        time.sleep(0.5)
 
     def _record_after_kill_trigger(self, duration=5.0):
         """
