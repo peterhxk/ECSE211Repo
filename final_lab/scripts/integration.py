@@ -133,18 +133,18 @@ try:
         # room_traverser.traverse_a_room(RoomType.WALL_SINGLE)
 
         # routing.room2_to_room3A()
-        room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
+        # room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
 
-        routing.room3A_to_room3C()
-        room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_SECOND_HALF)
+        # routing.room3A_to_room3C()
+        # room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_SECOND_HALF)
 
-        routing.room3C_to_room3B()
+        # routing.room3C_to_room3B()
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_MIDDLE)
 
-        routing.room3A_to_pharmacy()
+        # routing.room3A_to_pharmacy()
 
-        sound_controller.play_mission_complete()
-        sound_controller.wait_done()
+        # sound_controller.play_mission_complete()
+        # sound_controller.wait_done()
 
         # # Check if we got lucky and found the 2 green beds right away
         # if grabber_controller.cube_count == 0:
