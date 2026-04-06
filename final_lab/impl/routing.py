@@ -10,7 +10,7 @@ import time
 class Routing(SweepLineFollower):
     """Class defines fixed routing commands to move the robot between rooms."""
 
-    ROOM_EXIT_DST = -30
+    ROOM_EXIT_DST = -50
     """Distance (mm) we must back up when exiting the room
     so that the colour sensor is not on the orange line"""
 
@@ -85,7 +85,9 @@ class Routing(SweepLineFollower):
         self.move_forward(300)
         self.turn_logic("left", "front")
         print("move forward to pharma")
-        self.move_forward(100, "blue")
+        self.move_forward(300, "orange")
+        self.pilot.move_distance(200)
+        self.pilot.right_motor.wait_is_stopped(0.1)
 
     def pharmacy_to_grab_block_position(self):
         self.pilot.move_distance(50)

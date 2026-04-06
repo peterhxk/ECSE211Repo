@@ -8,6 +8,7 @@ from controllers.driving_controller import DrivingController
 from controllers.sound_controller import SoundController
 import math
 import threading
+from typing import Optional
 
 class RoomType(Enum):
     CORNER_SINGLE = 1
@@ -201,6 +202,7 @@ class RoomTraverser:
 
                 if detect_start:
                     detected = self.color_sensor_controller.read_colour_interval()
+                    print(detected)
                     if detected == "orange":
                         print("Orange detected — arrived back at starting point.")
                         start_detected = True
@@ -266,7 +268,7 @@ class RoomTraverser:
                 self.left_motor.set_dps(left_dps)
                 self.right_motor.set_dps(right_dps)
 
-                time.sleep(0.04)
+                time.sleep(0.01)
         finally:
             self.driving_controller.stop_motors()
             if detect_bed:
@@ -387,8 +389,9 @@ class RoomTraverser:
         self.right_motor.wait_is_stopped()
 
         print("Dropping block")
+        expected_after_unload = self.grabber_controller.bloc_count - 1
         self.grabber_controller.start_unloading()
-        self._wait_for_unloading(expected_bloc_count=1, label="unload")
+        self._wait_for_unloading(expected_bloc_count=expected_after_unload, label="unload")
 
         if self.sound_controller:
             self.sound_controller.play_success()
@@ -479,6 +482,103 @@ class RoomTraverser:
     # Tune empirically: if the robot still overshoots slightly, lower toward 0.80;
     # if it now undershoots, raise toward 1.0.
     ALIGN_CORRECTION_GAIN = 0.88
+
+    def align_to_wall_continuous(
+        self,
+        turn_dps: int = 50,
+        sample_dt: float = 0.01,
+        reversal_limit: int = 3,
+        max_iters: int = 2000,
+        offset: int = -1.5,
+        window_size: int = 5,
+    ):
+        """
+        Align the robot to the wall using continuous closed-loop turning.
+
+        Strategy:
+        - Turn slowly in one direction, sampling the ultrasonic sensor each tick.
+        - Raw readings are smoothed with a sliding window median to remove noise.
+        - As long as the smoothed reading keeps decreasing, continue in the same direction.
+        - The moment the smoothed reading increases (minimum was passed), reverse direction.
+        - Stop after reversal_limit reversals — the robot is oscillating around
+          the minimum and is considered aligned.
+        """
+
+        def _get_us() -> Optional[float]:
+            v = self.ultrasonic_sensor.get_cm()
+            try:
+                fv = float(v)
+                if self._US_CM_MIN <= fv <= self._US_CM_MAX:
+                    return fv
+            except (TypeError, ValueError):
+                pass
+            return None
+
+        window = []
+
+        def _smoothed_us() -> Optional[float]:
+            v = _get_us()
+            if v is None:
+                return None
+            window.append(v)
+            if len(window) > window_size:
+                window.pop(0)
+            sorted_w = sorted(window)
+            mid = len(sorted_w) // 2
+            return sorted_w[mid] if len(sorted_w) % 2 else (sorted_w[mid - 1] + sorted_w[mid]) / 2.0
+
+        # Prime the window before starting to move.
+        prev = None
+        for _ in range(window_size):
+            v = _smoothed_us()
+            if v is not None:
+                prev = v
+            time.sleep(sample_dt)
+        if prev is None:
+            print("[align_continuous] no US reading — aborting")
+            return
+
+        direction = 1   # +1 = left, -1 = right (matches turn_in_place sign convention)
+        reversals = 0
+
+        self.left_motor.set_dps(direction * turn_dps)
+        self.right_motor.set_dps(-direction * turn_dps)
+        print(f"[align_continuous] starting — initial US={prev:.1f} cm")
+
+        time.sleep(0.1)  # brief initial delay to let the robot start moving before sampling
+        for _ in range(max_iters):
+            time.sleep(sample_dt)
+
+            cur = _smoothed_us()
+            if cur is None:
+                continue
+
+            print(f"[align_continuous] US={cur:.1f} cm  dir={'+' if direction > 0 else '-'}  reversals={reversals}")
+
+            if cur > prev:
+                # Reading got bigger — we passed the minimum, reverse.
+                direction = -direction
+                reversals += 1
+                if reversals >= reversal_limit:
+                    break
+                self.left_motor.set_dps(direction * turn_dps)
+                self.right_motor.set_dps(-direction * turn_dps)
+
+            prev = cur
+
+        self.left_motor.set_dps(0)
+        self.right_motor.set_dps(0)
+        print(f"[align_continuous] done — final US={prev:.1f} cm")
+
+        self.left_motor.set_dps(offset * turn_dps)
+        self.right_motor.set_dps(-offset * turn_dps)
+        time.sleep(0.5)
+        self.left_motor.set_dps(0)
+        self.right_motor.set_dps(0)
+        print(f"[align_continuous] done — calibration done")
+
+
+
 
     def align_to_wall(self, search_range_deg: float = 40.0, step_deg: float = 4.0):
         """
@@ -598,7 +698,7 @@ class RoomTraverser:
         turn_angles = {
             RoomType.CORNER_DOUBLE_FIRST_HALF: {
                 "smaller_radius_deg": -50,
-                "larger_radius_deg": 130,
+                "larger_radius_deg": 140,
             },
             RoomType.CORNER_DOUBLE_SECOND_HALF: {
                 "smaller_radius_deg": -30,
@@ -613,15 +713,27 @@ class RoomTraverser:
         POWER = 320
 
         print("MOVING FORWARD, SWEEPING")
-        self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
 
         smaller_radius_deg = turn_angles[room_type]["smaller_radius_deg"]
         larger_radius_deg = turn_angles[room_type]["larger_radius_deg"]
 
-        bed_result = None
+        EXCLUSION_THRESHOLD = 15.0  # degrees — beds within this angle are considered the same bed
+        excluded_angles: list = []
+        heading_at_detection = 0.0
+        cumulative_heading = 0.0
 
         def _check_sweep():
-            return self.color_sensor_controller.sweep_get_result()
+            result = self.color_sensor_controller.sweep_get_result()
+            if result:
+                potential_combined = result[0][0] + cumulative_heading
+                if any(abs(potential_combined - ea) < EXCLUSION_THRESHOLD for ea in excluded_angles):
+                    # Already visited this bed — restart sweep and ignore
+                    self.color_sensor_controller.sweep_stop()
+                    self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
+                    return None
+                nonlocal heading_at_detection
+                heading_at_detection = cumulative_heading
+            return result
 
         moves = [
             (10, 10),
@@ -640,33 +752,39 @@ class RoomTraverser:
             (0, larger_radius_deg / 2),
         ]
 
-        cumulative_heading = 0.0
+        move_idx = 0
 
-        for left_mm, right_mm in moves:
-            self.move_differential(left_mm, right_mm, POWER)
-            cumulative_heading += (left_mm - right_mm) * 180.0 / (math.pi * self.WHEEL_BASE_MM)
-            bed_result = _check_sweep()
+        while move_idx < len(moves) and self.grabber_controller.bloc_count > 0:
+            self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
+            bed_result = None
+
+            while move_idx < len(moves):
+                left_mm, right_mm = moves[move_idx]
+                self.move_differential(left_mm, right_mm, POWER)
+                cumulative_heading += (left_mm - right_mm) * 180.0 / (math.pi * self.WHEEL_BASE_MM)
+                move_idx += 1
+                bed_result = _check_sweep()
+                if bed_result:
+                    print(f"Bed detected during sweep: {bed_result}")
+                    break
+
+            self.color_sensor_controller.sweep_stop()
+            self.color_sensor_controller.set_arm_at_angle(0)
+
+            # Straighten back to wall-parallel before any approach.
+            print(f"Straightening: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
+            self.driving_controller.turn_in_place(-cumulative_heading)
+            self.left_motor.wait_is_stopped()
+            self.right_motor.wait_is_stopped()
+            cumulative_heading = 0.0
+
             if bed_result:
-                print(f"Bed detected during sweep: {bed_result}")
-                break
-
-        self.color_sensor_controller.sweep_stop()
-        self.color_sensor_controller.set_arm_at_angle(0)
-
-        # Dead-reckon back to wall-parallel before anything else.
-        print(f"Straightening: turning {-cumulative_heading:.1f}° (accumulated {cumulative_heading:.1f}°)")
-        self.driving_controller.turn_in_place(-cumulative_heading)
-        self.left_motor.wait_is_stopped()
-        self.right_motor.wait_is_stopped()
-
-        if bed_result:
-            angle, colour, _ = bed_result[0]
-            # The arm angle was recorded while the robot was at cumulative_heading.
-            # After straightening by -cumulative_heading the bed sits at a different
-            # angle relative to the new forward direction: subtract the drift out.
-            adjusted_angle = angle - cumulative_heading
-            print(f"  colour={colour}  raw_arm={angle:.1f}°  heading_at_detection={cumulative_heading:.1f}°  adjusted_arm={adjusted_angle:.1f}°")
-            self._approach_and_unload(adjusted_angle, colour)
+                angle, colour, _ = bed_result[0]
+                combined_angle = angle + heading_at_detection
+                print(f"  colour={colour}  arm={angle:.1f}°  heading={heading_at_detection:.1f}°  combined={combined_angle:.1f}°")
+                self._approach_and_unload(combined_angle, colour)
+                excluded_angles.append(combined_angle)
+                heading_at_detection = 0.0
 
         print("Moving back.")
         self._run(room_type=room_type, detect_bed=False, detect_start=True)
