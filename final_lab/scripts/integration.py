@@ -133,13 +133,13 @@ try:
         room_traverser.traverse_a_room(RoomType.WALL_SINGLE)
 
         # Check if we got lucky and found the 2 green beds right away
-        if grabber_controller.bloc_count == 0:
+        if grabber_controller.cube_count == 0:
             routing.room2_to_pharmacy()
         else:
             routing.room2_to_room3A()
             room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
 
-            if grabber_controller.bloc_count == 0:
+            if grabber_controller.cube_count == 0:
                 routing.room3A_to_pharmacy()
             else:
                 routing.room3A_to_room3B()
