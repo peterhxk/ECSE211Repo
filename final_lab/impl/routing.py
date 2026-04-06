@@ -7,7 +7,7 @@ import time
 class Routing(SweepLineFollower):
     """Class defines fixed routing commands to move the robot between rooms."""
 
-    ROOM_EXIT_DST = -30
+    ROOM_EXIT_DST = -50
     """Distance (mm) we must back up when exiting the room
     so that the colour sensor is not on the orange line"""
 

@@ -126,10 +126,10 @@ class DrivingController:
         print(f"pivoting {direction}")
 
         if direction == "left":
-            self.right_motor.set_limits(0, self.base_power)
+            self.right_motor.set_limits(0, self.base_power*2)
             self.right_motor.set_position_relative(180*self.ORIENTTODEG)
         elif direction == "right":
-            self.left_motor.set_limits(0, self.base_power)
+            self.left_motor.set_limits(0, self.base_power*2)
             self.left_motor.set_position_relative(180*self.ORIENTTODEG)
         print(f"turning {180*self.ORIENTTODEG} degrees on wheel")
 
