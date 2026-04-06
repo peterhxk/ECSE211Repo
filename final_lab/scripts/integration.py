@@ -70,21 +70,21 @@ try:
         routing.pharmacy_to_grab_block_position()
         routing.grab_block(grabber_controller)
         robot_state = 1
-        blocks_stored = grabber_controller.bloc_count
+        blocks_stored = grabber_controller.cube_count
 
         # Room 1
         routing.pharmacy_to_room1()
         room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
         robot_state = 2
         # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.bloc_count
+        blocks_stored = grabber_controller.cube_count
 
         # Room 2
         routing.room1_to_room2()
         room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
         robot_state = 3
         # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.bloc_count
+        blocks_stored = grabber_controller.cube_count
 
         # Go back early 
         if (blocks_stored == 0):
@@ -100,7 +100,7 @@ try:
         room_traverser.traverse_a_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF, grabber_controller=grabber_controller)
         robot_state = 4
         # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.bloc_count
+        blocks_stored = grabber_controller.cube_count
 
         # Go back early 
         if (blocks_stored == 0):
@@ -116,7 +116,7 @@ try:
         room_traverser.traverse_a_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF, grabber_controller=grabber_controller)
         robot_state = 5
         # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.bloc_count
+        blocks_stored = grabber_controller.cube_count
         routing.room3B_to_pharmacy()
 
         sound_controller.play_mission_complete()

@@ -388,10 +388,10 @@ class RoomTraverser:
         final_status = self.grabber_controller.get_loading_status()
         print(f"[DEBUG] Loading finished for {label} with status={final_status}")
 
-        if self.grabber_controller.bloc_count != expected_bloc_count:
+        if self.grabber_controller.cube_count != expected_bloc_count:
             raise RuntimeError(
                 f"Unexpected bloc_count after loading {label}: "
-                f"expected {expected_bloc_count}, got {self.grabber_controller.bloc_count}"
+                f"expected {expected_bloc_count}, got {self.grabber_controller.cube_count}"
             )
 
     def _wait_for_unloading(self, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
@@ -420,10 +420,10 @@ class RoomTraverser:
         final_status = self.grabber_controller.get_unloading_status()
         print(f"[DEBUG] Unloading finished for {label} with status={final_status}")
 
-        if self.grabber_controller.bloc_count != expected_bloc_count:
+        if self.grabber_controller.cube_count != expected_bloc_count:
             raise RuntimeError(
                 f"Unexpected bloc_count after unloading {label}: "
-                f"expected {expected_bloc_count}, got {self.grabber_controller.bloc_count}"
+                f"expected {expected_bloc_count}, got {self.grabber_controller.cube_count}"
             )
 
     """
@@ -467,7 +467,7 @@ class RoomTraverser:
         self.right_motor.wait_is_stopped()
 
         print("Dropping block")
-        expected_after_unload = self.grabber_controller.bloc_count - 1
+        expected_after_unload = self.grabber_controller.cube_count - 1
         self.grabber_controller.start_unloading()
         self._wait_for_unloading(expected_bloc_count=expected_after_unload, label="unload")
 
@@ -913,7 +913,7 @@ class RoomTraverser:
 
         move_idx = 0
 
-        while move_idx < len(moves) and self.grabber_controller.bloc_count > 0:
+        while move_idx < len(moves) and self.grabber_controller.cube_count > 0:
             self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
             bed_result = None
 
