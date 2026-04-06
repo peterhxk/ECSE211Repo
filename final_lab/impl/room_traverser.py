@@ -286,7 +286,7 @@ class RoomTraverser:
                         start_detected = True
                         break
 
-                    if target_degrees < 0 and travelled_deg <= target_degrees / 6:
+                    if target_degrees < 0 and travelled_deg <= target_degrees / 10:
                         print(
                             f"[ARM] Halfway reached ({travelled_deg:.0f}/{target_degrees:.0f} deg),"
                             " resetting arm to 0°"
