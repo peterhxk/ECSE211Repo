@@ -138,8 +138,6 @@ class RoomTraverser:
         # before set_dps takes over.
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
-        self.left_motor.float_motor()
-        self.right_motor.float_motor()
 
         # BrickPi3 reset_all() sets every port's SensorType to NONE. Without
         # re-applying modes, get_sensor raises "Sensor not configured or not supported."
