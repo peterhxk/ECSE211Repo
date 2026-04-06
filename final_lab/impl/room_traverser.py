@@ -110,16 +110,16 @@ class RoomTraverser:
                 "ramp": 0.0,
                 "straight_distance": -80,
             },
-        },
-        RoomType.CORNER_DOUBLE_MIDDLE: {
-            "Kp": 100,
-            "Ki": 0,
-            "Kd": 140,
-            "steer_scale": 1.3,
-            "ramp": 0.0,
-            "straight_distance": 40,
-        },
+            RoomType.CORNER_DOUBLE_MIDDLE: {
+                "Kp": 1,
+                "Ki": 0,
+                "Kd": 180,
+                "steer_scale": 0.7,
+                "ramp": 0.0,
+                "straight_distance": -80,
+            }
         }
+    }
     
 
     # Low-pass the *steering* command so motor DPS does not jump every loop
