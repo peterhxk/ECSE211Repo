@@ -138,23 +138,29 @@ class RoomTraverser:
         wait_ready_sensors(True)
         print("Room Traverser ready.")
 
-    """ 
-    Designed to make a robot move in a straight line until it detects a bed OR until it reaches a certain distance.
-    Every call to the run() method is responsible for one straight forward or backwards path.
-    This function is not to be called directly. Use traverse_a_room() instead.
-    
-    Inputs:
-    - room_type: The type of the room to traverse. This determines the path taken by the robot.
-    - detect_bed: Whether the robot should be detecting a bed or not (indicates whether the color sensor arm should be looking for a bed)
-    - detect_start: Whether the robot should be detecting the starting point or not (indicates whether the color sensor arm should be looking for the starting point)
-
-    Returns:
-    - Tuple of (bed color detected or None, distance travelled in CM)
     """
-    def _run(self, room_type: RoomType, detect_bed: bool = False, detect_start: bool = False):
-        # Reset encoders first, then immediately float so the BrickPi3 position
-        # controller (briefly engaged by reset_encoder) cannot lock the wheels
-        # before set_dps takes over.
+    Wall-follow in a straight line, optionally detecting beds or the start marker.
+
+    For single room types the loop stops as soon as a bed is found (or max distance
+    is reached). For double room types the loop always travels the full max distance so
+    both possible beds can be found; it only stops early when a *second* bed is
+    detected (so that bed can be handled immediately).
+
+    An optional override_distance_cm parameter replaces the straight_distance that
+    would normally come from the PID config table. Pass a negative value to travel
+    backward without detect_start.
+
+    Returns a 7-tuple:
+        (first_bed_color, first_bed_dist_cm, first_bed_angle,
+         second_bed_color, second_bed_dist_cm, second_bed_angle,
+         total_dist_cm)
+
+    For single rooms, second_bed_* entries are always None.
+    When detect_start=True and orange is found, first_bed_color is "orange" and
+    all other fields except total_dist_cm are None.
+    """
+    def _run(self, room_type: RoomType, detect_bed: bool = False,
+             detect_start: bool = False, override_distance_cm: float = None):
         self.left_motor.reset_encoder()
         self.right_motor.reset_encoder()
 
@@ -162,24 +168,42 @@ class RoomTraverser:
         self.color_sensor_controller.set_mode("component")
         self.color_sensor_controller.wait_ready()
 
-        # reject spikes: ignore readings that jump more than this from the last accepted value
         OUTLIER_THRESHOLD_CM = 8
 
         last_distance_cm = None
 
-        # PID state for wall following
         integral = 0.0
         prev_error = 0.0
         prev_time = time.time()
         smoothed_adjustment = None
 
-        bed_detected = False
+        first_bed_detected = False
+        first_bed_color = None
+        first_bed_angle = None
+        first_bed_dist_cm = 0.0
+
+        second_bed_detected = False
+        second_bed_color = None
+        second_bed_angle = None
+        second_bed_dist_cm = 0.0
+
         start_detected = False
 
-        # parameters are keyed by direction then room type (not room_type at top level)
-        direction_key = "backward" if detect_start else "forward"
+        is_double = room_type not in [RoomType.CORNER_SINGLE, RoomType.WALL_SINGLE]
+
+        # Choose PID direction: backward when detect_start or when an explicit
+        # negative distance override is given.
+        going_backward = detect_start or (
+            override_distance_cm is not None and override_distance_cm < 0
+        )
+        direction_key = "backward" if going_backward else "forward"
         pid_cfg = self.parameters[direction_key][room_type]
-        straight_distance = pid_cfg["straight_distance"]
+
+        straight_distance = (
+            override_distance_cm
+            if override_distance_cm is not None
+            else pid_cfg["straight_distance"]
+        )
         target_degrees = (straight_distance * 10 / (self.WHEEL_DIAMETER_MM * math.pi)) * 360
 
         motor_base_power = self.base_power
@@ -194,11 +218,47 @@ class RoomTraverser:
                 self.color_sensor_controller.sweep_start(colours=["red", "green"], range="full")
 
             while True:
+                travelled_deg = (
+                    self.left_motor.get_encoder() + self.right_motor.get_encoder()
+                ) / 2.0
+                current_dist_cm = (
+                    (abs(travelled_deg) / 360) * (self.WHEEL_DIAMETER_MM * math.pi) / 10
+                )
+
+                # Universal max-distance stop condition.
+                if target_degrees > 0 and travelled_deg >= target_degrees:
+                    break
+                if target_degrees < 0 and travelled_deg <= target_degrees:
+                    break
+
                 if detect_bed:
-                    color_sensor_sweep_result = self.color_sensor_controller.sweep_get_result()
-                    if color_sensor_sweep_result and color_sensor_sweep_result[0][1] in ["green", "red"]:
-                        bed_detected = True
-                        break
+                    sweep_result = self.color_sensor_controller.sweep_get_result()
+                    if sweep_result and sweep_result[0][1] in ["green", "red"]:
+                        detected_color = sweep_result[0][1]
+                        detected_angle = sweep_result[0][0]
+
+                        if not is_double:
+                            # Single room: stop immediately at the first bed.
+                            first_bed_detected = True
+                            first_bed_color = detected_color
+                            first_bed_angle = detected_angle
+                            first_bed_dist_cm = current_dist_cm
+                            break
+                        else:
+                            # Double room: note first bed and keep going; stop
+                            # only when a second distinct bed is found.
+                            if not first_bed_detected:
+                                first_bed_detected = True
+                                first_bed_color = detected_color
+                                first_bed_angle = detected_angle
+                                first_bed_dist_cm = current_dist_cm
+                                # Do NOT break — continue wall-following to max distance.
+                            elif not second_bed_detected:
+                                second_bed_detected = True
+                                second_bed_color = detected_color
+                                second_bed_angle = detected_angle
+                                second_bed_dist_cm = current_dist_cm
+                                break  # Handle second bed immediately after this run.
 
                 if detect_start:
                     detected = self.color_sensor_controller.read_colour_interval()
@@ -208,16 +268,12 @@ class RoomTraverser:
                         start_detected = True
                         break
 
-                    # check travelled distance
-                    travelled_deg = (self.left_motor.get_encoder() + self.right_motor.get_encoder()) / 2.0
-
-                    if target_degrees < 0 and travelled_deg <= target_degrees / 5.5:
-                        print(f"[ARM] Halfway reached ({travelled_deg:.0f}/{target_degrees:.0f} deg), resetting arm to 0°")
+                    if target_degrees < 0 and travelled_deg <= target_degrees / 6:
+                        print(
+                            f"[ARM] Halfway reached ({travelled_deg:.0f}/{target_degrees:.0f} deg),"
+                            " resetting arm to 0°"
+                        )
                         self.color_sensor_controller.set_arm_at_angle(0)
-                    if target_degrees > 0 and travelled_deg >= target_degrees:
-                        break
-                    elif target_degrees < 0 and travelled_deg <= target_degrees:
-                        break
 
                 now = time.time()
                 dt = max(now - prev_time, 0.001)
@@ -264,7 +320,6 @@ class RoomTraverser:
                     left_dps  = -self.base_power - adjustment * s
                     right_dps = -self.base_power + adjustment * s
 
-                print(f"Adjustment: {adjustment}, Left DPS: {left_dps}, Right DPS: {right_dps}")
                 self.left_motor.set_dps(left_dps)
                 self.right_motor.set_dps(right_dps)
 
@@ -274,15 +329,20 @@ class RoomTraverser:
             if detect_bed:
                 self.color_sensor_controller.sweep_stop()
 
-        dist_cm = (abs(travelled_deg) / 360) * (self.WHEEL_DIAMETER_MM * math.pi) / 10
-        if bed_detected:
-            detected_color = color_sensor_sweep_result[0][1]
-            detected_angle = color_sensor_sweep_result[0][0]
-            return (detected_color, dist_cm, detected_angle)
-        elif start_detected:
-            return ("orange", dist_cm, None)
-        else:
-            return (None, dist_cm, None)
+        total_dist_cm = (abs(travelled_deg) / 360) * (self.WHEEL_DIAMETER_MM * math.pi) / 10
+
+        if start_detected:
+            return ("orange", total_dist_cm, None, None, None, None, total_dist_cm)
+
+        return (
+            first_bed_color,
+            first_bed_dist_cm,
+            first_bed_angle,
+            second_bed_color,
+            second_bed_dist_cm,
+            second_bed_angle,
+            total_dist_cm,
+        )
     
     def _wait_for_loading(self, expected_bloc_count: int, timeout: float = 15.0, label: str = "block"):
         start = time.time()
@@ -411,30 +471,108 @@ class RoomTraverser:
         time.sleep(0.1)
 
     """
-    The main function to traverse a room depending on the room type. Everything is self contained here.
-    This is the only function to call when you are in front of a room.
+    The main function to traverse a room depending on the room type. Everything is
+    self-contained here. This is the only function to call when you are in front of
+    a room.
+
+    Single room  (CORNER_SINGLE / WALL_SINGLE):
+      1. Wall-follow forward; stop at first bed or max distance.
+      2. If green bed: unload. If red bed: skip.
+      3. Wall-follow backward to start (orange detection).
+
+    Double room  (all other RoomType values):
+      1. Wall-follow forward to max distance ALWAYS, noting both beds if present.
+      2. If a second bed was found, handle it immediately:
+           - Green → unload.
+           - Red   → skip (do not unload).
+      3. If a first bed was found, wall-follow backward from the current position
+         to the first bed's location, then handle it:
+           - Green → unload.
+           - Red   → skip (do not unload).
+      4. Wall-follow backward to start (orange detection).
 
     Input:
-    - room_type: The type of the room to traverse. This determines the path taken by the robot.
+    - room_type: The type of the room to traverse.
     """
     def traverse_a_room(self, room_type: RoomType) -> None:
-        traverse_results = self._run(room_type, 45, detect_bed=True)
-        bed_colour = traverse_results[0]
-        distance_travelled = traverse_results[1]
-        bed_angle = traverse_results[2]
+        is_double = room_type not in [RoomType.CORNER_SINGLE, RoomType.WALL_SINGLE]
 
-        if bed_colour is not None:
-            print(f"Detected bed colour: {bed_colour}, distance: {distance_travelled:.2f} cm, angle: {bed_angle}")
-            self._approach_and_unload(bed_angle, bed_colour)
-        else:
-            print(f"No bed detected, distance travelled: {distance_travelled:.2f} cm")
+        # --- Forward pass ---
+        (
+            first_color, first_dist, first_angle,
+            second_color, second_dist, second_angle,
+            total_dist,
+        ) = self._run(room_type, detect_bed=True)
 
-        print("Going back.")
-        back_result = self._run(room_type, -2 * distance_travelled, detect_bed=False, detect_start=True)
-        if back_result[0] == "orange":
-            print(f"Returned to starting point (orange detected) after {back_result[1]:.2f} cm.")
+        if not is_double:
+            # ------------------------------------------------------------------
+            # Single room
+            # ------------------------------------------------------------------
+            if first_color is not None:
+                print(
+                    f"Bed detected: {first_color} at {first_dist:.2f} cm,"
+                    f" angle {first_angle:.1f}°"
+                )
+                self._approach_and_unload(first_angle, first_color)
+            else:
+                print(f"No bed detected. Distance travelled: {total_dist:.2f} cm")
+
+            print("Going back to start.")
+            back = self._run(room_type, detect_start=True)
+            if back[0] == "orange":
+                print(f"Returned to start after {back[1]:.2f} cm.")
+            else:
+                print(f"Back run finished without orange after {back[1]:.2f} cm.")
+
         else:
-            print(f"Back run completed without detecting orange after {back_result[1]:.2f} cm.")
+            # ------------------------------------------------------------------
+            # Double room
+            # ------------------------------------------------------------------
+
+            # Step 1: handle second bed immediately (if any).
+            if second_color is not None:
+                print(
+                    f"Second bed detected: {second_color} at {second_dist:.2f} cm,"
+                    f" angle {second_angle:.1f}°"
+                )
+                if second_color == "green":
+                    self._approach_and_unload(second_angle, second_color)
+                else:
+                    print("Second bed is red — skipping unload.")
+            else:
+                print("No second bed found.")
+
+            # Step 2: navigate back to first bed (if any) and handle it.
+            if first_color is not None:
+                dist_to_first_bed_cm = total_dist - first_dist
+                if dist_to_first_bed_cm > 0.5:
+                    print(
+                        f"Navigating {dist_to_first_bed_cm:.2f} cm back to first bed"
+                        f" (wall-following)."
+                    )
+                    self._run(
+                        room_type,
+                        override_distance_cm=-dist_to_first_bed_cm,
+                    )
+
+                print(
+                    f"First bed: {first_color} at {first_dist:.2f} cm,"
+                    f" angle {first_angle:.1f}°"
+                )
+                if first_color == "green":
+                    self._approach_and_unload(first_angle, first_color)
+                else:
+                    print("First bed is red — skipping unload.")
+            else:
+                print("No first bed found either.")
+
+            # Step 3: wall-follow all the way back to start.
+            print("Going back to start.")
+            back = self._run(room_type, detect_start=True)
+            if back[0] == "orange":
+                print(f"Returned to start after {back[1]:.2f} cm.")
+            else:
+                print(f"Back run finished without orange after {back[1]:.2f} cm.")
 
     """
     --- UNDER THIS LINE IS LEGACY DOUBLE ROOM TRAVERSAL CODE ---
