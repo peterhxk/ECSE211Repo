@@ -96,9 +96,9 @@ class Routing(SweepLineFollower):
 
     def stop_on_orange(self):
         count = 0
-        while count < 1:
+        while count < 3:
             time.sleep(0.01)
-            if self.sensor.read_colour() != "orange":
+            if self.sensor.read_colour() == "orange":
                 count +=1
         print("FOUND ORANGE LINE : stopping motors")
         self.pilot.stop_motors() # stop both motors : this will set "wait_is_stopped()" to True
