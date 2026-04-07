@@ -100,7 +100,7 @@ class Routing(SweepLineFollower):
         count = 0
         while count < 1:
             time.sleep(0.01)
-            if self.sensor.read_colour() == "blue":
+            if self.sensor.read_colour() == "orange":
                 count +=1
             else:
                 count = 0
