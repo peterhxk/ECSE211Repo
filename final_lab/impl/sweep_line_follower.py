@@ -176,6 +176,7 @@ class SweepLineFollower:
             self.pilot.move_forward()
         elif heading == "back":
             self.pilot.move_backward()
+            additional_dist -= 5
         else:
             raise Exception(f"Invalid parameter heading for method SweepLineFollower.turn_logic: {heading}. Valid options are front, back")
         # print(f"[DEBUG] turn_logic: The colors detected are : {self.sensor.read_black_white()}")

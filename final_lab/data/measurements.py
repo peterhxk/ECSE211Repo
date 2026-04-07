@@ -26,5 +26,5 @@ dist_pivot_mm = 79.5
 dist_move_mm = dist_axle_intersect_mm-dist_pivot_mm
 """distance robot need to move after detecting intersection"""
 
-dist_blocks_mm = 58
+dist_blocks_mm = 57
 """extra distance to move forward to pickup blocks"""

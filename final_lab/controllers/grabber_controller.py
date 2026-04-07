@@ -180,7 +180,7 @@ class GrabberController:
                         self.kill(reason=f"FAST_TILT_KILL detected: dps={dps:.3f}")
                         return
                     """
-                    if self._wait_for_inwards_after_kill(window_s=1.0, needed=2):
+                    if self._wait_for_inwards_after_kill(window_s=1.0, needed=1):
                         print("[KILL SWITCH] Secondary inwards press detected")
                         self.kill(reason="FAST_TILT_KILL: 1 slow inwards within 2s")
                         return
@@ -1416,7 +1416,7 @@ class GrabberController:
         self._end_operation_recording(outcome="completed")
         print("[RECORD] Finished post-kill recording")
 
-    def _wait_for_inwards_after_kill(self, window_s=2.0, needed=2) -> bool:
+    def _wait_for_inwards_after_kill(self, window_s=2.0, needed=1) -> bool:
         """
         After the initial outward kill-switch trigger, listen for up to window_s
         seconds and return True only if we observe `needed` consecutive
@@ -1435,7 +1435,7 @@ class GrabberController:
 
             last_seq, ts, dps, z = sample
 
-            if self._is_tilted_inwards_sample(dps, GyroTilt.SLOW_TILT):
+            if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT):
                 hits += 1
                 if hits >= needed:
                     return True
