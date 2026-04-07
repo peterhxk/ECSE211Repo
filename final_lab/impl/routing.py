@@ -119,7 +119,7 @@ class Routing(SweepLineFollower):
         # 4. The robot should then be lined up with the virtual wall and the blocks
         self.sensor.set_arm_at_angle(90)
         time.sleep(0.1)
-        self.pilot.pivot_angle("left",-92)
+        self.pilot.pivot_angle("left",-100)
         t2 = threading.Thread(target=self.stop_on_orange)
         t2.start()
 
