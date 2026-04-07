@@ -123,7 +123,7 @@ try:
         time.sleep(1)
     
     def worker():
-        routing.pharmacy_to_grab_block_position()
+        #routing.pharmacy_to_grab_block_position()
         routing.grab_block(grabber_controller)
 
         print("MOVING ON")
