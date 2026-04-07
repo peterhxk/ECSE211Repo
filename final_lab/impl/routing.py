@@ -109,25 +109,17 @@ class Routing(SweepLineFollower):
         self.turn_logic("right", "front",consts.dist_blocks_mm, arm_avoid_block=True) # horizontal distance right?
         # self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)xw
         print("Finished turning right")
-        exit()
         # Edit :
         # 1. stop moving once the color sensor sees orange
         # 2. Rotate the colour sweeper arm 180 degrees
         # 3. Rotate the wheel opposite to the arm forward until the colour sensor sees orange.
         # 4. The robot should then be lined up with the virtual wall and the blocks
-        """
         self.sensor.set_arm_at_angle(90)
         time.sleep(0.1)
-        while self.sensor.read_colour() != "orange":
-            time.sleep(0.01)
+        self.pilot.pivot_angle("left",-90)
+        threading.Thread(target=self.stop_on_orange).start()
         self.pilot.stop_motors()
-        self.sensor.set_arm_at_angle(-90)
-        time.sleep(0.5)
-        self.pilot.pivot("right")
-        while self.sensor.read_colour() != "orange":
-            time.sleep(0.01)
-        self.pilot.stop_motors()
-        """
+        self.sensor.reset_arm()
 
     def grab_block(self,grabberInstance:GrabberController):
         self.pilot.move_distance(110)
