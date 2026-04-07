@@ -123,11 +123,9 @@ try:
         time.sleep(1)
     
     def worker():
-        """
         routing.pharmacy_to_grab_block_position()
-        """
         routing.grab_block(grabber_controller)
-        exit()
+
         routing.pharmacy_to_room1()
         room_traverser.traverse_a_room(RoomType.CORNER_SINGLE)
 
