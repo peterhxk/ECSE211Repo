@@ -53,6 +53,9 @@ class Routing(SweepLineFollower):
         self._exit_room()
 
         self.turn_logic("right", "back")
+        self.pilot.move_distance(-100)
+        self.pilot.right_motor.wait_is_stopped()
+        self.move_forward(100)
         self.turn_logic("right", "front")
 
     def room3A_to_room3C(self):
