@@ -20,7 +20,8 @@ class Routing(SweepLineFollower):
         """From the main horizontal black line, advances into the pharmacy"""
         res = self.move_forward(300, "orange") 
         if res == "colour":
-            self.pilot.move_distance(150)
+            self.sensor.set_arm_at_angle(90)
+            self.pilot.move_distance(180)
 
     def pharmacy_to_room1(self):
         self.pilot.move_distance(-50)
