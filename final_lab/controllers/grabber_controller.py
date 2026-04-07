@@ -1165,7 +1165,6 @@ class GrabberController:
                     },
                     stop_event=stop_event,
                 )
-                time.sleep(0.5)
 
                 if not ok:
                     print("Timeout or cancellation waiting for first cube to arrive.")
