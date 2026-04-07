@@ -1361,7 +1361,7 @@ class GrabberController:
                 print(f"[DEBUG] Waiting for loading of {label}... status={status}")
                 last_log = now
                 counter +=1
-            if counter > 1:
+            if counter > 1 and self.cube_count == 0: # only do that for first cube loading
                 self.motor.set_dps(2*self.running_dps)
                 print("Temporary BOOST")
                 time.sleep(0.3)
