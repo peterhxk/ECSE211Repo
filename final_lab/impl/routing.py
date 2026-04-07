@@ -117,9 +117,9 @@ class Routing(SweepLineFollower):
         # 2. Rotate the colour sweeper arm 180 degrees
         # 3. Rotate the wheel opposite to the arm forward until the colour sensor sees orange.
         # 4. The robot should then be lined up with the virtual wall and the blocks
-        self.sensor.set_arm_at_angle(90)
+        self.sensor.set_arm_at_angle(100)
         time.sleep(0.1)
-        self.pilot.pivot_angle("left",-100)
+        self.pilot.pivot_angle("left",-90)
         t2 = threading.Thread(target=self.stop_on_orange)
         t2.start()
 
