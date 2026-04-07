@@ -1141,7 +1141,7 @@ class GrabberController:
             print("Already loaded 2 cubes, aborting.")
             return False
 
-        self.motor.set_dps(self.running_dps)
+        self.motor.set_dps(1.5*self.running_dps)
 
         try:
             if stop_event is not None and stop_event.is_set():
