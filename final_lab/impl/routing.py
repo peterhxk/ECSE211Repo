@@ -96,7 +96,7 @@ class Routing(SweepLineFollower):
 
     def stop_on_orange(self):
         count = 0
-        while count < 3:
+        while count < 2:
             time.sleep(0.01)
             if self.sensor.read_colour() == "orange":
                 count +=1
@@ -119,7 +119,7 @@ class Routing(SweepLineFollower):
         # 4. The robot should then be lined up with the virtual wall and the blocks
         self.sensor.set_arm_at_angle(90)
         time.sleep(0.1)
-        self.pilot.pivot_angle("left",-90)
+        self.pilot.pivot_angle("left",-92)
         t2 = threading.Thread(target=self.stop_on_orange)
         t2.start()
 
