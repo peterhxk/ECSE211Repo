@@ -62,67 +62,13 @@ class RoutingError(Exception):
 
 
 try:
-    def state_machine():
-        global robot_state
-        global blocks_stored
-
-        # Initial routing
-        routing.pharmacy_to_grab_block_position()
-        routing.grab_block(grabber_controller)
-        robot_state = 1
-        blocks_stored = grabber_controller.cube_count
-
-        # Room 1
-        routing.pharmacy_to_room1()
-        room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
-        robot_state = 2
-        # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.cube_count
-
-        # Room 2
-        routing.room1_to_room2()
-        room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
-        robot_state = 3
-        # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.cube_count
-
-        # Go back early 
-        if (blocks_stored == 0):
-            robot_state = 5
-            routing.room2_to_pharmacy()
-            sound_controller.play_mission_complete()
-            time.sleep(1)
-            reset_brick() # Turn off everything on the brick's hardware, and reset it
-            exit()
-            
-        # Room 3A
-        routing.room2_to_room3A()
-        room_traverser.traverse_a_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF, grabber_controller=grabber_controller)
-        robot_state = 4
-        # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.cube_count
-
-        # Go back early 
-        if (blocks_stored == 0):
-            robot_state = 5
-            routing.room3A_to_pharmacy()
-            sound_controller.play_mission_complete()
-            time.sleep(1)
-            reset_brick() # Turn off everything on the brick's hardware, and reset it
-            exit()
-
-        # Room 3B
-        routing.room3A_to_room3C() # Week Demo
-        room_traverser.traverse_a_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF, grabber_controller=grabber_controller)
-        robot_state = 5
-        # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.cube_count
-        routing.room3C_to_pharmacy()
-
-        sound_controller.play_mission_complete()
-        time.sleep(1)
-    
     def worker():
+        def _complete_mission(return_to_pharmacy):
+            return_to_pharmacy()
+            
+            sound_controller.play_mission_complete()
+            sound_controller.wait_done()
+
         routing.pharmacy_to_grab_block_position()
         routing.grab_block(grabber_controller)
 
@@ -132,36 +78,29 @@ try:
         routing.room1_to_room2()
         room_traverser.traverse_a_room(RoomType.WALL_SINGLE)
 
-        # routing.room2_to_room3A()
+        # Check if we got lucky and found the 2 green beds right away
+        if grabber_controller.cube_count == 0:
+            _complete_mission(routing.room2_to_pharmacy)
+            return
+        
+        routing.room2_to_room3A()
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
 
+        if grabber_controller.cube_count == 0:
+            _complete_mission(routing.room3A_to_pharmacy)
+            return
+        
         routing.room3A_to_room3C()
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_SECOND_HALF)
+        
+        if grabber_controller.cube_count == 0:
+            _complete_mission(routing.room3C_to_pharmacy)
+            return 
 
         routing.room3C_to_room3B()
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_MIDDLE)
 
-        routing.room3A_to_pharmacy()
-
-        sound_controller.play_mission_complete()
-        sound_controller.wait_done()
-
-        # # Check if we got lucky and found the 2 green beds right away
-        # if grabber_controller.cube_count == 0:
-        #     routing.room2_to_pharmacy()
-        # else:
-        #     routing.room2_to_room3A()
-        #     room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
-
-        #     if grabber_controller.cube_count == 0:
-        #         routing.room3A_to_pharmacy()
-        #     else:
-        #         routing.room3A_to_room3B()
-        #         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_SECOND_HALF)
-        #         routing.room3B_to_pharmacy()
-
-        # sound_controller.play_mission_complete()
-        # sound_controller.wait_done()
+        _complete_mission(routing.room3A_to_pharmacy)
 
     control_thread = threading.Thread(target=worker, daemon=True)
 
