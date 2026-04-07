@@ -1361,11 +1361,11 @@ class GrabberController:
                 print(f"[DEBUG] Waiting for loading of {label}... status={status}")
                 last_log = now
                 counter +=1
-            if counter > 2:
-                self.motor.set_power(100)
+            if counter > 1:
+                self.motor.set_dps(6**self.running_dps)
                 print("Temporary BOOST")
                 counter = 0
-                time.sleep(0.5)
+                time.sleep(1.0)
                 #threading.Timer(1.8,lambda:self.motor.set_dps(1.8*self.running_dps)).start()
 
             time.sleep(0.05)
