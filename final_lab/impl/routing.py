@@ -184,6 +184,6 @@ class Routing(SweepLineFollower):
         #reset arm angle at the end
         self.reset_arm()
         self.pilot.move_backward()
-        #while self.sensor.read_colour() != "orange":
-        #    time.sleep(0.01)
+        while self.sensor.read_colour() != "orange":
+            time.sleep(0.01)
         self.pilot.stop_motors()
