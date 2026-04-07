@@ -27,6 +27,7 @@ class Routing(SweepLineFollower):
         self.pilot.move_distance(-50)
         self.pilot.right_motor.wait_is_stopped()
         self.turn_logic("right", "back")
+        self.move_forward(130)
         self.turn_logic("right", "front")
         self.move_forward(200, "orange")
     
