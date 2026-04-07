@@ -586,9 +586,6 @@ class RoomTraverser:
                 if first_color == "green":
                     self._approach_and_unload(first_angle, first_color)
                     print("UNLOADING")
-                    if self.sound_controller:
-                        self.sound_controller.play_success()
-                        self.sound_controller.wait_done()
                     time.sleep(1)
                 else:
                     print("Red bed — skipping unload (no sound).")
@@ -636,11 +633,8 @@ class RoomTraverser:
                     print(
                         "Left→right sweep found no green/yellow — using initial hit angle"
                     )
-                    # self._approach_and_unload(first_angle, "green")
+                    self._approach_and_unload(first_angle, "green")
                     print("UNLOADING")
-                    if self.sound_controller:
-                        self.sound_controller.play_success()
-                        self.sound_controller.wait_done()
                     time.sleep(1)
             elif first_color is not None:
                 # Should not occur (double pass sweeps green only).
