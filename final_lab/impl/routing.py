@@ -1,7 +1,7 @@
 from impl.sweep_line_follower import SweepLineFollower
 import data.measurements as consts
 from controllers.grabber_controller import GrabberController
-
+import threading
 import time
 
 class Routing(SweepLineFollower):
@@ -94,13 +94,22 @@ class Routing(SweepLineFollower):
 
         self._advance_into_pharmacy()
 
+    def stop_on_orange(self):
+        while self.sensor.read_colour() != "orange":
+            time.sleep(0.01)
+        print("FOUND ORANGE LINE : stopping motors")
+        self.pilot.stop_motors() # stop both motors : this will set "wait_is_stopped()" to True
+        return
+
     def pharmacy_to_grab_block_position(self):
         self.pilot.move_distance(50)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.turn_logic("right", "front")
+        threading.Thread(target=self.sto    p_on_orange).start()
         self.turn_logic("right", "front",consts.dist_blocks_mm, arm_avoid_block=True) # horizontal distance right?
         # self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)xw
         print("Finished turning right")
+        exit()
         # Edit :
         # 1. stop moving once the color sensor sees orange
         # 2. Rotate the colour sweeper arm 180 degrees
