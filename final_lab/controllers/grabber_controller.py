@@ -1362,7 +1362,7 @@ class GrabberController:
                 last_log = now
                 counter +=1
             if counter > 1:
-                self.motor.set_dps(6**self.running_dps)
+                self.motor.set_dps(6*self.running_dps)
                 print("Temporary BOOST")
                 counter = 0
                 time.sleep(1.0)
