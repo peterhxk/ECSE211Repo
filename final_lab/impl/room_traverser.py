@@ -621,22 +621,16 @@ class RoomTraverser:
                     )
                     for i, ang in enumerate(bed_angles):
                         print(f"  Bed {i + 1} at mean angle {ang:.1f}°")
-                        # self._approach_and_unload(ang, "green")
+                        self._approach_and_unload(ang, "green")
                         print("UNLOADING")
-                        if self.sound_controller:
-                            self.sound_controller.play_success()
-                            self.sound_controller.wait_done()
                         time.sleep(1)
                 elif len(bed_angles) == 1:
                     print(
                         f"Left→right sweep: single green region (no yellow between beds) "
                         f"at {bed_angles[0]:.1f}°"
                     )
-                    # self._approach_and_unload(bed_angles[0], "green")
+                    self._approach_and_unload(bed_angles[0], "green")
                     print("UNLOADING")
-                    if self.sound_controller:
-                        self.sound_controller.play_success()
-                        self.sound_controller.wait_done()
                     time.sleep(1)
                 else:
                     print(
