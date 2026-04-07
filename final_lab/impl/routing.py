@@ -118,7 +118,6 @@ class Routing(SweepLineFollower):
         time.sleep(0.1)
         self.pilot.pivot_angle("left",-90)
         threading.Thread(target=self.stop_on_orange).start()
-        self.pilot.stop_motors()
         self.reset_arm()
 
     def grab_block(self,grabberInstance:GrabberController):
