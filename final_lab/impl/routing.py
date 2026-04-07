@@ -117,6 +117,7 @@ class Routing(SweepLineFollower):
         # 2. Rotate the colour sweeper arm 180 degrees
         # 3. Rotate the wheel opposite to the arm forward until the colour sensor sees orange.
         # 4. The robot should then be lined up with the virtual wall and the blocks
+        """
         self.sensor.set_arm_at_angle(100)
         time.sleep(0.1)
         self.pilot.pivot_angle("left",-90)
@@ -124,6 +125,7 @@ class Routing(SweepLineFollower):
         t2.start()
 
         t2.join() # waits for thread to be done
+        """
 
 
     def grab_block(self,grabberInstance:GrabberController):
