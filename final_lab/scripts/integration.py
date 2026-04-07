@@ -126,7 +126,7 @@ except Exception as err:
     print(err)
     traceback.print_exc()
 finally:
-    print("Ejecting all cubes from Grabber")
-    grabber_controller.eject_existing_blocs()
+    # print("Ejecting all cubes from Grabber")
+    # grabber_controller.eject_existing_blocs()
     reset_brick() # Turn off everything on the brick's hardware, and reset it
     exit()
