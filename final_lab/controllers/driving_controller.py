@@ -127,10 +127,10 @@ class DrivingController:
 
         if direction == "left":
             self.right_motor.set_limits(0, self.base_power*2)
-            self.right_motor.set_position_relative(185*self.ORIENTTODEG) #CHANGE : increased from 180 to 185
+            self.right_motor.set_position_relative(182*self.ORIENTTODEG) #CHANGE : increased from 180 to 185
         elif direction == "right":
             self.left_motor.set_limits(0, self.base_power*2)
-            self.left_motor.set_position_relative(185*self.ORIENTTODEG)
+            self.left_motor.set_position_relative(182*self.ORIENTTODEG)
         print(f"turning {180*self.ORIENTTODEG} degrees on wheel")
 
     def pivot_angle(self, direction: Literal["left", "right"], angle: float):
