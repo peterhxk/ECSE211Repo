@@ -105,7 +105,7 @@ class Routing(SweepLineFollower):
         self.pilot.move_distance(50)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.turn_logic("right", "front")
-        threading.Thread(target=self.sto    p_on_orange).start()
+        threading.Thread(target=self.stop_on_orange).start()
         self.turn_logic("right", "front",consts.dist_blocks_mm, arm_avoid_block=True) # horizontal distance right?
         # self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)xw
         print("Finished turning right")
