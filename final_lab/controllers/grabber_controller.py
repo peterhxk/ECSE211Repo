@@ -677,7 +677,7 @@ class GrabberController:
             return 40.0
             # change this value if needed for kill switch
         else:
-            return 16.0
+            return 15.0
 
     def _floor_for_inwards(self, tilt: GyroTilt) -> float:
         """

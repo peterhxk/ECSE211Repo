@@ -111,7 +111,7 @@ try:
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_MIDDLE)
 
         _complete_mission(routing.room3A_to_pharmacy)
-        
+
 
     control_thread = threading.Thread(target=worker, daemon=True)
 
