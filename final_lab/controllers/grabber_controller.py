@@ -1372,6 +1372,7 @@ class GrabberController:
 
         final_status = self.get_loading_status()
         print(f"[DEBUG] Loading finished for {label} with status={final_status}")
+        self.motor.set_dps(0)
         return True
 
     def eject_existing_blocs(self,duration=5):
