@@ -71,6 +71,14 @@ try:
 
         #routing.pharmacy_to_grab_block_position()
         routing.grab_block(grabber_controller)
+        time.sleep(4)
+        grabber_controller.start_unloading()
+        while not grabber_controller.unloading_finished():
+            time.sleep(0.01)
+        time.sleep(1)
+        grabber_controller.start_unloading()
+        while not grabber_controller.unloading_finished():
+            time.sleep(0.01)
         time.sleep(100)
         """
         routing.pharmacy_to_room1()
