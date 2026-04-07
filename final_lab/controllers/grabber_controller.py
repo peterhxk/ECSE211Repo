@@ -1346,6 +1346,7 @@ class GrabberController:
     def wait_for_loading(self,expected_bloc_count=0, label="block")->bool:
         start = time.time()
         last_log = start
+        counter = 0
         while True:
             status = self.get_loading_status()
 
@@ -1359,6 +1360,11 @@ class GrabberController:
             if now - last_log > 1.0:
                 print(f"[DEBUG] Waiting for loading of {label}... status={status}")
                 last_log = now
+                counter +=1
+            if counter > 2:
+                self.motor.set_dps(4*self.running_dps)
+                counter = 0
+                threading.Timer(1.8,lambda:self.motor.set_dps(1.8*self.running_dps)).start()
 
             time.sleep(0.05)
 
