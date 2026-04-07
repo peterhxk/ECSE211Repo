@@ -30,7 +30,7 @@ color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 driving_controller = DrivingController(left_motor, right_motor, 200)
 color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
-grabber_controller = GrabberController(kill_switch_flag, Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
+grabber_controller = GrabberController(kill_switch_flag, Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=True, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
 sound_controller = SoundController()
 room_traverser = RoomTraverser(driving_controller, color_sensor_controller, grabber_controller, sound_controller)
