@@ -326,7 +326,7 @@ class GrabberController:
 
             ok = self._is_motor_drop_detected(
                 timeout=5.0,
-                warmup_delay=0.9,
+                warmup_delay=1.1,
                 stop_event=stop_event,
                 operation_name="unload_last_bloc",
                 extra={
