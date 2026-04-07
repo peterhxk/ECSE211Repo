@@ -584,7 +584,7 @@ class RoomTraverser:
                     f" angle {first_angle:.1f}°"
                 )
                 if first_color == "green":
-                    # self._approach_and_unload(first_angle, first_color)
+                    self._approach_and_unload(first_angle, first_color)
                     print("UNLOADING")
                     if self.sound_controller:
                         self.sound_controller.play_success()
