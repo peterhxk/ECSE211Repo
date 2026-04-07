@@ -96,9 +96,9 @@ class Routing(SweepLineFollower):
 
     def stop_on_orange(self):
         count = 0
-        while count < 2:
+        while count < 1:
             time.sleep(0.01)
-            if self.sensor.read_colour() == "orange":
+            if self.sensor.read_colour() == "blue":
                 count +=1
             else:
                 count = 0
