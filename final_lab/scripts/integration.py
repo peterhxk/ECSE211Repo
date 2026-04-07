@@ -69,9 +69,10 @@ try:
             sound_controller.play_mission_complete()
             sound_controller.wait_done()
 
-        routing.pharmacy_to_grab_block_position()
+        #routing.pharmacy_to_grab_block_position()
         routing.grab_block(grabber_controller)
-
+        time.sleep(100)
+        """
         routing.pharmacy_to_room1()
         room_traverser.traverse_a_room(RoomType.CORNER_SINGLE)
 
@@ -101,6 +102,7 @@ try:
         room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_MIDDLE)
 
         _complete_mission(routing.room3A_to_pharmacy)
+        """
 
     control_thread = threading.Thread(target=worker, daemon=True)
 
