@@ -113,11 +113,11 @@ class Routing(SweepLineFollower):
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.turn_logic("right", "front")
         t1 = threading.Thread(target=self.stop_on_orange,daemon=True)
-        t1.start()
+        #t1.start()
         self.turn_logic("right", "front",consts.dist_blocks_mm, arm_avoid_block=True) # horizontal distance right?
-        if t1.is_alive():
-            self.pilot.pivot_angle("right", 45)
-            self.pilot.left_motor.wait_is_stopped()
+        #if t1.is_alive():
+            #self.pilot.pivot_angle("right", 45)
+            #self.pilot.left_motor.wait_is_stopped()
         # self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)xw
         print("Finished turning right")
         # Edit :
