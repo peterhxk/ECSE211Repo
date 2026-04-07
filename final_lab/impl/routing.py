@@ -108,7 +108,7 @@ class Routing(SweepLineFollower):
         self.pilot.move_distance(50)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.turn_logic("right", "front")
-        threading.Thread(target=self.stop_on_orange).start()
+        threading.Thread(target=self.stop_on_orange,daemon=True).start()
         self.turn_logic("right", "front",consts.dist_blocks_mm, arm_avoid_block=True) # horizontal distance right?
         # self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)xw
         print("Finished turning right")
@@ -120,8 +120,11 @@ class Routing(SweepLineFollower):
         self.sensor.set_arm_at_angle(90)
         time.sleep(0.1)
         self.pilot.pivot_angle("left",-90)
-        threading.Thread(target=self.stop_on_orange).start()
-        self.reset_arm()
+        t2 = threading.Thread(target=self.stop_on_orange)
+        t2.start()
+
+        t2.join() # waits for thread to be done
+
 
     def grab_block(self,grabberInstance:GrabberController):
         self.pilot.move_distance(110)
