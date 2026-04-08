@@ -93,7 +93,7 @@ class GrabberController:
         self.running_dps = 450
 
         # Motor-drop detection knobs
-        self.motor_calibration_dps = 300
+        self.motor_calibration_dps = 450
         self.motor_sample_sleep = 0.02
         self.motor_eject_time = 2.0
 
@@ -596,7 +596,7 @@ class GrabberController:
 
             time.sleep(0.5)
 
-            print("[Motor calibration] Dry run inward...")
+            print(f"[Motor calibration] Dry run inward at DPS ={self.motor_calibration_dps}")
             inward_samples = self._sample_motor_speeds(
                 dps=self.motor_calibration_dps,
                 duration=self.motor_dry_run_time,
