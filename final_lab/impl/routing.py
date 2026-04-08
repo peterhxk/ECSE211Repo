@@ -157,11 +157,9 @@ class Routing(SweepLineFollower):
                 self.pilot.move_distance(EXTRA_DISTANCE)
                 self.pilot.right_motor.wait_is_stopped(0.1)
                 attempts+=1
-        if attempts == 3:
-            raise RuntimeError
         time.sleep(0.5)
         # make sure to have some distance between the block and the grabber
-        self.pilot.move_distance(80-attempts*EXTRA_DISTANCE)
+        self.pilot.move_distance(85-attempts*EXTRA_DISTANCE)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.pilot.left_motor.set_dps(10)
         self.pilot.right_motor.set_dps(10)
@@ -179,8 +177,6 @@ class Routing(SweepLineFollower):
                 self.pilot.move_distance(EXTRA_DISTANCE)
                 self.pilot.right_motor.wait_is_stopped(0.1)
                 attempts += 1
-        if attempts == 3:
-            raise RuntimeError
         self.pilot.move_distance(-100-attempts*EXTRA_DISTANCE) # move extra if had to move forward
         self.pilot.right_motor.wait_is_stopped(0.1)
 
