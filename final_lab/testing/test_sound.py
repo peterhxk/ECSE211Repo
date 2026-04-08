@@ -1,8 +1,8 @@
 from utils.sound import Sound
 
 # ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]
-note = "A4"   # note name (e.g. "C4", "G5") or frequency in Hz
-volume = 70   # 0–100
+note = "A1"   # note name (e.g. "C4", "G5") or frequency in Hz
+volume = 100   # 0–100
 duration = 1  # seconds
 
 s = Sound(pitch=note, volume=volume, duration=duration)
