@@ -89,6 +89,7 @@ class SoundController(Sound):
         """Stop any currently playing note."""
         for s in self.sounds:
             s.stop()
+        self._executor.shutdown(wait=False, cancel_futures=True)
         self.note_playing = False
         self.play_requested = False
 
