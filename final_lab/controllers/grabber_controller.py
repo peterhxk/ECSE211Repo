@@ -286,7 +286,7 @@ class GrabberController:
                 return False
 
             if self.cube_count == 2:
-                self.motor.set_dps(self.running_dps)
+                self.motor.set_dps(-self.running_dps)
                 print("[INFO] Unloading first cube")
                 unloaded = self._consecutive_gyro_trigger(
                     operation_name="unload_from_2_to_1",
