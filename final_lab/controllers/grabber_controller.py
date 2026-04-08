@@ -97,7 +97,7 @@ class GrabberController:
         self.motor_sample_sleep = 0.02
         self.motor_eject_time = 2.0
 
-        self.motor_dry_run_time = 5.0
+        self.motor_dry_run_time = 10.0
         self.motor_drop_k = 1.5
         self.motor_drop_consecutive_needed = 1
         self.use_motor_moving_average = True
@@ -426,7 +426,7 @@ class GrabberController:
             print("Skipped motor calibration")
 
         self.calibrate_gyro_noise(
-            seconds=15.0,
+            seconds=10.0,
             sample_hz=self.sample_hz,
             warmup=0.5,
             calibration=self.calibration,
