@@ -90,7 +90,7 @@ class GrabberController:
         # Gyro detection knobs
         self.sample_hz = 50
         self.consecutive_needed = 15
-        self.running_dps = 300
+        self.running_dps = 450
 
         # Motor-drop detection knobs
         self.motor_calibration_dps = 300
@@ -112,7 +112,7 @@ class GrabberController:
         self._unload_result = None
         self.kill_switch = False
 
-        if self.running_dps > 400:
+        if self.running_dps > 600:
             print("Warning: running power too high. Pick a lower value")
 
         # Empirical gyro trace recording
@@ -286,7 +286,7 @@ class GrabberController:
                 return False
 
             if self.cube_count == 2:
-                self.motor.set_dps(-1.3 * self.running_dps)
+                self.motor.set_dps(self.running_dps)
                 print("[INFO] Unloading first cube")
                 unloaded = self._consecutive_gyro_trigger(
                     operation_name="unload_from_2_to_1",
@@ -1141,7 +1141,7 @@ class GrabberController:
             print("Already loaded 2 cubes, aborting.")
             return False
 
-        self.motor.set_dps(1.8*self.running_dps)
+        self.motor.set_dps(self.running_dps) # before : 1.8*300
 
         try:
             if stop_event is not None and stop_event.is_set():
@@ -1362,10 +1362,10 @@ class GrabberController:
                 last_log = now
                 counter +=1
             if counter > 2 and self.cube_count == 0: # only do that for first cube loading
-                self.motor.set_dps(2*self.running_dps)
+                self.motor.set_dps(1.2*self.running_dps) # temporarily increase
                 print("Temporary BOOST")
                 time.sleep(0.1)
-                self.motor.set_dps(1.5*self.running_dps)
+                self.motor.set_dps(self.running_dps)
                 #threading.Timer(1.8,lambda:self.motor.set_dps(1.8*self.running_dps)).start()
 
             time.sleep(0.05)
