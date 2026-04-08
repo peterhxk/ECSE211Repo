@@ -1,13 +1,9 @@
 from utils.sound import Sound
 from concurrent import futures
-import threading
 import time
-from typing import Optional
 
 NOTES = ["A4", "B4", "C5", "D5", "E5", "F5", "G5"]
 TEMPO = 0.5
-
-_POLL_S = 0.02
 
 
 class SoundController(Sound):
@@ -17,19 +13,6 @@ class SoundController(Sound):
         self.note_playing = False
         self.play_requested = False
         self._executor = futures.ThreadPoolExecutor(max_workers=1)
-        self._active_sound_lock = threading.Lock()
-        self._active_sound: Optional[Sound] = None
-        self._cancel_playback = threading.Event()
-
-    def _set_active_sound(self, sound: Optional[Sound]) -> None:
-        with self._active_sound_lock:
-            self._active_sound = sound
-
-    def _wait_sound_or_cancel(self, note: Sound) -> None:
-        while note.is_playing() and not self._cancel_playback.is_set():
-            time.sleep(_POLL_S)
-        if self._cancel_playback.is_set():
-            note.stop()
 
     def request_play(self):
         """Signal that a note should be played on the next update."""
@@ -49,16 +32,11 @@ class SoundController(Sound):
         note = self.sounds[note_index]
 
         def _play():
-            self._cancel_playback.clear()
             self.note_playing = True
-            try:
-                self._set_active_sound(note)
-                note.play()
-                self._wait_sound_or_cancel(note)
-            finally:
-                self._set_active_sound(None)
-                self.note_playing = False
-                self.play_requested = False
+            note.play()
+            note.wait_done()
+            self.note_playing = False
+            self.play_requested = False
 
         self._executor.submit(_play)
 
@@ -79,18 +57,11 @@ class SoundController(Sound):
         ]
 
         def _play():
-            self._cancel_playback.clear()
             self.note_playing = True
-            try:
-                for note in sequence:
-                    if self._cancel_playback.is_set():
-                        break
-                    self._set_active_sound(note)
-                    note.play()
-                    self._wait_sound_or_cancel(note)
-            finally:
-                self._set_active_sound(None)
-                self.note_playing = False
+            for note in sequence:
+                note.play()
+                time.sleep(note._duration-0.05)
+            self.note_playing = False
 
         self._executor.submit(_play)
 
@@ -106,35 +77,21 @@ class SoundController(Sound):
         ]
 
         def _play():
-            self._cancel_playback.clear()
             self.note_playing = True
-            try:
-                for note in sequence:
-                    if self._cancel_playback.is_set():
-                        break
-                    self._set_active_sound(note)
-                    note.play()
-                    self._wait_sound_or_cancel(note)
-            finally:
-                self._set_active_sound(None)
-                self.note_playing = False
+            for note in sequence:
+                note.play()
+                time.sleep(note._duration-0.05)
+            self.note_playing = False
 
         self._executor.submit(_play)
 
     def stop_all(self):
-        """Stop any currently playing note (scale, mission jingle, or success chime)."""
-        self._cancel_playback.set()
-        with self._active_sound_lock:
-            active = self._active_sound
-        if active is not None:
-            active.stop()
+        """Stop any currently playing note."""
         for s in self.sounds:
             s.stop()
         self._executor.shutdown(wait=False, cancel_futures=True)
-        self._executor = futures.ThreadPoolExecutor(max_workers=1)
         self.note_playing = False
         self.play_requested = False
-        self._cancel_playback.clear()
 
     def wait_done(self, polling_interval=0.05):
         """Blocking function that waits until notes are done playing."""
