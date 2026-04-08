@@ -397,7 +397,9 @@ class RoomTraverser:
             status = self.grabber_controller.get_unloading_status()
 
             if status == "FAILED":
-                raise RuntimeError(f"Failed while unloading {label}")
+                # raise RuntimeError(f"Failed while unloading {label}")
+                print("FAILED TO UNLOAD :((")
+                break
 
             if status != "UNLOADING":
                 break

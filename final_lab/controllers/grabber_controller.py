@@ -984,7 +984,7 @@ class GrabberController:
     # ----------------------------
     # Motor drop detection
     # ----------------------------
-    def increase_on_velocity_drop(self, duration=0.6):
+    def increase_on_velocity_drop(self, duration=0.4):
         start = time.time()
         cooldown = time.time()
         timeout = 1.0
@@ -1199,7 +1199,7 @@ class GrabberController:
 
             ok = self._is_motor_drop_detected(
                 timeout=5.0,
-                warmup_delay=0.6,
+                warmup_delay=0.4,
                 stop_event=stop_event,
                 operation_name="load_second_bloc",
                 extra={
