@@ -13,6 +13,13 @@ class SoundController(Sound):
         self.note_playing = False
         self.play_requested = False
         self._executor = futures.ThreadPoolExecutor(max_workers=1)
+        self._stopping = False
+
+    def _get_executor(self):
+        """Get or recreate the executor if it's been shut down."""
+        if self._executor._shutdown:
+            self._executor = futures.ThreadPoolExecutor(max_workers=1)
+        return self._executor
 
     def request_play(self):
         """Signal that a note should be played on the next update."""
@@ -38,7 +45,7 @@ class SoundController(Sound):
             self.note_playing = False
             self.play_requested = False
 
-        self._executor.submit(_play)
+        self._get_executor().submit(_play)
 
     def play_mission_complete(self):
         """Super Mario Bros. 1-UP jingle.
@@ -63,7 +70,7 @@ class SoundController(Sound):
                 time.sleep(note._duration-0.05)
             self.note_playing = False
 
-        self._executor.submit(_play)
+        self._get_executor().submit(_play)
 
     def play_success(self):
         """Short upbeat chime: quick two-note rise.
@@ -83,18 +90,19 @@ class SoundController(Sound):
                 time.sleep(note._duration-0.05)
             self.note_playing = False
 
-        self._executor.submit(_play)
+        self._get_executor().submit(_play)
 
     def stop_all(self):
         """Stop all currently playing sounds and cancel any queued tones."""
         print("Stopping sounds ...")
+        self._stopping = True
 
         for s in self.sounds:
             s.stop()
         self._executor.shutdown(wait=False, cancel_futures=True)
-        self._executor = futures.ThreadPoolExecutor(max_workers=1)
         self.note_playing = False
         self.play_requested = False
+        self._stopping = False
 
     def wait_done(self, polling_interval=0.05):
         """Blocking function that waits until notes are done playing."""
