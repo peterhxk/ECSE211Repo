@@ -62,7 +62,7 @@ class Routing(SweepLineFollower):
         self._exit_room()
 
         self.turn_logic("left", "back")
-        self.turn_logic("right", "front", additional_dist=15)
+        self.turn_logic("right", "front")
 
     def room3C_to_room3B(self):
         self._exit_room()
