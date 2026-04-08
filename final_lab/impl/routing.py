@@ -171,7 +171,6 @@ class Routing(SweepLineFollower):
         EXTRA_DISTANCE = 5
         while attempts < 2:
             grabberInstance.start_loading(timeout=5.0)
-            time.sleep(0.5)
             if grabberInstance.wait_for_loading(0, label="block 2"):
                 print(f"Successfully loaded block 2 after {attempts} attempts")
                 self.pilot.stop_motors()
