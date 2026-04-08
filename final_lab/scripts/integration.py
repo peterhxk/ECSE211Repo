@@ -130,6 +130,7 @@ try:
     kill_switch_flag.wait()
 
     print("[INFO] Kill switch activated. Terminating script...")
+    
     sound_controller.stop_all()
     raise KillSwitchInterrupt()
 
