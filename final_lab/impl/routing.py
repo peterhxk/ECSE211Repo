@@ -44,7 +44,7 @@ class Routing(SweepLineFollower):
         self.turn_logic("right", "back")
 
         print('[DEBUG] routing: Moving forward 200mm')
-        self.move_forward(230)
+        self.move_forward(220)
 
         print('[DEBUG] routing: Beginning second left turn')
         self.turn_logic("left", "front")
