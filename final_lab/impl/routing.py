@@ -160,7 +160,7 @@ class Routing(SweepLineFollower):
         if attempts == 3:
             raise RuntimeError
         time.sleep(0.5)
-        self.pilot.move_distance(79-attempts*EXTRA_DISTANCE)
+        self.pilot.move_distance(81-attempts*EXTRA_DISTANCE)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.pilot.stop_motors()
         time.sleep(0.5)
