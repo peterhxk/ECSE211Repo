@@ -41,7 +41,7 @@ class SoundController(Sound):
             self.note_playing = False
             self.play_requested = False
 
-        self._executor.submit(_play)
+        self._get_executor().submit(_play)
 
     def play_mission_complete(self):
         """Super Mario Bros. 1-UP jingle.
@@ -70,7 +70,7 @@ class SoundController(Sound):
                 self._stop_event.wait(note._duration - 0.05)
             self.note_playing = False
 
-        self._executor.submit(_play)
+        self._get_executor().submit(_play)
 
     def play_success(self):
         """Short upbeat chime: quick two-note rise.
@@ -95,7 +95,7 @@ class SoundController(Sound):
                 self._stop_event.wait(note._duration - 0.05)
             self.note_playing = False
 
-        self._executor.submit(_play)
+        self._get_executor().submit(_play)
 
     def stop_all(self):
         """Stop any currently playing note."""
@@ -108,6 +108,7 @@ class SoundController(Sound):
         self._executor.shutdown(wait=False, cancel_futures=True)
         self.note_playing = False
         self.play_requested = False
+        self._stopping = False
 
     def wait_done(self, polling_interval=0.05):
         """Blocking function that waits until notes are done playing."""
