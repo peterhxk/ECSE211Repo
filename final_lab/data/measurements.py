@@ -28,3 +28,9 @@ dist_move_mm = dist_axle_intersect_mm-dist_pivot_mm
 
 dist_blocks_mm = 55
 """extra distance to move forward to pickup blocks"""
+
+dist_block_1_to_block_2 = 85
+"""distance to move from block 1 to block 2"""
+
+dist_block_1 = 112
+"""distance to get to block 1"""
