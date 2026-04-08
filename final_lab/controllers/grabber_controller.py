@@ -1416,7 +1416,7 @@ class GrabberController:
         self._end_operation_recording(outcome="completed")
         print("[RECORD] Finished post-kill recording")
 
-    def _wait_for_inwards_after_kill(self, window_s=1.0, needed=2) -> bool:
+    def _wait_for_inwards_after_kill(self, window_s=1.0, needed=1) -> bool:
         """
         After the initial outward kill-switch trigger, listen for up to window_s
         seconds and return True only if we observe `needed` consecutive
