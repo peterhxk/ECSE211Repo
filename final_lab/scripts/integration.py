@@ -112,8 +112,18 @@ try:
 
         _complete_mission(routing.room3A_to_pharmacy)
 
+    def ks_test():
+        sound_controller.play_mission_complete()
+        sound_controller.wait_done()
+        time.sleep(1)
+        sound_controller.play_success()
+        sound_controller.wait_done()
+        time.sleep(1)
+        sound_controller.play_success()
+        sound_controller.wait_done()
+        time.sleep(1)
 
-    control_thread = threading.Thread(target=worker, daemon=True)
+    control_thread = threading.Thread(target=ks_test, daemon=True)
 
     control_thread.start()
 
