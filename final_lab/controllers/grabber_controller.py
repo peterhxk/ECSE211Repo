@@ -674,7 +674,7 @@ class GrabberController:
         if tilt == GyroTilt.SLOW_TILT:
             return 10.0
         elif tilt == GyroTilt.FAST_TILT_KILL :
-            return 35.0
+            return 42.0
             # change this value if needed for kill switch
         else:
             return 16.0
