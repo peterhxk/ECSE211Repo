@@ -123,7 +123,7 @@ try:
         sound_controller.wait_done()
         time.sleep(1)
 
-    control_thread = threading.Thread(target=ks_test, daemon=True)
+    control_thread = threading.Thread(target=worker, daemon=True)
 
     control_thread.start()
 
