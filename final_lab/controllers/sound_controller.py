@@ -86,10 +86,13 @@ class SoundController(Sound):
         self._executor.submit(_play)
 
     def stop_all(self):
-        """Stop any currently playing note."""
+        """Stop all currently playing sounds and cancel any queued tones."""
+        print("Stopping sounds ...")
+
         for s in self.sounds:
             s.stop()
         self._executor.shutdown(wait=False, cancel_futures=True)
+        self._executor = futures.ThreadPoolExecutor(max_workers=1)
         self.note_playing = False
         self.play_requested = False
 
