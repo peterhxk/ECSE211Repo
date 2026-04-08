@@ -159,7 +159,7 @@ class Routing(SweepLineFollower):
                 attempts+=1
         time.sleep(0.5)
         # make sure to have some distance between the block and the grabber
-        self.pilot.move_distance(90-attempts*EXTRA_DISTANCE)
+        self.pilot.move_distance(85-attempts*EXTRA_DISTANCE)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.pilot.left_motor.set_dps(10)
         self.pilot.right_motor.set_dps(10)
