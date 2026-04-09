@@ -66,6 +66,7 @@ class GrabberController:
         self.debug = debug
         self._kill_recording_active = False
         self._kill_recording_start_time = None
+        self._kill_sequence_armed = False
 
         # Thread-safe state / async-like control
         self.state_lock = threading.Lock()
@@ -148,10 +149,13 @@ class GrabberController:
         if self._kill_recording_active:
             return
 
+        if not self.debug:
+            return
+
         print("[RECORD] Starting kill-switch recording")
         self._begin_operation_recording(
             operation_name="kill_switch_sequence",
-            timeout=3.0,
+            timeout=None,
             extra={"type": "kill_switch_sequence"}
         )
         self._kill_recording_active = True
@@ -160,6 +164,7 @@ class GrabberController:
     def _append_kill_switch_sample(self, dps: float, z: float):
         if not self._kill_recording_active:
             return
+
 
         elapsed = time.time() - self._kill_recording_start_time
         self._append_gyro_sample_to_record(
@@ -173,10 +178,12 @@ class GrabberController:
         if not self._kill_recording_active:
             return
 
-        self._end_operation_recording(outcome=outcome)
+        if self.debug:
+            self._end_operation_recording(outcome=outcome)
+            print("[RECORD] Finished kill-switch recording")
+
         self._kill_recording_active = False
         self._kill_recording_start_time = None
-        print("[RECORD] Finished kill-switch recording")
 
     def _gyro_worker(self):
         dt = 1.0 / float(self.sample_hz)
@@ -199,20 +206,22 @@ class GrabberController:
 
                 # First kill trigger: outward tilt
                 if (
-                        not self._kill_recording_active
+                        not self._kill_sequence_armed
                         and self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL)
                 ):
                     print("[KILL SWITCH] Initial outwards press detected")
-                    self._start_kill_switch_recording()
+                    self._kill_sequence_armed = True
+                    if self.debug:
+                        self._start_kill_switch_recording()
 
-                # Second kill trigger: inward tilt after recording has started
                 elif (
-                        self._kill_recording_active
+                        self._kill_sequence_armed
                         and self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT)
                 ):
                     print("[KILL SWITCH] Secondary inwards press detected")
-                    self._append_kill_switch_sample(dps, z)  # make sure trigger sample is captured
-                    self._stop_kill_switch_recording(outcome="success")
+                    if self.debug:
+                        #self._append_kill_switch_sample(dps, z)
+                        self._stop_kill_switch_recording(outcome="success")
                     self.kill(reason="FAST_TILT_KILL sequence detected")
                     return
 
