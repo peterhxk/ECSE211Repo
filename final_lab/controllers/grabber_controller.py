@@ -151,7 +151,7 @@ class GrabberController:
         print("[RECORD] Starting kill-switch recording")
         self._begin_operation_recording(
             operation_name="kill_switch_sequence",
-            timeout=None,
+            timeout=3.0,
             extra={"type": "kill_switch_sequence"}
         )
         self._kill_recording_active = True
