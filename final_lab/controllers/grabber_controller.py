@@ -64,6 +64,8 @@ class GrabberController:
         self.cube_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
         self.calibration = calibration
         self.debug = debug
+        self._kill_recording_active = False
+        self._kill_recording_start_time = None
 
         # Thread-safe state / async-like control
         self.state_lock = threading.Lock()
@@ -142,19 +144,45 @@ class GrabberController:
         self._gyro_sample_seq = 0
         self._gyro_sample_cond = threading.Condition(self._gyro_sample_lock)
 
+    def _start_kill_switch_recording(self):
+        if self._kill_recording_active:
+            return
 
+        print("[RECORD] Starting kill-switch recording")
+        self._begin_operation_recording(
+            operation_name="kill_switch_sequence",
+            timeout=None,
+            extra={"type": "kill_switch_sequence"}
+        )
+        self._kill_recording_active = True
+        self._kill_recording_start_time = time.time()
+
+    def _append_kill_switch_sample(self, dps: float, z: float):
+        if not self._kill_recording_active:
+            return
+
+        elapsed = time.time() - self._kill_recording_start_time
+        self._append_gyro_sample_to_record(
+            elapsed_s=elapsed,
+            dps=dps,
+            z=z,
+            detectors={"kill_sequence": True},
+        )
+
+    def _stop_kill_switch_recording(self, outcome="completed"):
+        if not self._kill_recording_active:
+            return
+
+        self._end_operation_recording(outcome=outcome)
+        self._kill_recording_active = False
+        self._kill_recording_start_time = None
+        print("[RECORD] Finished kill-switch recording")
 
     def _gyro_worker(self):
-        """
-        Threaded loop to poll Gyro DPS and publish dps to the kill switch monitor and to any gyro event detection event
-        :return:
-        """
         dt = 1.0 / float(self.sample_hz)
         print("[GYRO] worker started")
 
         try:
-            kill_hits = 0
-            kill_needed = 5
             while not self._gyro_stop.is_set():
                 raw = self.gyro.get_dps_measure()
                 now = time.time()
@@ -166,24 +194,27 @@ class GrabberController:
                 dps = float(raw)
                 z = (dps - self.mu) / max(self.sigma, 1e-6)
 
-                # internal kill trigger
-                if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
+                # If recording is active, keep saving every sample
+                self._append_kill_switch_sample(dps, z)
+
+                # First kill trigger: outward tilt
+                if (
+                        not self._kill_recording_active
+                        and self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL)
+                ):
                     print("[KILL SWITCH] Initial outwards press detected")
-                    """
-                    threading.Thread(
-                        target=self._record_after_kill_trigger,
-                        args=(5.0,),
-                        daemon=True
-                    ).start()
-                    if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT):
-                        print("[KILL SWITCH] Secondary inwards press detected")
-                        self.kill(reason=f"FAST_TILT_KILL detected: dps={dps:.3f}")
-                        return
-                    """
-                    if self._wait_for_inwards_after_kill(window_s=1.0, needed=1):
-                        print("[KILL SWITCH] Secondary inwards press detected")
-                        self.kill(reason="FAST_TILT_KILL: 1 slow inwards within 2s")
-                        return
+                    self._start_kill_switch_recording()
+
+                # Second kill trigger: inward tilt after recording has started
+                elif (
+                        self._kill_recording_active
+                        and self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT)
+                ):
+                    print("[KILL SWITCH] Secondary inwards press detected")
+                    self._append_kill_switch_sample(dps, z)  # make sure trigger sample is captured
+                    self._stop_kill_switch_recording(outcome="success")
+                    self.kill(reason="FAST_TILT_KILL sequence detected")
+                    return
 
                 with self._gyro_sample_cond:
                     self._gyro_sample = (now, dps, z)
@@ -193,6 +224,8 @@ class GrabberController:
                 time.sleep(dt)
 
         except Exception as e:
+            if self._kill_recording_active:
+                self._stop_kill_switch_recording(outcome="error")
             print(f"[GYRO] worker crashed: {e}")
             raise
 
