@@ -40,7 +40,7 @@ class ColourSensorController (EV3ColorSensor):
     # Angle tolerance at which the line is still considered the same one
     THETA_TOLERANCE = 10
 
-    MOTOR_POWER_DPS = 250
+    MOTOR_POWER_DPS = 280
 
     def __init__(self, port, motor: Motor, mode="component", calibrate=False):
         super().__init__(port)
@@ -52,6 +52,7 @@ class ColourSensorController (EV3ColorSensor):
         self.BW_DROP_THRESHOLD = 1.5   # drop from baseline → black
         self.BW_RISE_THRESHOLD = 1.5   # rise from baseline → white
         self._colour_window = deque(maxlen=5)  # Sliding window for color filtering
+        self.motor.reset_encoder()
 
         # Reset the value of the motor encoder.
         if calibrate:
@@ -193,6 +194,60 @@ class ColourSensorController (EV3ColorSensor):
         if hasattr(self, '_sweep_thread') and self._sweep_thread.is_alive():
             self._sweep_thread.join(timeout=2.0)
         self.motor.set_dps(0)
+
+    def sweep_colours_max_left_to_right(
+        self,
+        colours: List[str],
+        *,
+        black_white: bool = False,
+    ) -> List[Tuple[int, str, int]]:
+        """
+        Park at the full-left stop (-60°), then drive the arm once toward full
+        right (+60°), logging colour hits along the way. Does not sweep back,
+        so the same bed is not seen twice on the return pass.
+        """
+        self.motor.set_dps(0)
+        init_position = 0.0
+        left_lim = float(self.MAX_SWEEP_ANGLE["full"][SweepDirection.LEFT])
+        self.set_arm_at_angle(left_lim)
+
+        self.sweep_dir = SweepDirection.RIGHT
+        duration = 0
+        consecutive_count = 0
+        consecutive_positions: List[float] = []
+        self.colours_found = []
+
+        while True:
+            if self.motor.get_speed() * self.sweep_dir.value <= 0:
+                self.motor.set_dps(self.MOTOR_POWER_DPS * self.sweep_dir.value)
+
+            if black_white:
+                detected_colour = self.read_black_white()
+            else:
+                detected_colour = self.read_colour()
+
+            if detected_colour in colours:
+                consecutive_count += 1
+                consecutive_positions.append(self.motor.get_position())
+                if consecutive_count >= 3:
+                    avg_pos = sum(consecutive_positions) / len(consecutive_positions)
+                    self.colours_found.append((avg_pos, detected_colour, duration))
+                    print(self.colours_found)
+                    consecutive_count = 0
+                    consecutive_positions = []
+            else:
+                consecutive_count = 0
+                consecutive_positions = []
+
+            if self._is_at_boundary("full"):
+                results = list(self.colours_found)
+                self.colours_found = []
+                self.motor.set_dps(0)
+                self.set_arm_at_angle(init_position)
+                return results
+
+            time.sleep(0.01)
+            duration += 0.1
 
     def sweep(self, colours=[], range: Literal["left", "right", "full"] = "left", stop_on_match: bool = False, starting_on_right: bool = True, black_white = False) -> List[Tuple[int, str, int]]:
         """Sweeps the colour sensor arm and checks the colour.
@@ -433,7 +488,7 @@ class ColourSensorController (EV3ColorSensor):
                 time.sleep(0.1)
 
     def read_colour_print(self):
-        print(self.get_rgb())
+        print(self.read_colour())
 
     def read_ambient(self):
         return self.get_ambient()
@@ -452,9 +507,9 @@ class ColourSensorController (EV3ColorSensor):
         
         # If window is not yet full, return None
         if len(self._colour_window) < 5:
-            return None
-        
-        # Window is full, return the most common colour (majority vote)
-        colour_counts = Counter(self._colour_window)
-        most_common_colour = colour_counts.most_common(1)[0][0]
-        return most_common_colour
+            return current_colour
+        else:
+            # Window is full, return the most common colour (majority vote)
+            colour_counts = Counter(self._colour_window)
+            most_common_colour = colour_counts.most_common(1)[0][0]
+            return most_common_colour

@@ -64,6 +64,9 @@ class GrabberController:
         self.cube_positions = [BlocLocation.UNLOADED, BlocLocation.UNLOADED]
         self.calibration = calibration
         self.debug = debug
+        self._kill_recording_active = False
+        self._kill_recording_start_time = None
+        self._kill_sequence_armed = False
 
         # Thread-safe state / async-like control
         self.state_lock = threading.Lock()
@@ -90,15 +93,15 @@ class GrabberController:
         # Gyro detection knobs
         self.sample_hz = 50
         self.consecutive_needed = 15
-        self.running_dps = 300
+        self.running_dps = 450
 
         # Motor-drop detection knobs
-        self.motor_calibration_dps = 300
+        self.motor_calibration_dps = 450
         self.motor_sample_sleep = 0.02
         self.motor_eject_time = 2.0
 
-        self.motor_dry_run_time = 5.0
-        self.motor_drop_k = 0.5
+        self.motor_dry_run_time = 10.0
+        self.motor_drop_k = 1.5
         self.motor_drop_consecutive_needed = 1
         self.use_motor_moving_average = True
         self.motor_moving_avg_window = 5
@@ -112,7 +115,7 @@ class GrabberController:
         self._unload_result = None
         self.kill_switch = False
 
-        if self.running_dps > 400:
+        if self.running_dps > 600:
             print("Warning: running power too high. Pick a lower value")
 
         # Empirical gyro trace recording
@@ -142,19 +145,51 @@ class GrabberController:
         self._gyro_sample_seq = 0
         self._gyro_sample_cond = threading.Condition(self._gyro_sample_lock)
 
+    def _start_kill_switch_recording(self):
+        if self._kill_recording_active:
+            return
 
+        if not self.debug:
+            return
+
+        print("[RECORD] Starting kill-switch recording")
+        self._begin_operation_recording(
+            operation_name="kill_switch_sequence",
+            timeout=None,
+            extra={"type": "kill_switch_sequence"}
+        )
+        self._kill_recording_active = True
+        self._kill_recording_start_time = time.time()
+
+    def _append_kill_switch_sample(self, dps: float, z: float):
+        if not self._kill_recording_active:
+            return
+
+
+        elapsed = time.time() - self._kill_recording_start_time
+        self._append_gyro_sample_to_record(
+            elapsed_s=elapsed,
+            dps=dps,
+            z=z,
+            detectors={"kill_sequence": True},
+        )
+
+    def _stop_kill_switch_recording(self, outcome="completed"):
+        if not self._kill_recording_active:
+            return
+
+        if self.debug:
+            self._end_operation_recording(outcome=outcome)
+            print("[RECORD] Finished kill-switch recording")
+
+        self._kill_recording_active = False
+        self._kill_recording_start_time = None
 
     def _gyro_worker(self):
-        """
-        Threaded loop to poll Gyro DPS and publish dps to the kill switch monitor and to any gyro event detection event
-        :return:
-        """
         dt = 1.0 / float(self.sample_hz)
         print("[GYRO] worker started")
 
         try:
-            kill_hits = 0
-            kill_needed = 5
             while not self._gyro_stop.is_set():
                 raw = self.gyro.get_dps_measure()
                 now = time.time()
@@ -166,24 +201,29 @@ class GrabberController:
                 dps = float(raw)
                 z = (dps - self.mu) / max(self.sigma, 1e-6)
 
-                # internal kill trigger
-                if self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL):
+                # If recording is active, keep saving every sample
+                self._append_kill_switch_sample(dps, z)
+
+                # First kill trigger: outward tilt
+                if (
+                        not self._kill_sequence_armed
+                        and self._is_tilted_outwards_sample(dps, GyroTilt.FAST_TILT_KILL)
+                ):
                     print("[KILL SWITCH] Initial outwards press detected")
-                    """
-                    threading.Thread(
-                        target=self._record_after_kill_trigger,
-                        args=(5.0,),
-                        daemon=True
-                    ).start()
-                    if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT):
-                        print("[KILL SWITCH] Secondary inwards press detected")
-                        self.kill(reason=f"FAST_TILT_KILL detected: dps={dps:.3f}")
-                        return
-                    """
-                    if self._wait_for_inwards_after_kill(window_s=1.0, needed=1):
-                        print("[KILL SWITCH] Secondary inwards press detected")
-                        self.kill(reason="FAST_TILT_KILL: 1 slow inwards within 2s")
-                        return
+                    self._kill_sequence_armed = True
+                    if self.debug:
+                        self._start_kill_switch_recording()
+
+                elif (
+                        self._kill_sequence_armed
+                        and self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT)
+                ):
+                    print("[KILL SWITCH] Secondary inwards press detected")
+                    if self.debug:
+                        #self._append_kill_switch_sample(dps, z)
+                        self._stop_kill_switch_recording(outcome="success")
+                    self.kill(reason="FAST_TILT_KILL sequence detected")
+                    return
 
                 with self._gyro_sample_cond:
                     self._gyro_sample = (now, dps, z)
@@ -193,6 +233,8 @@ class GrabberController:
                 time.sleep(dt)
 
         except Exception as e:
+            if self._kill_recording_active:
+                self._stop_kill_switch_recording(outcome="error")
             print(f"[GYRO] worker crashed: {e}")
             raise
 
@@ -286,7 +328,7 @@ class GrabberController:
                 return False
 
             if self.cube_count == 2:
-                self.motor.set_dps(-1.3 * self.running_dps)
+                self.motor.set_dps(-self.running_dps)
                 print("[INFO] Unloading first cube")
                 unloaded = self._consecutive_gyro_trigger(
                     operation_name="unload_from_2_to_1",
@@ -326,7 +368,7 @@ class GrabberController:
 
             ok = self._is_motor_drop_detected(
                 timeout=5.0,
-                warmup_delay=0.9,
+                warmup_delay=1.1,
                 stop_event=stop_event,
                 operation_name="unload_last_bloc",
                 extra={
@@ -426,7 +468,7 @@ class GrabberController:
             print("Skipped motor calibration")
 
         self.calibrate_gyro_noise(
-            seconds=15.0,
+            seconds=10.0,
             sample_hz=self.sample_hz,
             warmup=0.5,
             calibration=self.calibration,
@@ -596,7 +638,7 @@ class GrabberController:
 
             time.sleep(0.5)
 
-            print("[Motor calibration] Dry run inward...")
+            print(f"[Motor calibration] Dry run inward at DPS ={self.motor_calibration_dps}")
             inward_samples = self._sample_motor_speeds(
                 dps=self.motor_calibration_dps,
                 duration=self.motor_dry_run_time,
@@ -674,7 +716,7 @@ class GrabberController:
         if tilt == GyroTilt.SLOW_TILT:
             return 10.0
         elif tilt == GyroTilt.FAST_TILT_KILL :
-            return 40.0
+            return 42.0
             # change this value if needed for kill switch
         else:
             return 16.0
@@ -984,7 +1026,7 @@ class GrabberController:
     # ----------------------------
     # Motor drop detection
     # ----------------------------
-    def increase_on_velocity_drop(self, duration=0.6):
+    def increase_on_velocity_drop(self, duration=0.4):
         start = time.time()
         cooldown = time.time()
         timeout = 1.0
@@ -1141,7 +1183,7 @@ class GrabberController:
             print("Already loaded 2 cubes, aborting.")
             return False
 
-        self.motor.set_dps(self.running_dps)
+        self.motor.set_dps(self.running_dps) # before : 1.8*300
 
         try:
             if stop_event is not None and stop_event.is_set():
@@ -1176,7 +1218,6 @@ class GrabberController:
 
                 print("[INFO] First cube gyro event triggered")
                 #time.sleep(2) # make sure cube goes to back
-                time.sleep(0.5)
                 self.motor.set_dps(0)
                 with self.state_lock:
                     self.cube_positions[0] = BlocLocation.UNDER_GYRO
@@ -1200,7 +1241,7 @@ class GrabberController:
 
             ok = self._is_motor_drop_detected(
                 timeout=5.0,
-                warmup_delay=0.3,
+                warmup_delay=0.3, # if the second cube goes too far in the belt, reduce that distance
                 stop_event=stop_event,
                 operation_name="load_second_bloc",
                 extra={
@@ -1347,6 +1388,7 @@ class GrabberController:
     def wait_for_loading(self,expected_bloc_count=0, label="block")->bool:
         start = time.time()
         last_log = start
+        counter = 0
         while True:
             status = self.get_loading_status()
 
@@ -1360,11 +1402,19 @@ class GrabberController:
             if now - last_log > 1.0:
                 print(f"[DEBUG] Waiting for loading of {label}... status={status}")
                 last_log = now
+                counter +=1
+            if counter > 2 and self.cube_count == 0: # only do that for first cube loading
+                self.motor.set_dps(1.2*self.running_dps) # temporarily increase
+                print("Temporary BOOST")
+                time.sleep(0.1)
+                self.motor.set_dps(self.running_dps)
+                #threading.Timer(1.8,lambda:self.motor.set_dps(1.8*self.running_dps)).start()
 
             time.sleep(0.05)
 
         final_status = self.get_loading_status()
         print(f"[DEBUG] Loading finished for {label} with status={final_status}")
+        self.motor.set_dps(0)
         return True
 
     def eject_existing_blocs(self,duration=5):
@@ -1408,7 +1458,7 @@ class GrabberController:
         self._end_operation_recording(outcome="completed")
         print("[RECORD] Finished post-kill recording")
 
-    def _wait_for_inwards_after_kill(self, window_s=2.0, needed=2) -> bool:
+    def _wait_for_inwards_after_kill(self, window_s=1.0, needed=1) -> bool:
         """
         After the initial outward kill-switch trigger, listen for up to window_s
         seconds and return True only if we observe `needed` consecutive
@@ -1427,7 +1477,7 @@ class GrabberController:
 
             last_seq, ts, dps, z = sample
 
-            if self._is_tilted_inwards_sample(dps, GyroTilt.SLOW_TILT):
+            if self._is_tilted_inwards_sample(dps, GyroTilt.FAST_TILT):
                 hits += 1
                 if hits >= needed:
                     return True
@@ -1438,6 +1488,6 @@ class GrabberController:
 
 if __name__ == "__main__":
     kill_event = threading.Event()
-    controller = GrabberController(kill_event, "D", 4, False, True)
+    controller = GrabberController(kill_event, "D", 4, False, False)
     controller.initialize_sensors()
     controller.loop()

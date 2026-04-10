@@ -29,11 +29,11 @@ right_motor = Motor(Ports.RIGHT_MOTOR.value)
 color_sensor_motor = Motor(Ports.COLOR_MOTOR.value)
 
 driving_controller = DrivingController(left_motor, right_motor, 200)
-color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor)
+color_sensor_controller = ColourSensorController(Ports.COLOR_SENSOR.value, color_sensor_motor,calibrate=False)
 grabber_controller = GrabberController(kill_switch_flag, Ports.GRABBER_MOTOR.value, Ports.GYRO_SENSOR.value, calibration=False, debug=False)
 routing = Routing(color_sensor_controller, driving_controller)
-sound_controller = SoundController()
-room_traverser = RoomTraverser(driving_controller, color_sensor_controller, sound_controller=sound_controller)
+sound_controller = SoundController(kill_switch_flag)
+room_traverser = RoomTraverser(driving_controller, color_sensor_controller, grabber_controller, sound_controller)
 
 wait_ready_sensors(True)
 grabber_controller.initialize_sensors()
@@ -62,80 +62,66 @@ class RoutingError(Exception):
 
 
 try:
-    def state_machine():
-        global robot_state
-        global blocks_stored
-
-        # Initial routing
-        routing.pharmacy_to_grab_block_position()
-        routing.grab_block(grabber_controller)
-        robot_state = 1
-        blocks_stored = grabber_controller.bloc_count
-
-        # Room 1
-        routing.pharmacy_to_room1()
-        room_traverser.traverse_a_room(room_type=RoomType.CORNER_SINGLE, grabber_controller=grabber_controller)
-        robot_state = 2
-        # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.bloc_count
-
-        # Room 2
-        routing.room1_to_room2()
-        room_traverser.traverse_a_room(room_type=RoomType.WALL_SINGLE, grabber_controller=grabber_controller)
-        robot_state = 3
-        # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.bloc_count
-
-        # Go back early 
-        if (blocks_stored == 0):
-            robot_state = 5
-            routing.room2_to_pharmacy()
-            sound_controller.play_mission_complete()
-            time.sleep(1)
-            reset_brick() # Turn off everything on the brick's hardware, and reset it
-            exit()
-            
-        # Room 3A
-        routing.room2_to_room3A()
-        room_traverser.traverse_a_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF, grabber_controller=grabber_controller)
-        robot_state = 4
-        # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.bloc_count
-
-        # Go back early 
-        if (blocks_stored == 0):
-            robot_state = 5
-            routing.room3A_to_pharmacy()
-            sound_controller.play_mission_complete()
-            time.sleep(1)
-            reset_brick() # Turn off everything on the brick's hardware, and reset it
-            exit()
-
-        # Room 3B
-        routing.room3A_to_room3B() # Week Demo
-        room_traverser.traverse_a_room(room_type=RoomType.CORNER_DOUBLE_FIRST_HALF, grabber_controller=grabber_controller)
-        robot_state = 5
-        # UPDATE BLOCK_STORED 
-        blocks_stored = grabber_controller.bloc_count
-        routing.room3B_to_pharmacy()
-
-        sound_controller.play_mission_complete()
-        time.sleep(1)
-    
     def worker():
+        def _complete_mission(return_to_pharmacy):
+            return_to_pharmacy()
+            
+            sound_controller.play_mission_complete()
+            sound_controller.wait_done()
+
         routing.pharmacy_to_grab_block_position()
         routing.grab_block(grabber_controller)
-
+        """
+        time.sleep(4)
+        grabber_controller.start_unloading()
+        while not grabber_controller.unloading_finished():
+            time.sleep(0.01)
+        time.sleep(1)
+        grabber_controller.start_unloading()
+        while not grabber_controller.unloading_finished():
+            time.sleep(0.01)
+        time.sleep(100)
+        """
         routing.pharmacy_to_room1()
-        room_traverser.traverse_a_room(RoomType.CORNER_SINGLE, grabber_controller)
+        room_traverser.traverse_a_room(RoomType.CORNER_SINGLE)
 
         routing.room1_to_room2()
-        room_traverser.traverse_a_room(RoomType.WALL_SINGLE, grabber_controller)
+        room_traverser.traverse_a_room(RoomType.WALL_SINGLE)
 
+        # Check if we got lucky and found the 2 green beds right away
+        if grabber_controller.cube_count == 0:
+            _complete_mission(routing.room2_to_pharmacy)
+            return
+        
         routing.room2_to_room3A()
+        room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_FIRST_HALF)
 
+        if grabber_controller.cube_count == 0:
+            _complete_mission(routing.room3A_to_pharmacy)
+            return
+        
+        routing.room3A_to_room3C()
+        room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_SECOND_HALF)
+        
+        if grabber_controller.cube_count == 0:
+            _complete_mission(routing.room3C_to_pharmacy)
+            return 
+
+        routing.room3C_to_room3B()
+        room_traverser.traverse_a_room(RoomType.CORNER_DOUBLE_MIDDLE)
+
+        _complete_mission(routing.room3A_to_pharmacy)
+
+    def ks_test():
         sound_controller.play_mission_complete()
         sound_controller.wait_done()
+        time.sleep(1)
+        sound_controller.play_success()
+        sound_controller.wait_done()
+        time.sleep(1)
+        sound_controller.play_success()
+        sound_controller.wait_done()
+        time.sleep(1)
 
     control_thread = threading.Thread(target=worker, daemon=True)
 
@@ -144,7 +130,8 @@ try:
     kill_switch_flag.wait()
 
     print("[INFO] Kill switch activated. Terminating script...")
-
+    
+    sound_controller.stop_all()
     raise KillSwitchInterrupt()
 
 except RoutingError:
@@ -161,5 +148,7 @@ except Exception as err:
     print(err)
     traceback.print_exc()
 finally:
+    # print("Ejecting all cubes from Grabber")
+    # grabber_controller.eject_existing_blocs()
     reset_brick() # Turn off everything on the brick's hardware, and reset it
     exit()

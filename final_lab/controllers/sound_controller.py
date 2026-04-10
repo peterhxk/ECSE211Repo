@@ -7,11 +7,12 @@ TEMPO = 0.5
 
 
 class SoundController(Sound):
-    def __init__(self, duration=0.3, volume=80):
+    def __init__(self, kill_event, duration=0.3, volume=80):
         super().__init__(duration=duration, volume=volume)
         self.sounds = [Sound(duration=duration, pitch=note, volume=volume) for note in NOTES]
         self.note_playing = False
         self.play_requested = False
+        self.kill_event = kill_event
         self._executor = futures.ThreadPoolExecutor(max_workers=1)
 
     def request_play(self):
@@ -59,11 +60,18 @@ class SoundController(Sound):
         def _play():
             self.note_playing = True
             for note in sequence:
+                if self.kill_event and self.kill_event.is_set():
+                    note.stop()
+                    break
+
                 note.play()
                 time.sleep(note._duration-0.05)
             self.note_playing = False
 
-        self._executor.submit(_play)
+        try:
+            self._executor.submit(_play)
+        except RuntimeError:
+            pass
 
     def play_success(self):
         """Short upbeat chime: quick two-note rise.
@@ -79,16 +87,24 @@ class SoundController(Sound):
         def _play():
             self.note_playing = True
             for note in sequence:
+                if self.kill_event and self.kill_event.is_set():
+                    note.stop()
+                    break
+                
                 note.play()
                 time.sleep(note._duration-0.05)
             self.note_playing = False
-
-        self._executor.submit(_play)
+        
+        try:
+            self._executor.submit(_play)
+        except RuntimeError:
+            pass
 
     def stop_all(self):
         """Stop any currently playing note."""
         for s in self.sounds:
             s.stop()
+        self._executor.shutdown(wait=False, cancel_futures=True)
         self.note_playing = False
         self.play_requested = False
 

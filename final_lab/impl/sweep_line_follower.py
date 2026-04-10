@@ -4,9 +4,6 @@ import math
 import time 
 from typing import Literal
 import data.measurements as consts
-import threading
-
-from impl.kill_switch import KillSwitchInterrupt
 
 class SweepLineFollower:
 
@@ -24,13 +21,17 @@ class SweepLineFollower:
     #     if self.kill_event and self.kill_event.is_set():
     #         raise KillSwitchInterrupt()
 
-    def move_forward(self, max_distance, stop_on_colour = None):
+    def move_forward(self, max_distance, stop_on_colour = None) -> Literal["colour", "dist"]:
         """Moves the robot forward as long as the colour sensor detects the black line.
         The robot will stop moving forward if max_distance is reached, or if the colour stop_on_colour is detected.
         
         Args:
             max_distance (int): The distance to move forward for, in millimetres.
             stop_on_colour (str | None): The colour that, upon detection, will halt the motors.
+        
+        Returns:
+            stop_reason ("colour" | "dist"): Whether the movement stopped because the colour was found
+                or the maximum distance was reached.
         """
 
         if stop_on_colour in ['b', 'w']:
@@ -101,8 +102,14 @@ class SweepLineFollower:
                 last_encoder_value = 0 
                 self.pilot.reset_encoders()
             time.sleep(0.1)
-        print(f"advancement of {max_distance} distance completed")
-        return
+        
+        if self.sensor.read_colour() == stop_on_colour:
+            print(f"[DEBUG] SweepLineFollower.move_forward: Stopped on colour {stop_on_colour}")
+            return "colour"
+        else:
+            print(f"[DEBUG] SweepLineFollower.move_forward: Advancement of {max_distance} distance completed")
+            return "dist"
+
     
     # Helper
     def f_theta(self, angle, dps):
@@ -169,6 +176,7 @@ class SweepLineFollower:
             self.pilot.move_forward()
         elif heading == "back":
             self.pilot.move_backward()
+            additional_dist -= 5
         else:
             raise Exception(f"Invalid parameter heading for method SweepLineFollower.turn_logic: {heading}. Valid options are front, back")
         # print(f"[DEBUG] turn_logic: The colors detected are : {self.sensor.read_black_white()}")

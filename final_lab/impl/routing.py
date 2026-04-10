@@ -1,16 +1,13 @@
-from controllers.color_sensor_controller import ColourSensorController
-from controllers.driving_controller import DrivingController
 from impl.sweep_line_follower import SweepLineFollower
 import data.measurements as consts
 from controllers.grabber_controller import GrabberController
 import threading
-
 import time
 
 class Routing(SweepLineFollower):
     """Class defines fixed routing commands to move the robot between rooms."""
 
-    ROOM_EXIT_DST = -30
+    ROOM_EXIT_DST = -50
     """Distance (mm) we must back up when exiting the room
     so that the colour sensor is not on the orange line"""
 
@@ -19,17 +16,24 @@ class Routing(SweepLineFollower):
         self.pilot.move_distance(self.ROOM_EXIT_DST)
         self.pilot.right_motor.wait_is_stopped()
 
+    def _advance_into_pharmacy(self):
+        """From the main horizontal black line, advances into the pharmacy"""
+        res = self.move_forward(300, "orange") 
+        if res == "colour":
+            self.sensor.set_arm_at_angle(90)
+            self.pilot.move_distance(180)
+
     def pharmacy_to_room1(self):
         self.pilot.move_distance(-50)
         self.pilot.right_motor.wait_is_stopped()
         self.turn_logic("right", "back")
+        self.move_forward(60)
         self.turn_logic("right", "front")
         self.move_forward(200, "orange")
     
     def room1_to_pharmacy(self):
         self.pilot.move_distance(-435)
         self.pilot.right_motor.wait_is_stopped()
-
     
     def room1_to_room2(self):
         # Back off of orange line
@@ -49,86 +53,130 @@ class Routing(SweepLineFollower):
         self._exit_room()
 
         self.turn_logic("right", "back")
+        self.pilot.move_distance(-100)
+        self.pilot.right_motor.wait_is_stopped()
+        self.move_forward(100)
         self.turn_logic("right", "front")
 
-    def room3A_to_room3B(self):
+    def room3A_to_room3C(self):
         self._exit_room()
 
         self.turn_logic("left", "back")
         self.turn_logic("right", "front")
+
+    def room3C_to_room3B(self):
+        self._exit_room()
+
+        self.turn_logic("right", "back")
+        self.move_forward(30)
+        self.pilot.turn_90("left")
+
+        self.pilot.right_motor.wait_is_stopped()
 
     def room2_to_pharmacy(self):
-        # UNTESTED
         self._exit_room()
 
         self.turn_logic("left", "back")
-        # add move forward?
         self.turn_logic("left", "front")
-        print("move forward to pharma")
-        self.move_forward(100, "orange") # change color/dist?
+
+        self._advance_into_pharmacy()
 
     def room3A_to_pharmacy(self):
-        # UNTESTED
         self._exit_room()
 
         self.turn_logic("right", "back")
-        self.move_forward(50) # change dist?
+        self.move_forward(220)
         self.turn_logic("left", "front")
-        print("move forward to pharma")
-        self.move_forward(100, "blue") # change color/dist?
 
+        self._advance_into_pharmacy()
 
-    def room3B_to_pharmacy(self):
+    def room3C_to_pharmacy(self):
         self._exit_room()
 
         self.turn_logic("right", "back")
-        self.move_forward(300)
+        self.move_forward(500)
         self.turn_logic("left", "front")
-        print("move forward to pharma")
-        self.move_forward(100, "blue")
+
+        self._advance_into_pharmacy()
+
+    def stop_on_orange(self):
+        count = 0
+        while count < 1:
+            time.sleep(0.01)
+            if self.sensor.read_colour() == "orange":
+                count +=1
+            else:
+                count = 0
+        print("FOUND ORANGE LINE : stopping motors")
+        self.pilot.stop_motors() # stop both motors : this will set "wait_is_stopped()" to True
+        return
 
     def pharmacy_to_grab_block_position(self):
         self.pilot.move_distance(50)
         self.pilot.right_motor.wait_is_stopped(0.1)
         self.turn_logic("right", "front")
-        self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)
+        t1 = threading.Thread(target=self.stop_on_orange,daemon=True)
+        #t1.start()
+        self.turn_logic("right", "front",consts.dist_blocks_mm, arm_avoid_block=True) # horizontal distance right?
+        #if t1.is_alive():
+            #self.pilot.pivot_angle("right", 45)
+            #self.pilot.left_motor.wait_is_stopped()
+        # self.turn_logic("right", "front", consts.dist_blocks_mm, arm_avoid_block=True)xw
+        print("Finished turning right")
+        # Edit :
+        # 1. stop moving once the color sensor sees orange
+        # 2. Rotate the colour sweeper arm 180 degrees
+        # 3. Rotate the wheel opposite to the arm forward until the colour sensor sees orange.
+        # 4. The robot should then be lined up with the virtual wall and the blocks
+        """
+        self.sensor.set_arm_at_angle(100)
+        time.sleep(0.1)
+        self.pilot.pivot_angle("left",-90)
+        t2 = threading.Thread(target=self.stop_on_orange)
+        t2.start()
+
+        t2.join() # waits for thread to be done
+        """
+
 
     def grab_block(self,grabberInstance:GrabberController):
-        self.pilot.move_distance(110)
+        self.pilot.move_distance(consts.dist_block_1)
         self.pilot.right_motor.wait_is_stopped(0.1)
         attempts = 0
         EXTRA_DISTANCE = 10
         while attempts < 3:
+            self.pilot.left_motor.set_dps(10)
+            self.pilot.right_motor.set_dps(10)
             grabberInstance.start_loading(timeout=5.0)
             time.sleep(0.5)
             if grabberInstance.wait_for_loading(0, label="block 1"):
                 print(f"Successfully loaded block 1 after {attempts} attempts")
+                self.pilot.stop_motors()
                 break
             else:
                 self.pilot.move_distance(EXTRA_DISTANCE)
                 self.pilot.right_motor.wait_is_stopped(0.1)
                 attempts+=1
-        if attempts == 3:
-            raise RuntimeError
         time.sleep(0.5)
-        self.pilot.move_distance(79-attempts*EXTRA_DISTANCE)
+        # make sure to have some distance between the block and the grabber
+        self.pilot.move_distance(consts.dist_block_1_to_block_2-attempts*EXTRA_DISTANCE)
         self.pilot.right_motor.wait_is_stopped(0.1)
+        self.pilot.left_motor.set_dps(10)
+        self.pilot.right_motor.set_dps(10)
         self.pilot.stop_motors()
         time.sleep(0.5)
         attempts = 0
         EXTRA_DISTANCE = 5
         while attempts < 2:
             grabberInstance.start_loading(timeout=5.0)
-            time.sleep(0.5)
             if grabberInstance.wait_for_loading(0, label="block 2"):
                 print(f"Successfully loaded block 2 after {attempts} attempts")
+                self.pilot.stop_motors()
                 break
             else:
                 self.pilot.move_distance(EXTRA_DISTANCE)
                 self.pilot.right_motor.wait_is_stopped(0.1)
                 attempts += 1
-        if attempts == 3:
-            raise RuntimeError
         self.pilot.move_distance(-100-attempts*EXTRA_DISTANCE) # move extra if had to move forward
         self.pilot.right_motor.wait_is_stopped(0.1)
 

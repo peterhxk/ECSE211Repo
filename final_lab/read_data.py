@@ -4,9 +4,15 @@ import glob
 import pickle
 import matplotlib.pyplot as plt
 
-RECORDINGS_DIR = "data/gyro_operation_recordings"
+RECORDINGS_DIR = "data/gyro_operation_recordings/kill_switch"
 PLOTS_DIR = "controllers/plots"
 
+"""
+ create mode 100644 final_lab/data/gyro_operation_recordings/load_first_bloc_20260408_183427.pkl
+ create mode 100644 final_lab/data/gyro_operation_recordings/load_second_bloc_20260408_183430.pkl
+ create mode 100644 final_lab/data/gyro_operation_recordings/unload_from_2_to_1_20260408_183519.pkl
+ create mode 100644 final_lab/data/gyro_operation_recordings/unload_last_bloc_20260408_183606.pkl
+"""
 
 def load_operation_records(recordings_dir=RECORDINGS_DIR):
     files = sorted(glob.glob(os.path.join(recordings_dir, "*.pkl")))
